@@ -89,15 +89,20 @@ def consume(session: Session, token: str) -> RefreshToken:
     ).scalar_one_or_none()
     if record is None:
         raise RefreshError("jeton inconnu")
-    if record.used_at is not None:
-        # Réutilisation d'un jeton déjà consommé : vol présumé, on coupe toute la famille.
-        revoke_family(session, record.family_id)
-        raise RefreshError("jeton déjà utilisé", reuse_detected=True, user_id=record.user_id)
+    now = utcnow()
     if record.revoked_at is not None:
         raise RefreshError("jeton révoqué", user_id=record.user_id)
-    if record.expires_at <= utcnow():
+    if record.used_at is not None:
+        grace = timedelta(seconds=get_settings().refresh_reuse_grace_seconds)
+        if now - record.used_at <= grace and record.expires_at > now:
+            # Requêtes parallèles légitimes : un jeton frère est émis dans la même famille.
+            return record
+        # Réutilisation tardive d'un jeton consommé : vol présumé, toute la famille tombe.
+        revoke_family(session, record.family_id)
+        raise RefreshError("jeton déjà utilisé", reuse_detected=True, user_id=record.user_id)
+    if record.expires_at <= now:
         raise RefreshError("jeton expiré", user_id=record.user_id)
-    record.used_at = utcnow()
+    record.used_at = now
     return record
 
 

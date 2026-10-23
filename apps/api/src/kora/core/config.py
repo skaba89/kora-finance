@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     jwt_audience: str = "kora-finance-api"
     access_token_ttl_seconds: int = Field(default=900, ge=60, le=3600)
     refresh_token_ttl_days: int = Field(default=30, ge=1, le=90)
+    # Délai pendant lequel un refresh token déjà consommé est encore accepté : des
+    # requêtes parallèles d'un même navigateur (préchargements, onglets) présentent le
+    # même jeton. Au-delà, la réutilisation est traitée comme un vol (famille révoquée).
+    refresh_reuse_grace_seconds: int = Field(default=20, ge=0, le=60)
     mfa_challenge_ttl_seconds: int = Field(default=300, ge=60, le=900)
     # Verrouillage du compte après N échecs consécutifs.
     login_max_failures: int = Field(default=5, ge=3, le=20)

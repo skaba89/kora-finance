@@ -9,6 +9,10 @@ x-api-env: &api-env
   KORA_REDIS_URL: redis://redis:6379/0
   KORA_JWT_SECRET: ${KORA_JWT_SECRET:?lancer make env}
   KORA_ENCRYPTION_KEYS: ${KORA_ENCRYPTION_KEYS:?lancer make env}
+  # Seul le serveur web appelle l'API : il transmet l'IP du client (X-Forwarded-For).
+  # En production, l'API ne doit pas être joignable directement depuis internet.
+  KORA_TRUSTED_PROXY_COUNT: "1"
+  KORA_AUTH_RATE_LIMIT_PER_MINUTE: ${KORA_AUTH_RATE_LIMIT_PER_MINUTE:-20}
 
 services:
   postgres:
@@ -79,6 +83,8 @@ services:
     image: kora-web:local
     environment:
       KORA_API_INTERNAL_URL: http://api:8000
+      # https:// en production : cookies « Secure » et upgrade-insecure-requests.
+      KORA_PUBLIC_URL: ${KORA_PUBLIC_URL:-http://localhost:3100}
     ports:
       - "127.0.0.1:${KORA_WEB_PORT:-3100}:3000"
     depends_on:

@@ -72,7 +72,12 @@ web-build: ## Build de production Next.js
 contract: ## Vérifie que openapi.json et les types TS du frontend sont à jour
 	./scripts/check-contract.sh
 
-e2e: up ## Tests de bout en bout Playwright contre la pile démarrée
+# Toutes les requêtes E2E viennent d'une même IP : limite d'authentification relevée pour
+# la suite (la limitation elle-même est testée côté API). Exportée pour chaque commande,
+# sinon `compose run` recréerait l'API avec la valeur par défaut.
+e2e: export KORA_AUTH_RATE_LIMIT_PER_MINUTE = 1000
+e2e: env ## Tests de bout en bout Playwright contre la pile démarrée
+	$(COMPOSE) up -d --build --wait
 	$(COMPOSE) --profile e2e run --rm e2e
 
 secrets-scan: ## Recherche de secrets dans le dépôt (gitleaks)

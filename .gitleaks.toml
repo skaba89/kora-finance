@@ -1,0 +1,10 @@
+# Configuration gitleaks : règles par défaut + exceptions étroites et justifiées.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Mots de passe factices des tests (fixtures), jamais de vrais secrets"
+condition = "AND"
+paths = ['''^apps/api/tests/.*\.py$''', '''^apps/web/e2e/.*\.ts$''']
+regexTarget = "line"
+regexes = ['''(?i)password"?\s*[:=]''']

@@ -36,4 +36,7 @@ COPY alembic ./alembic
 COPY src ./src
 USER kora
 EXPOSE 8000
-CMD ["uvicorn", "kora.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+# Pas de --proxy-headers : uvicorn remplacerait l'IP client par X-Forwarded-For quel
+# que soit l'émetteur. L'IP est déterminée par kora.core.client_ip selon le nombre de
+# proxys de confiance (KORA_TRUSTED_PROXY_COUNT).
+CMD ["uvicorn", "kora.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers"]

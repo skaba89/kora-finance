@@ -10,7 +10,7 @@ Monorepo, docker-compose, CI bloquante, linters, harnais de tests (pytest sur vr
 Postgres, Vitest, Playwright), `CLAUDE.md`, `worklog.md`.
 - Critère : `docker compose up` démarre la pile ; un test cassé fait échouer la CI.
 
-## Phase 1 — Socle
+## Phase 1 — Socle ✅ (2026-10-23)
 Auth (JWT + refresh tokens rotatifs avec détection de réutilisation, 2FA TOTP,
 verrouillage après N échecs), rate limiting, tenants + memberships + RBAC 7 rôles,
 création d'entreprise (RCCM, NIF, forme juridique, devise), exercices, plan SYSCOHADA

@@ -28,5 +28,15 @@ make e2e     # tests de bout en bout Playwright (desktop + mobile)
 make help    # toutes les commandes
 ```
 
+## Mise en production : points obligatoires
+
+- L'API ne doit **pas** être exposée sur internet : seul le serveur web l'appelle
+  (`KORA_API_INTERNAL_URL`). Elle fait confiance à `KORA_TRUSTED_PROXY_COUNT` proxys pour
+  l'IP client (limitation de débit, audit).
+- `KORA_PUBLIC_URL` doit commencer par `https://` (cookies `Secure`, `upgrade-insecure-requests`).
+- Secrets à fournir par l'hébergeur : `KORA_JWT_SECRET` (≥ 64 caractères),
+  `KORA_ENCRYPTION_KEYS` (clé(s) Fernet), mots de passe des rôles `kora_owner` / `kora_app`.
+- Migrations : exécuter `alembic upgrade head` (rôle `kora_owner`) avant de démarrer l'API.
+
 Documentation projet : `CLAUDE.md` (architecture, règles, décisions, avancement),
 `docs/PLAN.md` (phases et critères d'acceptation), `worklog.md` (journal daté).

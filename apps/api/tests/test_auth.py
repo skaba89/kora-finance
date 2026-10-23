@@ -218,14 +218,16 @@ def test_reutilisation_d_un_refresh_token_revoque_toute_la_famille(
     stolen = user.login(client)["refresh_token"]
     legit = client.post("/api/v1/auth/refresh", json={"refresh_token": stolen}).json()
 
-    # L'attaquant rejoue le jeton volé, déjà consommé.
-    replay = client.post("/api/v1/auth/refresh", json={"refresh_token": stolen})
-    assert replay.status_code == 401
-    assert replay.json()["code"] == "session_expiree"
+    # L'attaquant rejoue le jeton volé, consommé depuis plus longtemps que la tolérance.
+    grace = get_settings().refresh_reuse_grace_seconds
+    with time_machine.travel(utcnow() + timedelta(seconds=grace + 1)):
+        replay = client.post("/api/v1/auth/refresh", json={"refresh_token": stolen})
+        assert replay.status_code == 401
+        assert replay.json()["code"] == "session_expiree"
 
-    # Le jeton légitime de la même famille est révoqué lui aussi…
-    after = client.post("/api/v1/auth/refresh", json={"refresh_token": legit["refresh_token"]})
-    assert after.status_code == 401
+        # Le jeton légitime de la même famille est révoqué lui aussi…
+        after = client.post("/api/v1/auth/refresh", json={"refresh_token": legit["refresh_token"]})
+        assert after.status_code == 401
 
     # … et la révocation est durable (vérifiée depuis une autre session).
     with get_sessionmaker()() as other:
@@ -240,6 +242,30 @@ def test_reutilisation_d_un_refresh_token_revoque_toute_la_famille(
             .all()
         )
         assert "auth.refresh_reuse_detected" in actions
+
+
+def test_requetes_paralleles_tolerees_pendant_la_fenetre_de_grace(
+    client: TestClient, make_user: MakeUser
+) -> None:
+    token = make_user().login(client)["refresh_token"]
+    first = client.post("/api/v1/auth/refresh", json={"refresh_token": token})
+    second = client.post("/api/v1/auth/refresh", json={"refresh_token": token})
+    assert first.status_code == second.status_code == 200
+    # Les deux successeurs restent utilisables.
+    for response in (first, second):
+        renewed = client.post(
+            "/api/v1/auth/refresh", json={"refresh_token": response.json()["refresh_token"]}
+        )
+        assert renewed.status_code == 200
+
+
+def test_jeton_revoque_refuse_meme_pendant_la_fenetre_de_grace(
+    client: TestClient, make_user: MakeUser
+) -> None:
+    token = make_user().login(client)["refresh_token"]
+    client.post("/api/v1/auth/refresh", json={"refresh_token": token})
+    client.post("/api/v1/auth/logout", json={"refresh_token": token})
+    assert client.post("/api/v1/auth/refresh", json={"refresh_token": token}).status_code == 401
 
 
 def test_refresh_token_expire_refuse(client: TestClient, make_user: MakeUser) -> None:

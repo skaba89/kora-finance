@@ -12,7 +12,7 @@ Journal daté des sessions : `worklog.md`. Le lire en début de session.
 | Phase | Contenu | État |
 |---|---|---|
 | 0 | Fondations du dépôt : monorepo, Docker, CI, harnais de tests | ✅ livrée (2026-10-23) |
-| 1 | Socle : auth, multi-tenant + RLS, RBAC, organisation, plan comptable, taxes, audit chaîné, PWA | ⏳ à démarrer |
+| 1 | Socle : auth, multi-tenant + RLS, RBAC, organisation, plan comptable, taxes, audit chaîné, PWA | ✅ livrée (2026-10-23) — reste listé dans `worklog.md` |
 | 2 | Comptabilité générale + états financiers | — |
 | 3 | Trésorerie, Mobile Money, rapprochement | — |
 | 4 | Ventes et achats | — |
@@ -40,6 +40,40 @@ scripts/       init-env.sh (secrets locaux), check-contract.sh
 Pile locale (`docker-compose.yml`, ports sur 127.0.0.1 uniquement) :
 postgres 16 (55432) · redis 7 (56379) · migrate (one-shot) · api (8100) · worker · web (3100).
 Profils : `tools` (api-tools, web-tools), `e2e` (Playwright).
+
+### Backend (`apps/api/src/kora`)
+
+```
+core/        config, erreurs {detail, code, errors}, crypto (Fernet), rate limit, IP client
+db/          base, session, tenant.py (contexte RLS réappliqué à chaque transaction)
+models/      identity (plateforme, sans RLS), organization, accounting, audit (tables tenant, RLS)
+auth/        mots de passe argon2id, JWT, refresh tokens rotatifs, 2FA TOTP
+tenancy/     rôles, matrice de permissions (source unique), résolution du rôle, dépendances
+organization/ dossiers, membres, exercices, cabinets
+accounting/  plan SYSCOHADA (data/*.csv), taux de taxes versionnés, paramétrage initial
+audit/       journal chaîné SHA-256 (écriture, vérification)
+api/v1/      routes ; `ROUTERS` = registre parcouru par les tests d'isolation
+```
+
+Route tenant = `/api/v1/companies/{company_id}/…` + paramètre typé `AccountsRead`,
+`TaxesManage`… (`tenancy/deps.py`). `tests/test_isolation_tenants.py` vérifie
+automatiquement toute nouvelle route ; `test_toute_table_avec_tenant_id_est_sous_rls`
+exige la RLS sur toute nouvelle table portant un `tenant_id`.
+
+### Frontend (`apps/web/src`) — BFF
+
+Le navigateur ne voit jamais les jetons : cookies httpOnly `kora_at` / `kora_rt`, lus par
+le serveur Next (proxy, Server Components, Server Actions) qui appelle l'API.
+
+```
+proxy.ts            CSP + en-têtes, renouvellement de session, garde des pages,
+                    réécriture /x → /{lang}/x selon le cookie kora_locale
+app/[lang]/(public) connexion, vérification 2FA, inscription
+app/[lang]/(app)    dossiers, paramètres du dossier, journal d'audit, sécurité du compte
+lib/dal.ts          lectures (API) ; lib/actions/*  Server Actions (mutations)
+lib/i18n            fr.ts (référence) / en.ts (mêmes clés, vérifié par TypeScript)
+public/sw.js        service worker : page hors connexion uniquement, rien d'authentifié en cache
+```
 
 ## Commandes
 
@@ -78,12 +112,15 @@ make api-lock     # après modification de apps/api/pyproject.toml
    route tenant est couverte par la suite de tests cross-tenant.
 8. **Rôles PostgreSQL** : `kora_app` (API/worker) est NOSUPERUSER, NOBYPASSRLS, sans DDL ;
    `kora_owner` exécute les migrations. Ne jamais faire tourner l'API avec `kora_owner`.
-9. **Secrets** : jamais dans le dépôt, jamais affichés. `.env` est généré localement
+9. **Déploiement** : l'API ne doit pas être joignable directement depuis internet (seul
+   le serveur web l'appelle) ; `KORA_PUBLIC_URL` en `https://` en production (cookies
+   Secure). Exceptions gitleaks : `.gitleaks.toml` (mots de passe factices des tests).
+10. **Secrets** : jamais dans le dépôt, jamais affichés. `.env` est généré localement
    (`make env`) ; gitleaks tourne en CI.
-10. **Dépendances épinglées** à des versions exactes (uv.lock, package-lock + `save-exact`,
+11. **Dépendances épinglées** à des versions exactes (uv.lock, package-lock + `save-exact`,
     images Docker taguées, actions GitHub par SHA). Vérifier la provenance de tout
     nouveau paquet avant de l'ajouter.
-11. **Langue** : interface, messages d'erreur, noms de tests et documentation en français.
+12. **Langue** : interface, messages d'erreur, noms de tests et documentation en français.
 
 ## Frontend : Next.js 16
 
@@ -95,6 +132,16 @@ d'écrire du code Next.** Points déjà rencontrés :
 - Vitest ne sait pas rendre les Server Components `async` : tester les composants
   synchrones en unitaire, les composants async en E2E ;
 - `src/lib/api/client.ts` est `server-only` : l'URL interne de l'API ne fuit pas au navigateur.
+- **Toute lecture de session/données (cookies, API) doit être sous `<Suspense>`** : sinon
+  le build échoue (« blocking-prerender-dynamic »). Le layout d'un dossier encapsule déjà
+  ses pages ; les autres pages encapsulent leur contenu.
+- Langue : `await lang()` de `next/root-params` (Server Components). Indisponible dans
+  les Server Actions → `actionDictionary()` (cookie). Liens internes **sans** préfixe de
+  langue : le proxy réécrit.
+- `usePathname()` renvoie le chemin réécrit : pour l'URL visible, lire `window.location`
+  après hydratation (voir `components/nav-link.tsx`).
+- Les tests E2E tournent sur desktop et mobile (Pixel 5) : une colonne masquée sur
+  mobile (`hidden sm:table-cell`) n'est pas visible pour Playwright.
 
 ## Décisions d'architecture
 
@@ -107,6 +154,14 @@ d'écrire du code Next.** Points déjà rencontrés :
 | 2026-10-23 | Contrat OpenAPI committé + types TS générés (`openapi-typescript`, `openapi-fetch`), au lieu d'un `packages/api-types` | Moins de plomberie monorepo ; la CI bloque toute dérive |
 | 2026-10-23 | Deux rôles PostgreSQL (`kora_owner` / `kora_app`) dès la phase 0 | La RLS de la phase 1 n'a de valeur que si le rôle d'exécution ne peut pas la contourner |
 | 2026-10-23 | Tout l'outillage tourne en conteneurs (uv 0.13.4, Python 3.13, Node 24) | Parité stricte local/CI ; aucun prérequis local hors Docker |
+| 2026-10-23 | Isolation : RLS PostgreSQL (`app.tenant_id`, FORCE) **et** filtrage applicatif ; tables plateforme (users, companies, memberships…) sans RLS, accès par services testés | Défense en profondeur ; un utilisateur appartient à plusieurs tenants |
+| 2026-10-23 | Dossier inaccessible ⇒ **404** (jamais 403) | Ne pas révéler l'existence d'un dossier |
+| 2026-10-23 | SUPER_ADMIN **sans** accès aux données des dossiers | Confidentialité ; accès support explicite à concevoir en phase 8 |
+| 2026-10-23 | Refresh tokens : rotation + révocation de famille, **tolérance de 20 s** à la réutilisation | Requêtes parallèles d'un navigateur (préchargements) ; au-delà = vol présumé |
+| 2026-10-23 | Frontend en **BFF** : jetons en cookies httpOnly, appels API côté serveur Next | Aucun jeton accessible au JavaScript ; formulaires fonctionnels en 3G |
+| 2026-10-23 | CSP **sans nonce** (`script-src 'self' 'unsafe-inline'`), autres directives strictes | Avec Cache Components la coquille statique ne peut pas porter de nonce ; à durcir avec SRI quand stable |
+| 2026-10-23 | L'API ne fait confiance qu'à `KORA_TRUSTED_PROXY_COUNT` proxys pour l'IP client ; uvicorn sans `--proxy-headers` | Limitation de débit non contournable par un en-tête forgé |
+| 2026-10-23 | Montants et taux en entiers (taux en points de base : 1800 = 18 %) | Pas de flottant ; conversion des saisies par chaîne (`lib/rates.ts`) |
 | 2026-10-23 | Stockage S3 et email (Mailpit) **reportés** à la phase où ils servent | Pas de service inutilisé. Note : MinIO ne publie plus d'images Docker officielles gratuites — choisir le serveur S3 local (MinIO via image tierce, Garage, SeaweedFS…) au moment voulu |
 
 ## À valider par un expert-comptable guinéen
