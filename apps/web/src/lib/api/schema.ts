@@ -72,6 +72,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/mfa/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Disable */
+        post: operations["disable_api_v1_auth_mfa_disable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enable */
+        post: operations["enable_api_v1_auth_mfa_enable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/recovery-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Regenerate */
+        post: operations["regenerate_api_v1_auth_mfa_recovery_codes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Setup */
+        post: operations["setup_api_v1_auth_mfa_setup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify */
+        post: operations["verify_api_v1_auth_mfa_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/password": {
         parameters: {
             query?: never;
@@ -168,6 +253,11 @@ export interface components {
             /** New Password */
             new_password: string;
         };
+        /** CodeRequest */
+        CodeRequest: {
+            /** Code */
+            code: string;
+        };
         /** ErrorResponse */
         ErrorResponse: {
             /** Code */
@@ -215,6 +305,22 @@ export interface components {
              */
             status: "mfa_required";
         };
+        /** MfaSetupResponse */
+        MfaSetupResponse: {
+            /** Otpauth Uri */
+            otpauth_uri: string;
+            /** Qr Svg Data Uri */
+            qr_svg_data_uri: string;
+            /** Secret */
+            secret: string;
+        };
+        /** MfaVerifyRequest */
+        MfaVerifyRequest: {
+            /** Code */
+            code: string;
+            /** Mfa Token */
+            mfa_token: string;
+        };
         /** ReadyResponse */
         ReadyResponse: {
             /**
@@ -232,6 +338,18 @@ export interface components {
              * @enum {string}
              */
             status: "ok" | "erreur";
+        };
+        /** ReauthRequest */
+        ReauthRequest: {
+            /** Code */
+            code: string;
+            /** Password */
+            password: string;
+        };
+        /** RecoveryCodesResponse */
+        RecoveryCodesResponse: {
+            /** Recovery Codes */
+            recovery_codes: string[];
         };
         /** RefreshRequest */
         RefreshRequest: {
@@ -463,6 +581,309 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    disable_api_v1_auth_mfa_disable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReauthRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    enable_api_v1_auth_mfa_enable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryCodesResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    regenerate_api_v1_auth_mfa_recovery_codes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReauthRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoveryCodesResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    setup_api_v1_auth_mfa_setup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaSetupResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    verify_api_v1_auth_mfa_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Locked */
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };

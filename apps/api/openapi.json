@@ -23,6 +23,21 @@
         "title": "ChangePasswordRequest",
         "type": "object"
       },
+      "CodeRequest": {
+        "properties": {
+          "code": {
+            "maxLength": 20,
+            "minLength": 6,
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "CodeRequest",
+        "type": "object"
+      },
       "ErrorResponse": {
         "properties": {
           "code": {
@@ -121,6 +136,51 @@
         "title": "MfaRequiredResponse",
         "type": "object"
       },
+      "MfaSetupResponse": {
+        "properties": {
+          "otpauth_uri": {
+            "title": "Otpauth Uri",
+            "type": "string"
+          },
+          "qr_svg_data_uri": {
+            "title": "Qr Svg Data Uri",
+            "type": "string"
+          },
+          "secret": {
+            "title": "Secret",
+            "type": "string"
+          }
+        },
+        "required": [
+          "secret",
+          "otpauth_uri",
+          "qr_svg_data_uri"
+        ],
+        "title": "MfaSetupResponse",
+        "type": "object"
+      },
+      "MfaVerifyRequest": {
+        "properties": {
+          "code": {
+            "maxLength": 20,
+            "minLength": 6,
+            "title": "Code",
+            "type": "string"
+          },
+          "mfa_token": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Mfa Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mfa_token",
+          "code"
+        ],
+        "title": "MfaVerifyRequest",
+        "type": "object"
+      },
       "ReadyResponse": {
         "properties": {
           "database": {
@@ -154,6 +214,44 @@
           "redis"
         ],
         "title": "ReadyResponse",
+        "type": "object"
+      },
+      "ReauthRequest": {
+        "properties": {
+          "code": {
+            "maxLength": 20,
+            "minLength": 6,
+            "title": "Code",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "code"
+        ],
+        "title": "ReauthRequest",
+        "type": "object"
+      },
+      "RecoveryCodesResponse": {
+        "properties": {
+          "recovery_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Recovery Codes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "recovery_codes"
+        ],
+        "title": "RecoveryCodesResponse",
         "type": "object"
       },
       "RefreshRequest": {
@@ -537,6 +635,374 @@
           }
         ],
         "summary": "Me",
+        "tags": [
+          "authentification"
+        ]
+      }
+    },
+    "/api/v1/auth/mfa/disable": {
+      "post": {
+        "operationId": "disable_api_v1_auth_mfa_disable_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReauthRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Disable",
+        "tags": [
+          "authentification"
+        ]
+      }
+    },
+    "/api/v1/auth/mfa/enable": {
+      "post": {
+        "operationId": "enable_api_v1_auth_mfa_enable_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Enable",
+        "tags": [
+          "authentification"
+        ]
+      }
+    },
+    "/api/v1/auth/mfa/recovery-codes": {
+      "post": {
+        "operationId": "regenerate_api_v1_auth_mfa_recovery_codes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReauthRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Regenerate",
+        "tags": [
+          "authentification"
+        ]
+      }
+    },
+    "/api/v1/auth/mfa/setup": {
+      "post": {
+        "operationId": "setup_api_v1_auth_mfa_setup_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MfaSetupResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Setup",
+        "tags": [
+          "authentification"
+        ]
+      }
+    },
+    "/api/v1/auth/mfa/verify": {
+      "post": {
+        "operationId": "verify_api_v1_auth_mfa_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "423": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Locked"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "summary": "Verify",
         "tags": [
           "authentification"
         ]

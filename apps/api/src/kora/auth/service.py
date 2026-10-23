@@ -68,7 +68,7 @@ def get_user_by_email(session: Session, email: str) -> User | None:
     ).scalar_one_or_none()
 
 
-def _audit(
+def audit_auth_event(
     session: Session,
     action: str,
     user_id: uuid.UUID | None,
@@ -109,7 +109,7 @@ def register(
     )
     session.add(user)
     session.flush()
-    _audit(session, "user.registered", user.id, ctx)
+    audit_auth_event(session, "user.registered", user.id, ctx)
     session.commit()
     return user
 
@@ -135,7 +135,7 @@ def login(
 
     if user is not None and user.locked_until is not None and user.locked_until > now:
         # Pendant le verrouillage, le mot de passe n'est même pas vérifié (pas d'oracle).
-        _audit(session, "auth.login_blocked", user.id, ctx)
+        audit_auth_event(session, "auth.login_blocked", user.id, ctx)
         session.commit()
         raise AccountLockedError(
             "Compte temporairement verrouillé après plusieurs échecs. Réessayez plus tard.",
@@ -147,7 +147,7 @@ def login(
         if user is not None:
             user.failed_login_count += 1
             locked = user.failed_login_count >= settings.login_max_failures
-            _audit(
+            audit_auth_event(
                 session,
                 "auth.login_failed",
                 user.id,
@@ -157,7 +157,7 @@ def login(
             if locked:
                 user.locked_until = now + timedelta(seconds=settings.login_lockout_seconds)
                 user.failed_login_count = 0
-                _audit(
+                audit_auth_event(
                     session,
                     "auth.account_locked",
                     user.id,
@@ -177,7 +177,7 @@ def login(
         user.password_hash = hash_password(password)
 
     if user.totp_enabled_at is not None:
-        _audit(session, "auth.mfa_challenge_issued", user.id, ctx)
+        audit_auth_event(session, "auth.mfa_challenge_issued", user.id, ctx)
         session.commit()
         return MfaChallenge(
             mfa_token=create_mfa_token(user.id, user.token_version),
@@ -185,7 +185,7 @@ def login(
         )
 
     pair = open_session(session, user, ctx)
-    _audit(session, "auth.login_succeeded", user.id, ctx)
+    audit_auth_event(session, "auth.login_succeeded", user.id, ctx)
     session.commit()
     return pair
 
@@ -196,7 +196,7 @@ def refresh(session: Session, *, token: str, ctx: RequestContext) -> TokenPair:
     except refresh_tokens.RefreshError as exc:
         if exc.reuse_detected:
             # La révocation de la famille doit être durable malgré l'erreur renvoyée.
-            _audit(session, "auth.refresh_reuse_detected", exc.user_id, ctx)
+            audit_auth_event(session, "auth.refresh_reuse_detected", exc.user_id, ctx)
             session.commit()
         else:
             session.rollback()
@@ -226,7 +226,7 @@ def logout(session: Session, *, token: str, ctx: RequestContext) -> None:
     record = refresh_tokens.find_family(session, token)
     if record is not None:
         refresh_tokens.revoke_family(session, record.family_id)
-        _audit(session, "auth.logout", record.user_id, ctx)
+        audit_auth_event(session, "auth.logout", record.user_id, ctx)
     session.commit()
 
 
@@ -234,7 +234,7 @@ def logout_everywhere(session: Session, user: User, ctx: RequestContext) -> None
     """Invalide tous les jetons d'accès et toutes les sessions de l'utilisateur."""
     user.token_version += 1
     refresh_tokens.revoke_all(session, user.id)
-    _audit(session, "auth.logout_everywhere", user.id, ctx)
+    audit_auth_event(session, "auth.logout_everywhere", user.id, ctx)
     session.commit()
 
 
@@ -248,7 +248,7 @@ def change_password(
     # Toutes les autres sessions sont fermées ; l'appareil courant reçoit de nouveaux jetons.
     user.token_version += 1
     refresh_tokens.revoke_all(session, user.id)
-    _audit(session, "auth.password_changed", user.id, ctx)
+    audit_auth_event(session, "auth.password_changed", user.id, ctx)
     pair = open_session(session, user, ctx)
     session.commit()
     return pair
