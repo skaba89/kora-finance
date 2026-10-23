@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
 
 from kora.api.v1.auth import TokenResponse
+from kora.api.v1.common import RequestBody
 from kora.auth import mfa
 from kora.auth.deps import Ctx, CurrentUser, DbSession
 from kora.core.config import get_settings
@@ -32,16 +33,16 @@ class MfaSetupResponse(BaseModel):
     qr_svg_data_uri: str
 
 
-class CodeRequest(BaseModel):
+class CodeRequest(RequestBody):
     code: Code
 
 
-class MfaVerifyRequest(BaseModel):
+class MfaVerifyRequest(RequestBody):
     mfa_token: Annotated[str, Field(min_length=1, max_length=2000)]
     code: Code
 
 
-class ReauthRequest(BaseModel):
+class ReauthRequest(RequestBody):
     password: Annotated[str, Field(min_length=1, max_length=256)]
     code: Code
 

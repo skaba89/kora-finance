@@ -6,6 +6,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, EmailStr, Field
 
+from kora.api.v1.common import RequestBody
 from kora.auth import service
 from kora.auth.deps import Ctx, CurrentUser, DbSession
 from kora.core.config import get_settings
@@ -24,23 +25,23 @@ _ERRORS: dict[int | str, dict[str, object]] = {
 }
 
 
-class RegisterRequest(BaseModel):
+class RegisterRequest(RequestBody):
     email: EmailStr
     password: Annotated[str, Field(min_length=1, max_length=256)]
     full_name: Annotated[str, Field(min_length=1, max_length=200)]
     locale: Literal["fr", "en"] = "fr"
 
 
-class LoginRequest(BaseModel):
+class LoginRequest(RequestBody):
     email: EmailStr
     password: Annotated[str, Field(min_length=1, max_length=256)]
 
 
-class RefreshRequest(BaseModel):
+class RefreshRequest(RequestBody):
     refresh_token: Annotated[str, Field(min_length=1, max_length=200)]
 
 
-class ChangePasswordRequest(BaseModel):
+class ChangePasswordRequest(RequestBody):
     current_password: Annotated[str, Field(min_length=1, max_length=256)]
     new_password: Annotated[str, Field(min_length=1, max_length=256)]
 

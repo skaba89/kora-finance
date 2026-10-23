@@ -103,3 +103,32 @@ def client() -> Iterator[TestClient]:
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+@dataclass
+class CompanyFixture:
+    id: uuid.UUID
+    owner: UserFixture
+    headers: dict[str, str]
+
+
+@pytest.fixture
+def make_company(
+    client: TestClient, make_user: Callable[..., UserFixture]
+) -> Callable[..., CompanyFixture]:
+    """Crée un dossier via l'API ; le créateur en devient PME_DIRIGEANT."""
+
+    def factory(owner: UserFixture | None = None, **fields: object) -> CompanyFixture:
+        owner = owner or make_user()
+        headers = owner.headers(client)
+        body = {
+            "legal_name": f"Société {uuid.uuid4().hex[:6]} SARL",
+            "legal_form": "SARL",
+            "first_fiscal_year": {"start_date": "2026-01-01", "end_date": "2026-12-31"},
+            **fields,
+        }
+        response = client.post("/api/v1/companies", headers=headers, json=body)
+        assert response.status_code == 201, response.text
+        return CompanyFixture(id=uuid.UUID(response.json()["id"]), owner=owner, headers=headers)
+
+    return factory

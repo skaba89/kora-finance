@@ -7,10 +7,11 @@ export KORA_GID := $(shell id -g)
 
 COMPOSE := docker compose
 API := $(COMPOSE) run --rm api-tools
+API_NODEPS := $(COMPOSE) run --rm --no-deps -T api-tools
 WEB := $(COMPOSE) run --rm --no-deps web-tools
 
 .PHONY: help env up down logs ps \
-        api-lint api-typecheck api-test api-lock migrate \
+        api-lint api-typecheck api-test api-lock permissions-doc migrate \
         web-install web-lint web-typecheck web-test web-build \
         contract e2e secrets-scan check
 
@@ -47,6 +48,9 @@ api-test: ## Tests pytest (vraie base kora_test)
 
 api-lock: ## Régénère uv.lock après modification de pyproject.toml
 	$(API) uv lock
+
+permissions-doc: ## Régénère docs/PERMISSIONS.md depuis la matrice du code
+	$(API_NODEPS) python -c "from kora.tenancy.permissions import render_markdown; print(render_markdown(), end='')" > docs/PERMISSIONS.md
 
 # --- Frontend
 web-install: ## npm ci

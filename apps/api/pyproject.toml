@@ -56,8 +56,13 @@ ignore = [
     "PLR0913",
 ]
 
+# Typographie française (tiret demi-cadratin, signe ×, apostrophe typographique).
+allowed-confusables = ["–", "×", "’"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S107", "PLR2004"]
+# Handlers FastAPI : paramètres injectés (corps, contexte, session, filtres…).
+"src/kora/api/**" = ["PLR0917"]
 "alembic/**" = ["N999"]
 # Migrations générées : longues contraintes CHECK sur une ligne.
 "alembic/versions/**" = ["N999", "E501"]

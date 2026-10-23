@@ -95,10 +95,13 @@ services:
     build: { context: ./apps/api, target: dev }
     image: kora-api:dev
     user: "${KORA_UID:-1000}:${KORA_GID:-1000}"
-    working_dir: /app
+    # Dépôt entier monté : certains tests vérifient la documentation générée (docs/).
+    working_dir: /repo/apps/api
     volumes:
-      - ./apps/api:/app
+      - .:/repo
     environment:
+      PYTHONPATH: /repo/apps/api/src
+      UV_CACHE_DIR: /tmp/uv
       KORA_ENV: test
       KORA_DATABASE_URL: postgresql+psycopg://kora_app:${KORA_DB_APP_PASSWORD:?lancer make env}@postgres:5432/kora_test
       KORA_DATABASE_MIGRATION_URL: postgresql+psycopg://kora_owner:${KORA_DB_OWNER_PASSWORD:?lancer make env}@postgres:5432/kora_test

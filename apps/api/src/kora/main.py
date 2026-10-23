@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from kora import __version__
 from kora.api import health
-from kora.api.v1 import auth, mfa
+from kora.api.v1 import PREFIX, ROUTERS
 from kora.core.config import get_settings
 from kora.core.errors import install_error_handlers
 from kora.core.logging import configure_logging
@@ -37,8 +37,8 @@ def create_app() -> FastAPI:
     install_error_handlers(app)
     app.include_router(health.router)
 
-    api_v1 = APIRouter(prefix="/api/v1")
-    api_v1.include_router(auth.router)
-    api_v1.include_router(mfa.router)
+    api_v1 = APIRouter(prefix=PREFIX)
+    for router in ROUTERS:
+        api_v1.include_router(router)
     app.include_router(api_v1)
     return app

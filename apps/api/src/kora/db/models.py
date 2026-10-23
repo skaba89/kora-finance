@@ -1,6 +1,6 @@
 """Registre des modèles : chaque module de modèles doit être importé ici pour
 qu'Alembic (autogenerate, `alembic check`) le voie."""
 
-from kora.models import audit, identity
+from kora.models import accounting, audit, identity, organization
 
-__all__ = ["audit", "identity"]
+__all__ = ["accounting", "audit", "identity", "organization"]
