@@ -5,7 +5,7 @@ from redis import Redis
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from kora.api.health import get_redis
+from kora.core.redis import get_redis
 from kora.db.session import get_db
 
 

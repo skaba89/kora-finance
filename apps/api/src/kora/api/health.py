@@ -1,7 +1,6 @@
 """Sondes de santé : `live` (processus vivant) et `ready` (dépendances joignables)."""
 
 import logging
-from functools import lru_cache
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Response, status
@@ -12,7 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from kora.core.config import get_settings
+from kora.core.redis import get_redis
 from kora.db.session import get_db
 
 logger = logging.getLogger(__name__)
@@ -30,11 +29,6 @@ class ReadyResponse(BaseModel):
     status: CheckStatus
     database: CheckStatus
     redis: CheckStatus
-
-
-@lru_cache
-def get_redis() -> Redis:
-    return Redis.from_url(str(get_settings().redis_url), socket_timeout=2)
 
 
 @router.get("/live", response_model=LiveResponse)
