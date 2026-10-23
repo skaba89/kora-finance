@@ -5,10 +5,8 @@ vérifié, et ce qui reste.
 
 ## 2026-10-23 — Audit initial + phase 0 (fondations du dépôt)
 
-**Audit.** Aucun code Kora Finance préexistant sur la machine. Seul projet présent :
-`~/gestion-scolaire-pro` (ERP scolaire, autre produit). Ses modèles de socle (RLS,
-JWT + révocation, idempotence, stockage) serviront d'inspiration en phase 1, sans
-copier-coller ; ses passerelles de paiement utilisent des `float` → non réutilisables.
+**Audit.** Aucun code Kora Finance préexistant : projet démarré de zéro.
+Kora est un projet indépendant, sans lien avec les autres dépôts présents sur la machine.
 
 **Plan** par phases validé par l'utilisateur (`docs/PLAN.md`).
 
