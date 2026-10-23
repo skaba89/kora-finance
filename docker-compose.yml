@@ -1,0 +1,140 @@
+# Pile locale Kora Finance. Démarrage : `make up` (voir README).
+# Tous les ports sont liés à 127.0.0.1 : rien n'est exposé sur le réseau.
+
+x-api-env: &api-env
+  KORA_ENV: local
+  KORA_LOG_LEVEL: ${KORA_LOG_LEVEL:-INFO}
+  KORA_DATABASE_URL: postgresql+psycopg://kora_app:${KORA_DB_APP_PASSWORD:?lancer make env}@postgres:5432/kora
+  KORA_DATABASE_MIGRATION_URL: postgresql+psycopg://kora_owner:${KORA_DB_OWNER_PASSWORD:?lancer make env}@postgres:5432/kora
+  KORA_REDIS_URL: redis://redis:6379/0
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: kora_admin
+      POSTGRES_PASSWORD: ${KORA_POSTGRES_ADMIN_PASSWORD:?lancer make env}
+      POSTGRES_DB: postgres
+      KORA_DB_OWNER_PASSWORD: ${KORA_DB_OWNER_PASSWORD:?lancer make env}
+      KORA_DB_APP_PASSWORD: ${KORA_DB_APP_PASSWORD:?lancer make env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init-roles.sh:/docker-entrypoint-initdb.d/10-init-roles.sh:ro
+    ports:
+      - "127.0.0.1:${KORA_POSTGRES_PORT:-55432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kora_admin -d kora"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:${KORA_REDIS_PORT:-56379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Les migrations sont une étape distincte : l'API ne modifie jamais le schéma au démarrage.
+  migrate:
+    build: { context: ./apps/api, target: runtime }
+    image: kora-api:local
+    command: ["alembic", "upgrade", "head"]
+    environment: *api-env
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  api:
+    image: kora-api:local
+    environment: *api-env
+    ports:
+      - "127.0.0.1:${KORA_API_PORT:-8100}:8000"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  worker:
+    image: kora-api:local
+    command: ["dramatiq", "kora.worker.tasks", "--processes", "1", "--threads", "4"]
+    environment: *api-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  web:
+    build: { context: ./apps/web, target: runtime }
+    image: kora-web:local
+    environment:
+      KORA_API_INTERNAL_URL: http://api:8000
+    ports:
+      - "127.0.0.1:${KORA_WEB_PORT:-3100}:3000"
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # --- Outillage (profil « tools ») : tests, lint, typage, dans des conteneurs épinglés.
+  api-tools:
+    profiles: ["tools"]
+    build: { context: ./apps/api, target: dev }
+    image: kora-api:dev
+    user: "${KORA_UID:-1000}:${KORA_GID:-1000}"
+    working_dir: /app
+    volumes:
+      - ./apps/api:/app
+    environment:
+      KORA_ENV: test
+      KORA_DATABASE_URL: postgresql+psycopg://kora_app:${KORA_DB_APP_PASSWORD:?lancer make env}@postgres:5432/kora_test
+      KORA_DATABASE_MIGRATION_URL: postgresql+psycopg://kora_owner:${KORA_DB_OWNER_PASSWORD:?lancer make env}@postgres:5432/kora_test
+      KORA_REDIS_URL: redis://redis:6379/15
+      RUFF_CACHE_DIR: /tmp/ruff
+      MYPY_CACHE_DIR: /tmp/mypy
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  web-tools:
+    profiles: ["tools"]
+    image: node:24-bookworm-slim
+    user: "${KORA_UID:-1000}:${KORA_GID:-1000}"
+    working_dir: /repo/apps/web
+    volumes:
+      - .:/repo
+    environment:
+      HOME: /tmp
+      npm_config_cache: /tmp/.npm
+      NEXT_TELEMETRY_DISABLED: "1"
+
+  e2e:
+    profiles: ["e2e"]
+    image: mcr.microsoft.com/playwright:v1.64.1-noble
+    user: "${KORA_UID:-1000}:${KORA_GID:-1000}"
+    working_dir: /repo/apps/web
+    ipc: host
+    volumes:
+      - .:/repo
+    environment:
+      HOME: /tmp
+      CI: ${CI:-}
+      E2E_BASE_URL: http://web:3000
+    command: ["npx", "playwright", "test"]
+    depends_on:
+      web: { condition: service_healthy }
+
+volumes:
+  postgres_data:
+  redis_data:

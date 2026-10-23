@@ -1,0 +1,65 @@
+[project]
+name = "kora-api"
+version = "0.1.0"
+description = "Kora Finance — API et worker (FastAPI, SQLAlchemy, Dramatiq)"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "fastapi>=0.161,<0.163",
+    "uvicorn[standard]>=0.54,<0.55",
+    "sqlalchemy>=2.1.6,<2.2",
+    "alembic>=1.20,<1.21",
+    "psycopg[binary]>=3.3,<3.4",
+    "pydantic>=2.14,<2.15",
+    "pydantic-settings>=2.16,<2.17",
+    "redis>=8.1,<8.2",
+    "dramatiq[redis]>=2.2,<2.3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1,<9.2",
+    "pytest-cov>=7.1,<7.2",
+    "httpx2>=2.16,<2.17",
+    "ruff>=0.17,<0.18",
+    "mypy>=2.4,<2.5",
+]
+
+# Pas de paquet installable : le code vit dans src/ et PYTHONPATH=src
+# (Dockerfile, pytest, alembic). Évite de dépendre d'un backend de build.
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+filterwarnings = ["error"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "PL", "PT", "DTZ", "N"]
+ignore = ["PLR2004"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "PLR2004"]
+"alembic/**" = ["N999"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+mypy_path = "src"
+explicit_package_bases = true
+plugins = ["pydantic.mypy"]
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["dramatiq.*"]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["src/kora"]
+branch = true
