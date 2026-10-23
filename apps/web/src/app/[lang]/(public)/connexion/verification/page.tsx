@@ -12,13 +12,28 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.auth.mfaTitle };
 }
 
-async function NextField({
+/** Rendu en un seul bloc avec la destination de retour (voir la page de connexion). */
+async function MfaForm({
   searchParams,
 }: {
   searchParams: PageProps<"/[lang]/connexion/verification">["searchParams"];
 }) {
-  const value = (await searchParams).suivant;
-  return <input type="hidden" name="suivant" value={typeof value === "string" ? value : ""} />;
+  const [{ t }, params] = await Promise.all([getDictionary(), searchParams]);
+  const next = typeof params.suivant === "string" ? params.suivant : "";
+  return (
+    <ActionForm action={verifyMfaAction} submitLabel={t.auth.verifyButton} pendingLabel={t.common.pending}>
+      <input type="hidden" name="suivant" value={next} />
+      <Field
+        label={t.auth.code}
+        name="code"
+        hint={t.auth.codeHint}
+        autoComplete="one-time-code"
+        inputMode="text"
+        required
+        autoFocus
+      />
+    </ActionForm>
+  );
 }
 
 export default async function MfaPage(props: PageProps<"/[lang]/connexion/verification">) {
@@ -32,20 +47,9 @@ export default async function MfaPage(props: PageProps<"/[lang]/connexion/verifi
         <CardDescription>{t.auth.mfaSubtitle}</CardDescription>
       </CardHeader>
       <CardContent>
-        <ActionForm action={verifyMfaAction} submitLabel={t.auth.verifyButton} pendingLabel={t.common.pending}>
-          <Suspense>
-            <NextField searchParams={props.searchParams} />
-          </Suspense>
-          <Field
-            label={t.auth.code}
-            name="code"
-            hint={t.auth.codeHint}
-            autoComplete="one-time-code"
-            inputMode="text"
-            required
-            autoFocus
-          />
-        </ActionForm>
+        <Suspense fallback={<div className="bg-muted h-32 animate-pulse rounded" />}>
+          <MfaForm searchParams={props.searchParams} />
+        </Suspense>
       </CardContent>
     </Card>
   );

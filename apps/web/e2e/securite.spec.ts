@@ -1,16 +1,20 @@
 import { expect, test } from "@playwright/test";
 
-import { createCompany, login, registerAndLogin, totp, uniqueEmail, waitForNextTotpStep } from "./helpers";
+import {
+  createCompany,
+  login,
+  register,
+  registerAndLogin,
+  totp,
+  uniqueEmail,
+  waitForNextTotpStep,
+} from "./helpers";
 
 test("les pages protégées renvoient vers la connexion puis vers la page demandée", async ({ page }) => {
   const email = uniqueEmail();
   await page.goto("/dossiers/nouveau");
   await expect(page).toHaveURL(/\/connexion\?suivant=%2Fdossiers%2Fnouveau/);
-  await page.goto("/inscription");
-  await page.getByLabel("Nom complet").fill("Ibrahima Barry");
-  await page.getByLabel("Adresse email").fill(email);
-  await page.getByLabel("Mot de passe").fill("Mot-de-passe-E2E-2026");
-  await page.getByRole("button", { name: "Créer mon compte" }).click();
+  await register(page, email, "Ibrahima Barry");
   await page.goto("/connexion?suivant=%2Fdossiers%2Fnouveau");
   await page.getByLabel("Adresse email").fill(email);
   await page.getByLabel("Mot de passe").fill("Mot-de-passe-E2E-2026");
@@ -20,11 +24,7 @@ test("les pages protégées renvoient vers la connexion puis vers la page demand
 
 test("une redirection externe après connexion est refusée", async ({ page }) => {
   const email = uniqueEmail();
-  await page.goto("/inscription");
-  await page.getByLabel("Nom complet").fill("Mariama Diallo");
-  await page.getByLabel("Adresse email").fill(email);
-  await page.getByLabel("Mot de passe").fill("Mot-de-passe-E2E-2026");
-  await page.getByRole("button", { name: "Créer mon compte" }).click();
+  await register(page, email, "Mariama Diallo");
   await page.goto("/connexion?suivant=https%3A%2F%2Fevil.example");
   await page.getByLabel("Adresse email").fill(email);
   await page.getByLabel("Mot de passe").fill("Mot-de-passe-E2E-2026");

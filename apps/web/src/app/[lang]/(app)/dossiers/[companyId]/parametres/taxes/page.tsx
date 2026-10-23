@@ -103,7 +103,7 @@ export default async function TaxesPage({
                   name="kind"
                   options={[
                     { value: "TVA", label: "TVA" },
-                    { value: "AUTRE", label: "—" },
+                    { value: "AUTRE", label: t.legalForms.AUTRE },
                   ]}
                 />
               </div>

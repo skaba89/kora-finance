@@ -49,6 +49,12 @@ Commits : `dac9685` (1a), `070ad3d` (1b), `796c2b6` (1c), `35262c0` (1d-1e), pui
 - Requêtes parallèles avec le même refresh token → fenêtre de tolérance.
 - FastAPI 0.162 imbrique les routeurs (`_IncludedRouter`) → registre public `ROUTERS`
   pour que les tests d'isolation ne soient jamais vides (test sentinelle).
+- Connexion sur réseau lent : le champ « suivant » arrivait en streaming après le
+  formulaire, qui pouvait être envoyé sans lui → formulaire rendu en un seul bloc.
+- Revue visuelle : sur téléphone, le menu du dossier occupait tout le premier écran →
+  barre horizontale défilante sous `md`.
+- E2E : 3 exécutions consécutives à 24/24 après correction de courses dans les tests
+  (navigation avant la fin d'une Server Action).
 
 **Reste à faire — non livré en phase 1 (à traiter avant une mise en production)**
 - **Emails** : vérification de l'adresse, *mot de passe oublié*, invitation d'une

@@ -24,9 +24,20 @@ async function Notice({ searchParams }: { searchParams: PageProps<"/[lang]/conne
   ) : null;
 }
 
-async function NextField({ searchParams }: { searchParams: PageProps<"/[lang]/connexion">["searchParams"] }) {
-  const value = (await searchParams).suivant;
-  return <input type="hidden" name="suivant" value={typeof value === "string" ? value : ""} />;
+/**
+ * Formulaire rendu en un seul bloc avec la destination de retour : sur réseau lent,
+ * il ne doit pas pouvoir être envoyé avant que le champ « suivant » soit arrivé.
+ */
+async function LoginForm({ searchParams }: { searchParams: PageProps<"/[lang]/connexion">["searchParams"] }) {
+  const [{ t }, params] = await Promise.all([getDictionary(), searchParams]);
+  const next = typeof params.suivant === "string" ? params.suivant : "";
+  return (
+    <ActionForm action={loginAction} submitLabel={t.auth.loginButton} pendingLabel={t.common.pending}>
+      <input type="hidden" name="suivant" value={next} />
+      <Field label={t.auth.email} name="email" type="email" autoComplete="username" required />
+      <Field label={t.auth.password} name="password" type="password" autoComplete="current-password" required />
+    </ActionForm>
+  );
 }
 
 export default async function LoginPage(props: PageProps<"/[lang]/connexion">) {
@@ -43,19 +54,9 @@ export default async function LoginPage(props: PageProps<"/[lang]/connexion">) {
         <Suspense>
           <Notice searchParams={props.searchParams} />
         </Suspense>
-        <ActionForm action={loginAction} submitLabel={t.auth.loginButton} pendingLabel={t.common.pending}>
-          <Suspense>
-            <NextField searchParams={props.searchParams} />
-          </Suspense>
-          <Field label={t.auth.email} name="email" type="email" autoComplete="username" required />
-          <Field
-            label={t.auth.password}
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-          />
-        </ActionForm>
+        <Suspense fallback={<div className="bg-muted h-48 animate-pulse rounded" />}>
+          <LoginForm searchParams={props.searchParams} />
+        </Suspense>
         <p className="text-muted-foreground text-sm">
           {t.auth.noAccount}{" "}
           <Link href="/inscription" className="text-foreground underline underline-offset-4">

@@ -20,17 +20,21 @@ async function CompanyNav({ params }: { params: Params }) {
     { href: `${base}/parametres/utilisateurs`, label: t.nav.members, permission: "members:read" },
   ].filter((item) => can(company, item.permission));
   return (
-    <nav aria-label={t.nav.mainMenu} className="flex flex-col gap-1">
-      <div className="mb-3 px-3">
-        <p className="font-semibold leading-tight">{company.company.legal_name}</p>
-        <Badge variant="secondary" className="mt-1">
+    <nav aria-label={t.nav.mainMenu}>
+      <div className="mb-2 flex items-center gap-2 px-1 md:mb-3 md:block md:px-3">
+        <p className="truncate font-semibold leading-tight">{company.company.legal_name}</p>
+        <Badge variant="secondary" className="md:mt-1">
           {t.roles[company.role]}
         </Badge>
       </div>
+      {/* Téléphone : barre horizontale défilante pour laisser le contenu en premier écran. */}
+      <div className="-mx-4 flex gap-1 overflow-x-auto border-b px-4 pb-2 whitespace-nowrap md:mx-0 md:flex-col md:overflow-visible md:border-0 md:px-0 md:pb-0">
       <NavLink href={base} exact>
         {t.nav.dashboard}
       </NavLink>
-      <p className="text-muted-foreground mt-3 px-3 text-xs font-medium uppercase">{t.nav.settings}</p>
+      <p className="text-muted-foreground mt-3 hidden px-3 text-xs font-medium uppercase md:block">
+        {t.nav.settings}
+      </p>
       {settings.map((item) => (
         <NavLink key={item.href} href={item.href}>
           {item.label}
@@ -42,6 +46,7 @@ async function CompanyNav({ params }: { params: Params }) {
       <NavLink href="/dossiers" exact>
         {t.nav.switchCompany}
       </NavLink>
+      </div>
     </nav>
   );
 }
