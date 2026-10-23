@@ -7,6 +7,8 @@ x-api-env: &api-env
   KORA_DATABASE_URL: postgresql+psycopg://kora_app:${KORA_DB_APP_PASSWORD:?lancer make env}@postgres:5432/kora
   KORA_DATABASE_MIGRATION_URL: postgresql+psycopg://kora_owner:${KORA_DB_OWNER_PASSWORD:?lancer make env}@postgres:5432/kora
   KORA_REDIS_URL: redis://redis:6379/0
+  KORA_JWT_SECRET: ${KORA_JWT_SECRET:?lancer make env}
+  KORA_ENCRYPTION_KEYS: ${KORA_ENCRYPTION_KEYS:?lancer make env}
 
 services:
   postgres:
@@ -101,6 +103,8 @@ services:
       KORA_DATABASE_URL: postgresql+psycopg://kora_app:${KORA_DB_APP_PASSWORD:?lancer make env}@postgres:5432/kora_test
       KORA_DATABASE_MIGRATION_URL: postgresql+psycopg://kora_owner:${KORA_DB_OWNER_PASSWORD:?lancer make env}@postgres:5432/kora_test
       KORA_REDIS_URL: redis://redis:6379/15
+      KORA_JWT_SECRET: ${KORA_JWT_SECRET:?lancer make env}
+      KORA_ENCRYPTION_KEYS: ${KORA_ENCRYPTION_KEYS:?lancer make env}
       RUFF_CACHE_DIR: /tmp/ruff
       MYPY_CACHE_DIR: /tmp/mypy
     depends_on:

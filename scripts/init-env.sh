@@ -9,7 +9,10 @@ fi
 umask 077
 while IFS= read -r line; do
   if [[ "$line" == *"=__GENERATE__" ]]; then
-    printf '%s=%s\n' "${line%%=*}" "$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')"
+    printf '%s=%s\n' "${line%%=*}" "$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
+  elif [[ "$line" == *"=__GENERATE_FERNET__" ]]; then
+    # Clé Fernet : 32 octets aléatoires en base64 url-safe.
+    printf '%s=%s\n' "${line%%=*}" "$(head -c32 /dev/urandom | base64 | tr '+/' '-_')"
   else
     printf '%s\n' "$line"
   fi
