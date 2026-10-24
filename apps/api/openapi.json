@@ -446,6 +446,83 @@
         "title": "ChangePasswordRequest",
         "type": "object"
       },
+      "ClosingCheckOut": {
+        "properties": {
+          "carried_accounts": {
+            "description": "Comptes de bilan reportés en à-nouveaux",
+            "title": "Carried Accounts",
+            "type": "integer"
+          },
+          "drafts": {
+            "title": "Drafts",
+            "type": "integer"
+          },
+          "issues": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "next_fiscal_year_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Fiscal Year Id"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "result": {
+            "description": "Résultat de l'exercice (positif = bénéfice)",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ready",
+          "issues",
+          "drafts",
+          "result",
+          "carried_accounts",
+          "next_fiscal_year_id"
+        ],
+        "title": "ClosingCheckOut",
+        "type": "object"
+      },
+      "ClosingOut": {
+        "properties": {
+          "fiscal_year": {
+            "$ref": "#/components/schemas/FiscalYearOut"
+          },
+          "opening_entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Entry Id"
+          }
+        },
+        "required": [
+          "fiscal_year",
+          "opening_entry_id"
+        ],
+        "title": "ClosingOut",
+        "type": "object"
+      },
       "CodeRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1363,6 +1440,18 @@
             "title": "Id",
             "type": "string"
           },
+          "locked_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked Until"
+          },
           "start_date": {
             "format": "date",
             "title": "Start Date",
@@ -1378,7 +1467,8 @@
           "start_date",
           "end_date",
           "status",
-          "closed_at"
+          "closed_at",
+          "locked_until"
         ],
         "title": "FiscalYearOut",
         "type": "object"
@@ -2182,6 +2272,29 @@
           "status"
         ],
         "title": "LiveResponse",
+        "type": "object"
+      },
+      "LockIn": {
+        "additionalProperties": false,
+        "properties": {
+          "locked_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Dernier jour verrouillé ; null pour tout déverrouiller",
+            "title": "Locked Until"
+          }
+        },
+        "required": [
+          "locked_until"
+        ],
+        "title": "LockIn",
         "type": "object"
       },
       "LoginRequest": {
@@ -5930,6 +6043,410 @@
         "summary": "Create Fiscal Year",
         "tags": [
           "dossiers"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/fiscal-years/{fiscal_year_id}/closing": {
+      "post": {
+        "description": "Clôture l'exercice et génère les à-nouveaux dans l'exercice suivant.",
+        "operationId": "close_fiscal_year_api_v1_companies__company_id__fiscal_years__fiscal_year_id__closing_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fiscal_year_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fiscal Year Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClosingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Close Fiscal Year",
+        "tags": [
+          "clôture"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/fiscal-years/{fiscal_year_id}/closing-check": {
+      "get": {
+        "description": "Ce que ferait la clôture, et ce qui l'empêche, sans rien modifier.",
+        "operationId": "closing_check_api_v1_companies__company_id__fiscal_years__fiscal_year_id__closing_check_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fiscal_year_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fiscal Year Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClosingCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Closing Check",
+        "tags": [
+          "clôture"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/fiscal-years/{fiscal_year_id}/lock": {
+      "post": {
+        "description": "Verrouille la période jusqu'à une date. Reculer la date exige le droit de clôture.",
+        "operationId": "lock_period_api_v1_companies__company_id__fiscal_years__fiscal_year_id__lock_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fiscal_year_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fiscal Year Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LockIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FiscalYearOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Lock Period",
+        "tags": [
+          "clôture"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/fiscal-years/{fiscal_year_id}/reopening": {
+      "post": {
+        "description": "Rouvre l'exercice ; ses à-nouveaux générés sont contre-passés.",
+        "operationId": "reopen_fiscal_year_api_v1_companies__company_id__fiscal_years__fiscal_year_id__reopening_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "fiscal_year_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fiscal Year Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FiscalYearOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reopen Fiscal Year",
+        "tags": [
+          "clôture"
         ]
       }
     },

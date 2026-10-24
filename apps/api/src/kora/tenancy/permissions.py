@@ -22,6 +22,7 @@ class Permission(StrEnum):
     MEMBERS_MANAGE = "members:manage"
     FISCAL_YEARS_READ = "fiscal_years:read"
     FISCAL_YEARS_MANAGE = "fiscal_years:manage"
+    FISCAL_YEARS_CLOSE = "fiscal_years:close"
     ACCOUNTS_READ = "accounts:read"
     ACCOUNTS_MANAGE = "accounts:manage"
     TAXES_READ = "taxes:read"
@@ -40,7 +41,8 @@ DESCRIPTIONS: dict[Permission, str] = {
     Permission.MEMBERS_READ: "Voir les utilisateurs ayant accès au dossier",
     Permission.MEMBERS_MANAGE: "Ajouter, modifier ou retirer des utilisateurs du dossier",
     Permission.FISCAL_YEARS_READ: "Consulter les exercices comptables",
-    Permission.FISCAL_YEARS_MANAGE: "Créer des exercices comptables",
+    Permission.FISCAL_YEARS_MANAGE: "Créer des exercices et verrouiller des périodes",
+    Permission.FISCAL_YEARS_CLOSE: "Clôturer, rouvrir un exercice et déverrouiller une période",
     Permission.ACCOUNTS_READ: "Consulter le plan comptable",
     Permission.ACCOUNTS_MANAGE: "Personnaliser le plan comptable",
     Permission.TAXES_READ: "Consulter les taux de taxes",

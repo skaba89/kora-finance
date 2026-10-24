@@ -59,6 +59,7 @@ MembersRead = Annotated[TenantContext, Depends(require(Permission.MEMBERS_READ))
 MembersManage = Annotated[TenantContext, Depends(require(Permission.MEMBERS_MANAGE))]
 FiscalYearsRead = Annotated[TenantContext, Depends(require(Permission.FISCAL_YEARS_READ))]
 FiscalYearsManage = Annotated[TenantContext, Depends(require(Permission.FISCAL_YEARS_MANAGE))]
+FiscalYearsClose = Annotated[TenantContext, Depends(require(Permission.FISCAL_YEARS_CLOSE))]
 AccountsRead = Annotated[TenantContext, Depends(require(Permission.ACCOUNTS_READ))]
 AccountsManage = Annotated[TenantContext, Depends(require(Permission.ACCOUNTS_MANAGE))]
 TaxesRead = Annotated[TenantContext, Depends(require(Permission.TAXES_READ))]

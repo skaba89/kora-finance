@@ -204,3 +204,53 @@ export async function autoLetterAction(companyId: string, accountId: string, _: 
   refresh();
   return { status: "success", message: interpolate(t.lettering.autoDone, { count: data.created }) };
 }
+
+export async function unlockPeriodAction(companyId: string, fiscalYearId: string, _: ActionState): Promise<ActionState> {
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/fiscal-years/{fiscal_year_id}/lock",
+    { params: { path: { company_id: companyId, fiscal_year_id: fiscalYearId } }, body: { locked_until: null } },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  return { status: "success" };
+}
+
+export async function lockPeriodAction(
+  companyId: string,
+  fiscalYearId: string,
+  _: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const until = field(formData, "locked_until");
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/fiscal-years/{fiscal_year_id}/lock",
+    {
+      params: { path: { company_id: companyId, fiscal_year_id: fiscalYearId } },
+      body: { locked_until: until || null },
+    },
+  );
+  if (!response.ok) return failure(error);
+  const t = await actionDictionary();
+  refresh();
+  return { status: "success", message: t.common.saved };
+}
+
+export async function closeFiscalYearAction(companyId: string, fiscalYearId: string, _: ActionState): Promise<ActionState> {
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/fiscal-years/{fiscal_year_id}/closing",
+    { params: { path: { company_id: companyId, fiscal_year_id: fiscalYearId } } },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  return { status: "success" };
+}
+
+export async function reopenFiscalYearAction(companyId: string, fiscalYearId: string, _: ActionState): Promise<ActionState> {
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/fiscal-years/{fiscal_year_id}/reopening",
+    { params: { path: { company_id: companyId, fiscal_year_id: fiscalYearId } } },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  return { status: "success" };
+}

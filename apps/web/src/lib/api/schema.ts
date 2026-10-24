@@ -490,6 +490,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/fiscal-years/{fiscal_year_id}/closing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close Fiscal Year
+         * @description Clôture l'exercice et génère les à-nouveaux dans l'exercice suivant.
+         */
+        post: operations["close_fiscal_year_api_v1_companies__company_id__fiscal_years__fiscal_year_id__closing_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/fiscal-years/{fiscal_year_id}/closing-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Closing Check
+         * @description Ce que ferait la clôture, et ce qui l'empêche, sans rien modifier.
+         */
+        get: operations["closing_check_api_v1_companies__company_id__fiscal_years__fiscal_year_id__closing_check_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/fiscal-years/{fiscal_year_id}/lock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lock Period
+         * @description Verrouille la période jusqu'à une date. Reculer la date exige le droit de clôture.
+         */
+        post: operations["lock_period_api_v1_companies__company_id__fiscal_years__fiscal_year_id__lock_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/fiscal-years/{fiscal_year_id}/reopening": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopen Fiscal Year
+         * @description Rouvre l'exercice ; ses à-nouveaux générés sont contre-passés.
+         */
+        post: operations["reopen_fiscal_year_api_v1_companies__company_id__fiscal_years__fiscal_year_id__reopening_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/invitations": {
         parameters: {
             query?: never;
@@ -1119,6 +1199,33 @@ export interface components {
             /** New Password */
             new_password: string;
         };
+        /** ClosingCheckOut */
+        ClosingCheckOut: {
+            /**
+             * Carried Accounts
+             * @description Comptes de bilan reportés en à-nouveaux
+             */
+            carried_accounts: number;
+            /** Drafts */
+            drafts: number;
+            /** Issues */
+            issues: string[];
+            /** Next Fiscal Year Id */
+            next_fiscal_year_id: string | null;
+            /** Ready */
+            ready: boolean;
+            /**
+             * Result
+             * @description Résultat de l'exercice (positif = bénéfice)
+             */
+            result: string;
+        };
+        /** ClosingOut */
+        ClosingOut: {
+            fiscal_year: components["schemas"]["FiscalYearOut"];
+            /** Opening Entry Id */
+            opening_entry_id: string | null;
+        };
         /** CodeRequest */
         CodeRequest: {
             /** Code */
@@ -1445,6 +1552,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Locked Until */
+            locked_until: string | null;
             /**
              * Start Date
              * Format: date
@@ -1817,6 +1926,14 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /** LockIn */
+        LockIn: {
+            /**
+             * Locked Until
+             * @description Dernier jour verrouillé ; null pour tout déverrouiller
+             */
+            locked_until: string | null;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -4155,6 +4272,277 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiscalYearOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    close_fiscal_year_api_v1_companies__company_id__fiscal_years__fiscal_year_id__closing_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fiscal_year_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    closing_check_api_v1_companies__company_id__fiscal_years__fiscal_year_id__closing_check_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fiscal_year_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosingCheckOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lock_period_api_v1_companies__company_id__fiscal_years__fiscal_year_id__lock_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fiscal_year_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LockIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiscalYearOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reopen_fiscal_year_api_v1_companies__company_id__fiscal_years__fiscal_year_id__reopening_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fiscal_year_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

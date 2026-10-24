@@ -148,6 +148,14 @@ export async function getLetterableLines(
   );
 }
 
+export async function getClosingCheck(companyId: string, fiscalYearId: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/fiscal-years/{fiscal_year_id}/closing-check", {
+      params: { path: { company_id: companyId, fiscal_year_id: fiscalYearId } },
+    }),
+  );
+}
+
 export async function getAuditEvents(companyId: string, limit: number, offset: number) {
   return read(
     (await api()).GET("/api/v1/companies/{company_id}/audit-events", {

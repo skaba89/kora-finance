@@ -239,3 +239,24 @@ et la RLS, puis l'auth, puis l'audit chaîné.
 
 **Vérifié** : tests du service, de la base (lettrage déséquilibré ou sur un autre compte
 refusé au commit), IDOR, matrice des permissions ; E2E desktop + mobile ; revue mobile.
+
+## 2026-10-24 — Phase 2d : verrouillage, clôture, à-nouveaux, réouverture
+
+**Livré**
+- Migration 0007 : `fiscal_years.locked_until`, `journal_entries.origin` (MANUAL/CLOSING) ;
+  déclencheur réécrit : création, modification et validation refusées dans un exercice
+  clôturé ou une période verrouillée (tout rôle).
+- `accounting/closing.py` : verrouillage (refusé s'il reste des brouillons ; reculer la date
+  exige `fiscal_years:close`), contrôle préalable sans effet, clôture (aucun brouillon,
+  exercice suivant ouvert, à-nouveaux classes 1–5 + résultat 131/139 dans le journal AN au
+  1er jour), réouverture par contre-passation des à-nouveaux générés.
+- Lettrage : les à-nouveaux générés sont exclus (le solde n'est pas compté deux fois) ; les
+  factures et règlements restent lettrables d'un exercice à l'autre.
+- API : `POST …/fiscal-years/{id}/lock|closing|reopening`, `GET …/closing-check`.
+- Web : page Exercices (une carte par exercice : verrouillage, résultat, blocages, clôture,
+  réouverture).
+
+**Vérifié** : critère d'acceptation « les à-nouveaux reproduisent exactement le bilan de
+clôture » testé compte par compte ; bénéfice (131) et perte (139) ; réouverture puis
+nouvelle clôture après correction ; réouverture refusée si l'exercice suivant est clôturé ;
+déclencheur testé en SQL direct ; matrice des permissions ; E2E desktop + mobile.

@@ -133,6 +133,7 @@ def _probe(permission: Permission, client: TestClient, s: Scenario, make_user: M
             client.get(f"{base}/entries", headers=s.headers).status_code
         ),
         Permission.ENTRIES_WRITE: lambda: _create_draft(client, base, s).status_code,
+        Permission.FISCAL_YEARS_CLOSE: lambda: _close_probe(client, base, s),
         Permission.LETTERING_MANAGE: lambda: (
             client.post(
                 f"{base}/letterings/auto",
@@ -147,6 +148,19 @@ def _probe(permission: Permission, client: TestClient, s: Scenario, make_user: M
         ),
     }
     return calls[permission]()
+
+
+def _close_probe(client: TestClient, base: str, s: Scenario) -> int:
+    """Clôture d'un exercice vide (2030) dont le suivant (2031) existe."""
+    for year in (2030, 2031):
+        client.post(
+            f"{base}/fiscal-years",
+            headers=s.headers,
+            json={"start_date": f"{year}-01-01", "end_date": f"{year}-12-31"},
+        )
+    years = client.get(f"{base}/fiscal-years", headers=s.headers).json()
+    target = next((y["id"] for y in years if y["start_date"] == "2030-01-01"), years[0]["id"])
+    return client.post(f"{base}/fiscal-years/{target}/closing", headers=s.headers).status_code
 
 
 def _create_draft(client: TestClient, base: str, s: Scenario) -> Any:

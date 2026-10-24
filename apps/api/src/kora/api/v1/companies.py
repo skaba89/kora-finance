@@ -180,6 +180,7 @@ class FiscalYearOut(BaseModel):
     end_date: date
     status: str
     closed_at: datetime | None
+    locked_until: date | None
 
     @classmethod
     def of(cls, fiscal_year: FiscalYear) -> "FiscalYearOut":

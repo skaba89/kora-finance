@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from kora.api.v1 import (
     accounting,
     auth,
+    closing,
     companies,
     firms,
     invitations,
@@ -25,6 +26,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     ledger.router,
     reports.router,
     lettering.router,
+    closing.router,
     firms.router,
     invitations.router,
 )

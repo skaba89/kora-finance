@@ -38,7 +38,7 @@ test("inscription, création d'un dossier et paramétrage comptable", async ({ p
   await page.getByLabel("Début").fill("2027-01-01");
   await page.getByLabel("Fin").fill("2027-12-31");
   await page.getByRole("button", { name: "Ajouter" }).click();
-  await expect(page.getByRole("cell", { name: "01/01/2027" })).toBeVisible();
+  await expect(page.getByRole("region", { name: /^01\/01\/2027/ })).toBeVisible();
   await page.getByLabel("Début").fill("2027-06-01");
   await page.getByLabel("Fin").fill("2028-05-31");
   await page.getByRole("button", { name: "Ajouter" }).click();
