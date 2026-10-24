@@ -156,6 +156,14 @@ export async function getClosingCheck(companyId: string, fiscalYearId: string) {
   );
 }
 
+export async function getFinancialStatements(companyId: string, query: { fiscal_year_id: string; date_to?: string }) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/financial-statements", {
+      params: { path: { company_id: companyId }, query },
+    }),
+  );
+}
+
 export async function getAuditEvents(companyId: string, limit: number, offset: number) {
   return read(
     (await api()).GET("/api/v1/companies/{company_id}/audit-events", {

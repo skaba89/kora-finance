@@ -472,6 +472,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/financial-statements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Financial Statements
+         * @description Bilan et compte de résultat SYSCOHADA révisé sur les écritures validées, avec
+         *     l'exercice précédent en comparaison (s'il existe dans Kora).
+         */
+        get: operations["financial_statements_api_v1_companies__company_id__financial_statements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/fiscal-years": {
         parameters: {
             query?: never;
@@ -1038,6 +1059,32 @@ export interface components {
             /** Label */
             label?: string | null;
         };
+        /** AssetLineOut */
+        AssetLineOut: {
+            /** Code */
+            code: string;
+            /**
+             * Depreciation
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            depreciation: string;
+            /**
+             * Gross
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            gross: string;
+            /** Is Total */
+            is_total: boolean;
+            /** Label */
+            label: string;
+            /**
+             * Net
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            net: string;
+            /** Previous Net */
+            previous_net: string | null;
+        };
         /** AssignmentCreate */
         AssignmentCreate: {
             /**
@@ -1483,6 +1530,34 @@ export interface components {
              * @default []
              */
             errors: string[];
+        };
+        /** FinancialStatementsOut */
+        FinancialStatementsOut: {
+            /** Assets */
+            assets: components["schemas"]["AssetLineOut"][];
+            /**
+             * Balanced
+             * @description Total actif = total passif et tous les comptes affectés
+             */
+            balanced: boolean;
+            /** Income Statement */
+            income_statement: components["schemas"]["StatementLineOut"][];
+            /** Liabilities */
+            liabilities: components["schemas"]["StatementLineOut"][];
+            /**
+             * Net Result
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            net_result: string;
+            period: components["schemas"]["PeriodRef"];
+            previous_period: components["schemas"]["PeriodRef"] | null;
+            /**
+             * Reference
+             * @description Version du référentiel d'affectation des comptes
+             */
+            reference: string;
+            /** Unmapped Accounts */
+            unmapped_accounts: string[];
         };
         /** FirmCreate */
         FirmCreate: {
@@ -2064,6 +2139,24 @@ export interface components {
              */
             fiscal_year_id: string;
         };
+        /** PeriodRef */
+        PeriodRef: {
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            /**
+             * Fiscal Year Id
+             * Format: uuid
+             */
+            fiscal_year_id: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+        };
         /** ReadyResponse */
         ReadyResponse: {
             /**
@@ -2138,6 +2231,22 @@ export interface components {
          * @enum {string}
          */
         Role: "SUPER_ADMIN" | "CABINET_ADMIN" | "CABINET_COLLABORATEUR" | "PME_DIRIGEANT" | "PME_COMPTABLE" | "PME_LECTEUR" | "PARTENAIRE_FINANCIER";
+        /** StatementLineOut */
+        StatementLineOut: {
+            /**
+             * Amount
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            amount: string;
+            /** Code */
+            code: string;
+            /** Is Total */
+            is_total: boolean;
+            /** Label */
+            label: string;
+            /** Previous Amount */
+            previous_amount: string | null;
+        };
         /** TaxRateCreate */
         TaxRateCreate: {
             /** Code */
@@ -4177,6 +4286,68 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    financial_statements_api_v1_companies__company_id__financial_statements_get: {
+        parameters: {
+            query: {
+                fiscal_year_id: string;
+                date_to?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialStatementsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

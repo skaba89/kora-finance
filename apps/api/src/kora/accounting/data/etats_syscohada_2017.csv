@@ -1,0 +1,96 @@
+etat;code;libelle;type;formule
+ACTIF;AD;Immobilisations incorporelles;ligne;
+ACTIF;AJ;Terrains;ligne;
+ACTIF;AK;Bâtiments;ligne;
+ACTIF;AL;Aménagements, agencements et installations;ligne;
+ACTIF;AM;Matériel, mobilier et actifs biologiques;ligne;
+ACTIF;AN;Matériel de transport;ligne;
+ACTIF;AP;Avances et acomptes versés sur immobilisations;ligne;
+ACTIF;AI;Immobilisations corporelles;total;AJ+AK+AL+AM+AN+AP
+ACTIF;AR;Titres de participation;ligne;
+ACTIF;AS;Autres immobilisations financières;ligne;
+ACTIF;AQ;Immobilisations financières;total;AR+AS
+ACTIF;AZ;TOTAL ACTIF IMMOBILISÉ;total;AD+AI+AQ
+ACTIF;BA;Actif circulant HAO;ligne;
+ACTIF;BB;Stocks et encours;ligne;
+ACTIF;BH;Fournisseurs, avances versées;ligne;
+ACTIF;BI;Clients;ligne;
+ACTIF;BJ;Autres créances;ligne;
+ACTIF;BG;Créances et emplois assimilés;total;BH+BI+BJ
+ACTIF;BK;TOTAL ACTIF CIRCULANT;total;BA+BB+BG
+ACTIF;BQ;Titres de placement;ligne;
+ACTIF;BR;Valeurs à encaisser;ligne;
+ACTIF;BS;Banques, chèques postaux, caisse et assimilés;ligne;
+ACTIF;BT;TOTAL TRÉSORERIE-ACTIF;total;BQ+BR+BS
+ACTIF;BU;Écart de conversion-Actif;ligne;
+ACTIF;BZ;TOTAL GÉNÉRAL;total;AZ+BK+BT+BU
+PASSIF;CA;Capital;ligne;
+PASSIF;CB;Apporteurs capital non appelé (-);ligne;
+PASSIF;CD;Primes liées au capital social;ligne;
+PASSIF;CE;Écarts de réévaluation;ligne;
+PASSIF;CF;Réserves indisponibles;ligne;
+PASSIF;CG;Réserves libres;ligne;
+PASSIF;CH;Report à nouveau (+ ou -);ligne;
+PASSIF;CJ;Résultat net de l'exercice (bénéfice + ou perte -);ligne;
+PASSIF;CL;Subventions d'investissement;ligne;
+PASSIF;CM;Provisions réglementées;ligne;
+PASSIF;CP;TOTAL CAPITAUX PROPRES ET RESSOURCES ASSIMILÉES;total;CA+CB+CD+CE+CF+CG+CH+CJ+CL+CM
+PASSIF;DA;Emprunts et dettes financières diverses;ligne;
+PASSIF;DB;Dettes de location-acquisition;ligne;
+PASSIF;DC;Provisions pour risques et charges;ligne;
+PASSIF;DD;TOTAL DETTES FINANCIÈRES ET RESSOURCES ASSIMILÉES;total;DA+DB+DC
+PASSIF;DF;TOTAL RESSOURCES STABLES;total;CP+DD
+PASSIF;DH;Dettes circulantes HAO;ligne;
+PASSIF;DI;Clients, avances reçues;ligne;
+PASSIF;DJ;Fournisseurs d'exploitation;ligne;
+PASSIF;DK;Dettes fiscales et sociales;ligne;
+PASSIF;DM;Autres dettes;ligne;
+PASSIF;DN;Provisions pour risques à court terme;ligne;
+PASSIF;DP;TOTAL PASSIF CIRCULANT;total;DH+DI+DJ+DK+DM+DN
+PASSIF;DQ;Banques, crédits d'escompte;ligne;
+PASSIF;DR;Banques, établissements financiers et crédits de trésorerie;ligne;
+PASSIF;DT;TOTAL TRÉSORERIE-PASSIF;total;DQ+DR
+PASSIF;DV;Écart de conversion-Passif;ligne;
+PASSIF;DZ;TOTAL GÉNÉRAL;total;DF+DP+DT+DV
+RESULTAT;TA;Ventes de marchandises;produit;
+RESULTAT;RA;Achats de marchandises;charge;
+RESULTAT;RB;Variation de stocks de marchandises;charge;
+RESULTAT;XA;MARGE COMMERCIALE;total;TA-RA-RB
+RESULTAT;TB;Ventes de produits fabriqués;produit;
+RESULTAT;TC;Travaux, services vendus;produit;
+RESULTAT;TD;Produits accessoires;produit;
+RESULTAT;XB;CHIFFRE D'AFFAIRES;total;TA+TB+TC+TD
+RESULTAT;TE;Production stockée (ou déstockage);produit;
+RESULTAT;TF;Production immobilisée;produit;
+RESULTAT;TG;Subventions d'exploitation;produit;
+RESULTAT;TH;Autres produits;produit;
+RESULTAT;TI;Transferts de charges d'exploitation;produit;
+RESULTAT;RC;Achats de matières premières et fournitures liées;charge;
+RESULTAT;RD;Variation de stocks de matières premières et fournitures liées;charge;
+RESULTAT;RE;Autres achats;charge;
+RESULTAT;RF;Variation de stocks d'autres approvisionnements;charge;
+RESULTAT;RG;Transports;charge;
+RESULTAT;RH;Services extérieurs;charge;
+RESULTAT;RI;Impôts et taxes;charge;
+RESULTAT;RJ;Autres charges;charge;
+RESULTAT;XC;VALEUR AJOUTÉE;total;XB+TE+TF+TG+TH+TI-RA-RB-RC-RD-RE-RF-RG-RH-RI-RJ
+RESULTAT;RK;Charges de personnel;charge;
+RESULTAT;XD;EXCÉDENT BRUT D'EXPLOITATION;total;XC-RK
+RESULTAT;TJ;Reprises d'amortissements, provisions et dépréciations;produit;
+RESULTAT;RL;Dotations aux amortissements, aux provisions et dépréciations;charge;
+RESULTAT;XE;RÉSULTAT D'EXPLOITATION;total;XD+TJ-RL
+RESULTAT;TK;Revenus financiers et assimilés;produit;
+RESULTAT;TL;Reprises de provisions et dépréciations financières;produit;
+RESULTAT;TM;Transferts de charges financières;produit;
+RESULTAT;RM;Frais financiers et charges assimilées;charge;
+RESULTAT;RN;Dotations aux provisions et aux dépréciations financières;charge;
+RESULTAT;XF;RÉSULTAT FINANCIER;total;TK+TL+TM-RM-RN
+RESULTAT;XG;RÉSULTAT DES ACTIVITÉS ORDINAIRES;total;XE+XF
+RESULTAT;TN;Produits des cessions d'immobilisations;produit;
+RESULTAT;TO;Autres produits HAO;produit;
+RESULTAT;RO;Valeurs comptables des cessions d'immobilisations;charge;
+RESULTAT;RP;Autres charges HAO;charge;
+RESULTAT;XH;RÉSULTAT HORS ACTIVITÉS ORDINAIRES;total;TN+TO-RO-RP
+RESULTAT;RQ;Participation des travailleurs;charge;
+RESULTAT;RS;Impôts sur le résultat;charge;
+RESULTAT;XI;RÉSULTAT NET;total;XG+XH-RQ-RS
