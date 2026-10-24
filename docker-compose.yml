@@ -13,6 +13,13 @@ x-api-env: &api-env
   # En production, l'API ne doit pas être joignable directement depuis internet.
   KORA_TRUSTED_PROXY_COUNT: "1"
   KORA_AUTH_RATE_LIMIT_PER_MINUTE: ${KORA_AUTH_RATE_LIMIT_PER_MINUTE:-20}
+  # Emails : en local, tout part vers Mailpit (aucun email réel n'est envoyé).
+  # En production : SMTP du fournisseur choisi, KORA_SMTP_SECURITY=starttls ou tls.
+  KORA_SMTP_HOST: mailpit
+  KORA_SMTP_PORT: "1025"
+  KORA_SMTP_SECURITY: none
+  KORA_EMAIL_FROM: Kora Finance <no-reply@kora.local>
+  KORA_WEB_PUBLIC_URL: ${KORA_PUBLIC_URL:-http://localhost:3100}
 
 services:
   postgres:
@@ -47,6 +54,21 @@ services:
       timeout: 3s
       retries: 20
 
+  # Serveur SMTP de développement : capture les emails, interface sur 127.0.0.1:58025.
+  mailpit:
+    image: axllent/mailpit:v1.31.3
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+      MP_MAX_MESSAGES: "2000"
+    ports:
+      - "127.0.0.1:${KORA_MAILPIT_PORT:-58025}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   # Les migrations sont une étape distincte : l'API ne modifie jamais le schéma au démarrage.
   migrate:
     build: { context: ./apps/api, target: runtime }
@@ -77,6 +99,7 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
+      mailpit: { condition: service_healthy }
 
   web:
     build: { context: ./apps/web, target: runtime }
@@ -109,6 +132,11 @@ services:
       PYTHONPATH: /repo/apps/api/src
       UV_CACHE_DIR: /tmp/uv
       KORA_ENV: test
+      KORA_EMAIL_BACKEND: memory
+      KORA_WEB_PUBLIC_URL: https://kora.test
+      # Test d'intégration SMTP (tests/test_email_smtp.py) contre Mailpit.
+      KORA_TEST_MAILPIT_SMTP: mailpit:1025
+      KORA_TEST_MAILPIT_API: http://mailpit:8025
       KORA_DATABASE_URL: postgresql+psycopg://kora_app:${KORA_DB_APP_PASSWORD:?lancer make env}@postgres:5432/kora_test
       KORA_DATABASE_MIGRATION_URL: postgresql+psycopg://kora_owner:${KORA_DB_OWNER_PASSWORD:?lancer make env}@postgres:5432/kora_test
       KORA_REDIS_URL: redis://redis:6379/15
@@ -119,6 +147,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
+      mailpit: { condition: service_healthy }
 
   web-tools:
     profiles: ["tools"]
@@ -144,6 +173,7 @@ services:
       HOME: /tmp
       CI: ${CI:-}
       E2E_BASE_URL: http://web:3000
+      E2E_MAILPIT_URL: http://mailpit:8025
     command: ["npx", "playwright", "test"]
     depends_on:
       web: { condition: service_healthy }

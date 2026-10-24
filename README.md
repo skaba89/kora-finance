@@ -37,6 +37,14 @@ make help    # toutes les commandes
 - Secrets à fournir par l'hébergeur : `KORA_JWT_SECRET` (≥ 64 caractères),
   `KORA_ENCRYPTION_KEYS` (clé(s) Fernet), mots de passe des rôles `kora_owner` / `kora_app`.
 - Migrations : exécuter `alembic upgrade head` (rôle `kora_owner`) avant de démarrer l'API.
+- Emails (mot de passe oublié, vérification d'adresse, invitations) : SMTP de n'importe
+  quel fournisseur (Brevo, Mailgun, Amazon SES, Postmark…), envoyé par le **worker**,
+  qui doit donc tourner. Variables : `KORA_SMTP_HOST`, `KORA_SMTP_PORT`,
+  `KORA_SMTP_SECURITY` (`starttls` ou `tls` ; `none` refusé en production),
+  `KORA_SMTP_USERNAME`, `KORA_SMTP_PASSWORD`, `KORA_EMAIL_FROM` (domaine authentifié
+  SPF/DKIM/DMARC chez le fournisseur, sinon les emails finissent en indésirables),
+  `KORA_WEB_PUBLIC_URL` (URL https du frontend, pour les liens).
+- En local, tous les emails sont capturés par Mailpit : http://localhost:58025.
 
 Documentation projet : `CLAUDE.md` (architecture, règles, décisions, avancement),
 `docs/PLAN.md` (phases et critères d'acceptation), `worklog.md` (journal daté).

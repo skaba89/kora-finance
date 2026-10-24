@@ -9,6 +9,8 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
+from dramatiq import Worker
+from dramatiq.brokers.stub import StubBroker
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session
@@ -17,7 +19,11 @@ from kora.auth import service as auth_service
 from kora.core.config import Environment, get_settings
 from kora.core.redis import get_redis
 from kora.db.session import get_sessionmaker
+from kora.email.sender import OUTBOX, OutgoingEmail
 from kora.main import create_app
+from kora.models.common import utcnow
+from kora.models.identity import User
+from kora.worker.broker import broker
 
 API_ROOT = Path(__file__).resolve().parents[1]
 
@@ -62,6 +68,45 @@ def _redis_vide() -> None:
     get_redis().flushdb()
 
 
+@pytest.fixture(autouse=True)
+def _file_d_attente_vide() -> None:
+    """Tâches et emails d'un test précédent ne fuient pas dans le suivant."""
+    assert isinstance(broker, StubBroker)
+    broker.flush_all()
+    OUTBOX.clear()
+
+
+class Mailbox:
+    """Exécute les tâches en attente (worker réel sur le broker en mémoire) et donne
+    accès aux emails « envoyés » par le backend de test."""
+
+    def __init__(self, worker: Worker) -> None:
+        self._worker = worker
+
+    def deliver(self) -> list[OutgoingEmail]:
+        assert isinstance(broker, StubBroker)
+        # Les tâches peuvent en programmer d'autres (préparation → envoi) : on attend
+        # que la file soit vide. Un échec fait échouer le test (pas de réessai d'attente).
+        broker.join("default", timeout=10_000, fail_fast=True)
+        self._worker.join()
+        return list(OUTBOX)
+
+    def last_to(self, email: str) -> OutgoingEmail:
+        sent = [m for m in self.deliver() if m.to == email]
+        assert sent, f"aucun email envoyé à {email}"
+        return sent[-1]
+
+
+@pytest.fixture
+def mailbox() -> Iterator[Mailbox]:
+    worker = Worker(broker, worker_timeout=50)
+    worker.start()
+    try:
+        yield Mailbox(worker)
+    finally:
+        worker.stop()
+
+
 @dataclass
 class UserFixture:
     id: uuid.UUID
@@ -82,7 +127,9 @@ class UserFixture:
 
 @pytest.fixture
 def make_user(db: Session) -> Callable[..., UserFixture]:
-    def factory(password: str = "Mot-de-passe-solide-2026", **kwargs: str) -> UserFixture:
+    def factory(
+        password: str = "Mot-de-passe-solide-2026", *, verified: bool = False, **kwargs: str
+    ) -> UserFixture:
         email = kwargs.get("email", f"user-{uuid.uuid4().hex[:12]}@exemple.gn")
         user = auth_service.register(
             db,
@@ -92,6 +139,9 @@ def make_user(db: Session) -> Callable[..., UserFixture]:
             locale="fr",
             ctx=auth_service.RequestContext(),
         )
+        if verified:
+            db.get_one(User, user.id).email_verified_at = utcnow()
+            db.commit()
         return UserFixture(id=user.id, email=user.email, password=password)
 
     return factory

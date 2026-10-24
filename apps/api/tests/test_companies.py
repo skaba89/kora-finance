@@ -105,7 +105,8 @@ def test_ajout_changement_et_retrait_d_un_membre(
         json={"email": colleague.email.upper(), "role": "PME_COMPTABLE"},
     )
     assert added.status_code == 201
-    member_id = added.json()["id"]
+    assert added.json()["status"] == "member"
+    member_id = added.json()["member"]["id"]
 
     duplicate = client.post(
         base, headers=company.headers, json={"email": colleague.email, "role": "PME_LECTEUR"}
@@ -122,17 +123,6 @@ def test_ajout_changement_et_retrait_d_un_membre(
         client.get(f"/api/v1/companies/{company.id}", headers=colleague.headers(client)).status_code
         == 404
     )
-
-
-def test_ajout_d_un_email_sans_compte(client: TestClient, make_company: MakeCompany) -> None:
-    company = make_company()
-    response = client.post(
-        f"/api/v1/companies/{company.id}/members",
-        headers=company.headers,
-        json={"email": "personne@exemple.gn", "role": "PME_LECTEUR"},
-    )
-    assert response.status_code == 404
-    assert "créer son compte" in response.json()["detail"]
 
 
 @pytest.mark.parametrize("role", ["CABINET_ADMIN", "SUPER_ADMIN", "PARTENAIRE_FINANCIER"])

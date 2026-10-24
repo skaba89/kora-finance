@@ -2,19 +2,21 @@
 
 import uuid
 from datetime import date, datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, status
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, model_validator
 from sqlalchemy import func, select
 
 from kora.api.v1.common import TENANT_ERRORS, WRITE_ERRORS, Limit, Offset, Page, RequestBody
 from kora.audit.service import verify_chain
 from kora.auth.deps import Ctx, CurrentUser, DbSession
+from kora.core.errors import ErrorResponse
 from kora.models.audit import AuditEvent
-from kora.models.identity import Company, LegalForm
+from kora.models.common import utcnow
+from kora.models.identity import Company, Invitation, LegalForm
 from kora.models.organization import FiscalYear
-from kora.organization import service
+from kora.organization import invitations, service
 from kora.organization.service import CompanyData, TenantLike
 from kora.tenancy.access import accessible_companies
 from kora.tenancy.deps import (
@@ -29,6 +31,8 @@ from kora.tenancy.deps import (
 )
 from kora.tenancy.permissions import permissions_for
 from kora.tenancy.roles import Role
+from kora.worker import tasks
+from kora.worker.enqueue import enqueue, enqueue_best_effort
 
 router = APIRouter(prefix="/companies", tags=["dossiers"])
 
@@ -125,8 +129,45 @@ class MemberOut(BaseModel):
 
 
 class MemberCreate(RequestBody):
-    email: Annotated[str, Field(min_length=3, max_length=320)]
+    email: EmailStr
     role: Role
+
+
+class InvitationOut(BaseModel):
+    id: uuid.UUID
+    email: str
+    role: Role
+    created_at: datetime
+    sent_at: datetime | None
+    expires_at: datetime
+    expired: bool
+
+    @classmethod
+    def of(cls, invitation: Invitation) -> "InvitationOut":
+        return cls(
+            id=invitation.id,
+            email=invitation.email,
+            role=Role(invitation.role),
+            created_at=invitation.created_at,
+            sent_at=invitation.sent_at,
+            expires_at=invitation.expires_at,
+            expired=invitation.expires_at <= utcnow(),
+        )
+
+
+class MemberAdded(BaseModel):
+    status: Literal["member"] = "member"
+    member: MemberOut
+
+
+class InvitationSent(BaseModel):
+    status: Literal["invited"] = "invited"
+    invitation: InvitationOut
+    # Faux si la file d'envoi est momentanément injoignable : « Renvoyer » réessaiera.
+    email_queued: bool
+
+
+MemberAddResult = Annotated[MemberAdded | InvitationSent, Field(discriminator="status")]
 
 
 class MemberUpdate(RequestBody):
@@ -219,10 +260,22 @@ def list_members(tenant: MembersRead, db: DbSession) -> list[MemberOut]:
     return [MemberOut.of(row) for row in service.list_members(db, tenant.company_id)]
 
 
-@router.post("/{company_id}/members", status_code=status.HTTP_201_CREATED, responses=WRITE_ERRORS)
-def add_member(body: MemberCreate, tenant: MembersManage, db: DbSession, ctx: Ctx) -> MemberOut:
-    row = service.add_member(db, _actor(tenant), email=body.email, role=body.role, ctx=ctx)
-    return MemberOut.of(row)
+@router.post(
+    "/{company_id}/members",
+    status_code=status.HTTP_201_CREATED,
+    responses={**WRITE_ERRORS, 429: {"model": ErrorResponse}},
+)
+def add_member(
+    body: MemberCreate, tenant: MembersManage, db: DbSession, ctx: Ctx
+) -> MemberAddResult:
+    """Rattache la personne si elle a un compte ; sinon lui envoie une invitation."""
+    result = invitations.add_member_or_invite(
+        db, _actor(tenant), tenant.user, email=body.email, role=body.role, ctx=ctx
+    )
+    if isinstance(result, Invitation):
+        queued = enqueue_best_effort(tasks.send_invitation, str(result.id))
+        return InvitationSent(invitation=InvitationOut.of(result), email_queued=queued)
+    return MemberAdded(member=MemberOut.of(result))
 
 
 @router.patch("/{company_id}/members/{membership_id}", responses=WRITE_ERRORS)
@@ -245,6 +298,36 @@ def change_member_role(
 )
 def remove_member(membership_id: uuid.UUID, tenant: MembersManage, db: DbSession, ctx: Ctx) -> None:
     service.remove_member(db, _actor(tenant), membership_id, ctx)
+
+
+@router.get("/{company_id}/invitations", responses=TENANT_ERRORS)
+def list_invitations(tenant: MembersRead, db: DbSession) -> list[InvitationOut]:
+    """Invitations en attente (y compris expirées, à renvoyer ou annuler)."""
+    return [InvitationOut.of(i) for i in invitations.list_pending(db, tenant.company_id)]
+
+
+@router.post(
+    "/{company_id}/invitations/{invitation_id}/resend",
+    responses={**WRITE_ERRORS, 429: {"model": ErrorResponse}, 503: {"model": ErrorResponse}},
+)
+def resend_invitation(
+    invitation_id: uuid.UUID, tenant: MembersManage, db: DbSession, ctx: Ctx
+) -> InvitationOut:
+    """Nouveau lien (le précédent cesse de fonctionner) et nouvelle échéance."""
+    invitation = invitations.resend(db, _actor(tenant), invitation_id, ctx)
+    enqueue(tasks.send_invitation, str(invitation.id))
+    return InvitationOut.of(invitation)
+
+
+@router.delete(
+    "/{company_id}/invitations/{invitation_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=WRITE_ERRORS,
+)
+def revoke_invitation(
+    invitation_id: uuid.UUID, tenant: MembersManage, db: DbSession, ctx: Ctx
+) -> None:
+    invitations.revoke(db, _actor(tenant), invitation_id, ctx)
 
 
 # --- Exercices

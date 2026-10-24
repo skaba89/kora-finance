@@ -12,7 +12,7 @@ Journal daté des sessions : `worklog.md`. Le lire en début de session.
 | Phase | Contenu | État |
 |---|---|---|
 | 0 | Fondations du dépôt : monorepo, Docker, CI, harnais de tests | ✅ livrée (2026-10-23) |
-| 1 | Socle : auth, multi-tenant + RLS, RBAC, organisation, plan comptable, taxes, audit chaîné, PWA | ✅ livrée (2026-10-23) — reste listé dans `worklog.md` |
+| 1 | Socle : auth, multi-tenant + RLS, RBAC, organisation, plan comptable, taxes, audit chaîné, PWA | ✅ livrée (2026-10-23) ; 1g emails ✅ (2026-10-24) — reste listé dans `worklog.md` |
 | 2 | Comptabilité générale + états financiers | — |
 | 3 | Trésorerie, Mobile Money, rapprochement | — |
 | 4 | Ventes et achats | — |
@@ -38,7 +38,8 @@ scripts/       init-env.sh (secrets locaux), check-contract.sh
 ```
 
 Pile locale (`docker-compose.yml`, ports sur 127.0.0.1 uniquement) :
-postgres 16 (55432) · redis 7 (56379) · migrate (one-shot) · api (8100) · worker · web (3100).
+postgres 16 (55432) · redis 7 (56379) · mailpit (UI 58025) · migrate (one-shot) · api (8100) ·
+worker · web (3100).
 Profils : `tools` (api-tools, web-tools), `e2e` (Playwright).
 
 ### Backend (`apps/api/src/kora`)
@@ -47,13 +48,21 @@ Profils : `tools` (api-tools, web-tools), `e2e` (Playwright).
 core/        config, erreurs {detail, code, errors}, crypto (Fernet), rate limit, IP client
 db/          base, session, tenant.py (contexte RLS réappliqué à chaque transaction)
 models/      identity (plateforme, sans RLS), organization, accounting, audit (tables tenant, RLS)
-auth/        mots de passe argon2id, JWT, refresh tokens rotatifs, 2FA TOTP
+auth/        mots de passe argon2id, JWT, refresh tokens rotatifs, 2FA TOTP,
+             recovery.py (mot de passe oublié, vérification d'adresse)
+email/       envoi SMTP générique / boîte mémoire (tests), gabarits FR/EN, quotas Redis
 tenancy/     rôles, matrice de permissions (source unique), résolution du rôle, dépendances
-organization/ dossiers, membres, exercices, cabinets
+organization/ dossiers, membres, invitations, exercices, cabinets
 accounting/  plan SYSCOHADA (data/*.csv), taux de taxes versionnés, paramétrage initial
 audit/       journal chaîné SHA-256 (écriture, vérification)
 api/v1/      routes ; `ROUTERS` = registre parcouru par les tests d'isolation
+worker/      acteurs Dramatiq (emails : préparation du jeton → deliver_email avec réessais)
 ```
+
+Emails : jamais envoyés pendant une requête HTTP. L'API met une tâche en file
+(`worker/enqueue.py`), le worker crée le jeton (empreinte SHA-256 en base) et envoie.
+Tests : `KORA_EMAIL_BACKEND=memory` + fixture `mailbox` (worker réel sur StubBroker) ;
+E2E : liens lus dans Mailpit (`emailLink` dans `e2e/helpers.ts`).
 
 Route tenant = `/api/v1/companies/{company_id}/…` + paramètre typé `AccountsRead`,
 `TaxesManage`… (`tenancy/deps.py`). `tests/test_isolation_tenants.py` vérifie
@@ -162,7 +171,13 @@ d'écrire du code Next.** Points déjà rencontrés :
 | 2026-10-23 | CSP **sans nonce** (`script-src 'self' 'unsafe-inline'`), autres directives strictes | Avec Cache Components la coquille statique ne peut pas porter de nonce ; à durcir avec SRI quand stable |
 | 2026-10-23 | L'API ne fait confiance qu'à `KORA_TRUSTED_PROXY_COUNT` proxys pour l'IP client ; uvicorn sans `--proxy-headers` | Limitation de débit non contournable par un en-tête forgé |
 | 2026-10-23 | Montants et taux en entiers (taux en points de base : 1800 = 18 %) | Pas de flottant ; conversion des saisies par chaîne (`lib/rates.ts`) |
-| 2026-10-23 | Stockage S3 et email (Mailpit) **reportés** à la phase où ils servent | Pas de service inutilisé. Note : MinIO ne publie plus d'images Docker officielles gratuites — choisir le serveur S3 local (MinIO via image tierce, Garage, SeaweedFS…) au moment voulu |
+| 2026-10-23 | Stockage S3 **reporté** à la phase où il sert | Pas de service inutilisé. Note : MinIO ne publie plus d'images Docker officielles gratuites — choisir le serveur S3 local (MinIO via image tierce, Garage, SeaweedFS…) au moment voulu |
+| 2026-10-24 | Emails en **SMTP générique** (aucun SDK fournisseur), Mailpit en local et en E2E | Fournisseur non choisi par l'utilisateur : tout fournisseur SMTP convient, changement par configuration |
+| 2026-10-24 | « Mot de passe oublié » : l'API répond toujours 202 et le worker cherche le compte | Ni la réponse ni le temps de réponse ne révèlent l'existence d'un compte |
+| 2026-10-24 | Réinitialisation : ferme toutes les sessions, lève le verrouillage, confirme l'adresse ; la **2FA reste exigée** | Recevoir le lien prouve la maîtrise de l'adresse, pas du second facteur |
+| 2026-10-24 | Inviter une personne sans compte exige une **adresse vérifiée** chez l'invitant ; quota de 20 invitations / dossier / 24 h, 3 emails de compte / heure | Empêcher l'usage de Kora pour envoyer du spam ou inonder une boîte |
+| 2026-10-24 | Vérification d'adresse et liens d'email : action par **bouton (POST)**, pas à l'ouverture du lien ; `Referrer-Policy: no-referrer` sur ces pages | Les antivirus de messagerie visitent les liens ; le jeton ne doit pas fuiter |
+| 2026-10-24 | Invitations limitées aux **dossiers d'entreprise** ; cabinets en phase 8 (avec leurs écrans) | L'ajout d'un collaborateur de cabinet exige encore un compte existant |
 
 ## À valider par un expert-comptable guinéen
 

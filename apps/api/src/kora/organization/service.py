@@ -213,7 +213,7 @@ def list_members(session: Session, company_id: uuid.UUID) -> list[MemberRow]:
     return [MemberRow(m, u) for m, u in rows]
 
 
-def _check_company_role(role: str) -> Role:
+def check_company_role(role: str) -> Role:
     if role not in COMPANY_ROLES:
         raise BusinessRuleError("Rôle non attribuable sur un dossier d'entreprise.")
     return Role(role)
@@ -222,7 +222,7 @@ def _check_company_role(role: str) -> Role:
 def add_member(
     session: Session, tenant: TenantLike, *, email: str, role: str, ctx: RequestContext
 ) -> MemberRow:
-    company_role = _check_company_role(role)
+    company_role = check_company_role(role)
     user = get_user_by_email(session, email)
     if user is None:
         raise NotFoundError(
@@ -286,7 +286,7 @@ def _ensure_a_director_remains(
 def change_member_role(
     session: Session, tenant: TenantLike, membership_id: uuid.UUID, role: str, ctx: RequestContext
 ) -> MemberRow:
-    new_role = _check_company_role(role)
+    new_role = check_company_role(role)
     membership = _get_membership(session, tenant, membership_id)
     if membership.role != new_role:
         _ensure_a_director_remains(session, tenant, membership)

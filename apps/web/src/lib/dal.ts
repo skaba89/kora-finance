@@ -58,6 +58,14 @@ export async function getMembers(companyId: string) {
   );
 }
 
+export async function getInvitations(companyId: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/invitations", {
+      params: { path: { company_id: companyId } },
+    }),
+  );
+}
+
 export async function getAuditEvents(companyId: string, limit: number, offset: number) {
   return read(
     (await api()).GET("/api/v1/companies/{company_id}/audit-events", {

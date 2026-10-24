@@ -100,3 +100,66 @@ export async function setLocaleAction(formData: FormData): Promise<void> {
   }
   redirect(safeNextPath(field(formData, "retour")));
 }
+
+export async function forgotPasswordAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const { error, response } = await (await publicApi()).POST("/api/v1/auth/password/forgot", {
+    body: { email: field(formData, "email") },
+  });
+  if (!response.ok) return failure(error);
+  const t = await actionDictionary();
+  return { status: "success", message: t.auth.forgotSent };
+}
+
+export async function resetPasswordAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const password = String(formData.get("password") ?? "");
+  if (password !== String(formData.get("password_confirm") ?? "")) {
+    const t = await actionDictionary();
+    return { status: "error", message: t.auth.passwordMismatch };
+  }
+  const { error, response } = await (await publicApi()).POST("/api/v1/auth/password/reset", {
+    body: { token: field(formData, "token"), new_password: password },
+  });
+  if (!response.ok) return failure(error);
+  // Toutes les sessions ont été fermées par l'API, y compris celle de ce navigateur.
+  const store = await cookies();
+  store.delete(ACCESS_COOKIE);
+  store.delete(REFRESH_COOKIE);
+  redirect("/connexion?reinitialise=1");
+}
+
+export async function verifyEmailAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const { error, response } = await (await publicApi()).POST("/api/v1/auth/email/verify", {
+    body: { token: field(formData, "token") },
+  });
+  if (!response.ok) return failure(error);
+  const t = await actionDictionary();
+  return { status: "success", message: t.auth.emailVerified };
+}
+
+export async function resendVerificationAction(_: ActionState): Promise<ActionState> {
+  const { error, response } = await (await api()).POST("/api/v1/auth/email/verification");
+  if (!response.ok) return failure(error);
+  const t = await actionDictionary();
+  return { status: "success", message: t.auth.verificationSent };
+}
+
+export async function acceptInvitationAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const { data, error } = await (await publicApi()).POST("/api/v1/invitations/accept", {
+    body: {
+      token: field(formData, "token"),
+      full_name: field(formData, "full_name"),
+      password: String(formData.get("password") ?? ""),
+    },
+  });
+  if (!data) return failure(error);
+  await storeSession(data);
+  redirect(`/dossiers/${data.company_id}`);
+}
+
+export async function joinInvitationAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const { data, error } = await (await api()).POST("/api/v1/invitations/join", {
+    body: { token: field(formData, "token") },
+  });
+  if (!data) return failure(error);
+  redirect(`/dossiers/${data.company_id}`);
+}

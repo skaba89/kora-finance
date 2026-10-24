@@ -5,8 +5,9 @@ Aucune valeur secrète n'a de défaut : si une variable manque, le démarrage é
 
 from enum import StrEnum
 from functools import lru_cache
+from typing import Literal, Self
 
-from pydantic import Field, PostgresDsn, RedisDsn, SecretStr
+from pydantic import Field, PostgresDsn, RedisDsn, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -55,6 +56,41 @@ class Settings(BaseSettings):
     # (32 octets en base64 url-safe). Plusieurs clés séparées par des virgules :
     # la première chiffre, toutes déchiffrent (rotation).
     encryption_keys: SecretStr
+
+    # --- Emails transactionnels (SMTP générique : tout fournisseur compatible)
+    # « memory » : boîte d'envoi en mémoire, réservée aux tests automatisés.
+    email_backend: Literal["smtp", "memory"] = "smtp"
+    email_from: str = "Kora Finance <no-reply@kora.local>"
+    smtp_host: str = "localhost"
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    # starttls (port 587) ou tls implicite (port 465) ; « none » interdit en production.
+    smtp_security: Literal["starttls", "tls", "none"] = "starttls"
+    smtp_username: str | None = None
+    smtp_password: SecretStr | None = None
+    smtp_timeout_seconds: int = Field(default=15, ge=1, le=120)
+    # URL publique du frontend, pour les liens des emails (sans barre finale).
+    web_public_url: str = "http://localhost:3100"
+
+    # Durées de validité des liens envoyés par email.
+    password_reset_ttl_minutes: int = Field(default=60, ge=10, le=24 * 60)
+    email_verification_ttl_hours: int = Field(default=48, ge=1, le=24 * 14)
+    invitation_ttl_days: int = Field(default=7, ge=1, le=30)
+    # Anti-abus : emails de réinitialisation et de vérification par compte et par heure,
+    # invitations par dossier sur 24 heures.
+    account_emails_per_hour: int = Field(default=3, ge=1)
+    invitations_per_company_per_day: int = Field(default=20, ge=1)
+
+    @model_validator(mode="after")
+    def _check_email_settings(self) -> Self:
+        self.web_public_url = self.web_public_url.rstrip("/")
+        if self.email_backend == "memory" and self.env != Environment.TEST:
+            raise ValueError("KORA_EMAIL_BACKEND=memory est réservé aux tests.")
+        if self.is_production:
+            if self.smtp_security == "none":
+                raise ValueError("KORA_SMTP_SECURITY=none est interdit en production.")
+            if not self.web_public_url.startswith("https://"):
+                raise ValueError("KORA_WEB_PUBLIC_URL doit être en https:// en production.")
+        return self
 
     @property
     def is_production(self) -> bool:

@@ -125,3 +125,43 @@ depuis le 2025-12-11).
 
 **Prochaine étape** : phase 1 (socle). Commencer par le modèle tenants/memberships/RBAC
 et la RLS, puis l'auth, puis l'audit chaîné.
+
+## 2026-10-24 — Phase 1g : emails (mot de passe oublié, vérification, invitations)
+
+**Décision** : sans préférence de l'utilisateur sur le fournisseur, envoi **SMTP générique**
+(Brevo, Mailgun, SES, Postmark… par configuration) ; Mailpit v1.31.3 en local et en E2E.
+
+**Livré**
+- Migration 0004 : `email_tokens` (jetons à usage unique, empreinte SHA-256) et
+  `invitations` (une seule en attente par adresse et par dossier).
+- Worker : `request_password_reset`, `send_email_verification`, `notify_password_changed`,
+  `send_invitation`, puis `deliver_email` (8 réessais espacés de 10 s à 30 min).
+- API : `POST /auth/password/forgot` (202 toujours), `/auth/password/reset`,
+  `/auth/email/verify`, `/auth/email/verification` (renvoi) ; `UserOut.email_verified` ;
+  `POST /companies/{id}/members` renvoie `member` ou `invited` ;
+  `GET/POST resend/DELETE /companies/{id}/invitations…` ; `/invitations/preview|accept|join`.
+- Notification par email après tout changement ou réinitialisation de mot de passe.
+- Garde-fous : quotas Redis (3 emails de compte/h, 20 invitations/dossier/24 h), invitant
+  à l'adresse vérifiée, échappement HTML et anti-injection d'en-têtes, configuration
+  refusée en production si SMTP non chiffré ou URL non https, boîte mémoire réservée aux tests.
+- Web : pages `/mot-de-passe-oublie`, `/reinitialisation-mot-de-passe`,
+  `/verification-email`, `/invitation` ; bandeau « confirmez votre adresse » avec renvoi ;
+  invitations en attente (renvoyer, annuler) sur la page Utilisateurs ; FR/EN.
+
+**Vérifié**
+- `make check` : ruff, mypy strict, **219 tests pytest** (dont SMTP réel contre Mailpit),
+  ESLint, tsc, 28 tests Vitest, contrat à jour ; `make web-build` OK.
+- `make e2e` : **32/32, trois fois de suite** (desktop + Pixel 5), dont 4 nouveaux
+  parcours qui lisent les vrais emails dans Mailpit.
+- Les nouvelles routes tenant sont couvertes automatiquement par les tests d'isolation
+  (404 cross-tenant, 401 sans session) + tests IDOR dédiés aux invitations.
+- Revue visuelle mobile/desktop des nouveaux écrans.
+
+**Reste à faire**
+- Choisir le fournisseur SMTP de production et authentifier le domaine d'envoi
+  (SPF, DKIM, DMARC) : à faire par l'utilisateur.
+- Invitations côté cabinet (phase 8) ; changement d'adresse email (non prévu à ce stade).
+- Tableau des membres : sur mobile, la colonne Actions impose un défilement horizontal
+  (antérieur à 1g).
+- Toujours en suspens depuis la phase 1 : messages d'erreur API traduits, vérification
+  planifiée de la chaîne d'audit + ancrage externe, CI jamais exécutée sur GitHub.

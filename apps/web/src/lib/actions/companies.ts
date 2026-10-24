@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { api } from "@/lib/api/server";
 import type { components } from "@/lib/api/schema";
+import { interpolate } from "@/lib/i18n/interpolate";
 import { percentToBasisPoints } from "@/lib/rates";
 
 import type { ActionState } from "./state";
@@ -149,13 +150,47 @@ export async function addMemberAction(
   formData: FormData,
 ): Promise<ActionState> {
   const role = field(formData, "role");
-  const { error, response } = await (await api()).POST("/api/v1/companies/{company_id}/members", {
+  const { data, error } = await (await api()).POST("/api/v1/companies/{company_id}/members", {
     params: { path: { company_id: companyId } },
     body: {
       email: field(formData, "email"),
       role: (COMPANY_ROLES.includes(role) ? role : "PME_LECTEUR") as CompanyRole,
     },
   });
+  if (!data) return failure(error);
+  const t = await actionDictionary();
+  refresh();
+  if (data.status === "member") return { status: "success", message: t.members.added };
+  const { email } = data.invitation;
+  return data.email_queued
+    ? { status: "success", message: interpolate(t.members.invited, { email }) }
+    : { status: "error", message: interpolate(t.members.invitedNotQueued, { email }) };
+}
+
+export async function resendInvitationAction(
+  companyId: string,
+  invitationId: string,
+  _: ActionState,
+): Promise<ActionState> {
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/invitations/{invitation_id}/resend",
+    { params: { path: { company_id: companyId, invitation_id: invitationId } } },
+  );
+  if (!response.ok) return failure(error);
+  const t = await actionDictionary();
+  refresh();
+  return { status: "success", message: t.members.resent };
+}
+
+export async function revokeInvitationAction(
+  companyId: string,
+  invitationId: string,
+  _: ActionState,
+): Promise<ActionState> {
+  const { error, response } = await (await api()).DELETE(
+    "/api/v1/companies/{company_id}/invitations/{invitation_id}",
+    { params: { path: { company_id: companyId, invitation_id: invitationId } } },
+  );
   return response.ok ? ok() : failure(error);
 }
 

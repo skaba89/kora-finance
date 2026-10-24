@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { InlineAction } from "@/components/forms/inline-action";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Button } from "@/components/ui/button";
-import { logoutAction } from "@/lib/actions/auth";
+import { logoutAction, resendVerificationAction } from "@/lib/actions/auth";
 import { getCurrentUser } from "@/lib/dal";
+import { interpolate } from "@/lib/i18n/interpolate";
 import { getDictionary } from "@/lib/i18n/server";
 
 async function UserMenu() {
@@ -19,6 +21,25 @@ async function UserMenu() {
           {t.nav.logout}
         </Button>
       </form>
+    </div>
+  );
+}
+
+/** Rappel tant que l'adresse n'est pas confirmée (condition pour inviter quelqu'un). */
+async function UnverifiedEmailBanner() {
+  const [{ t }, user] = await Promise.all([getDictionary(), getCurrentUser()]);
+  if (user.email_verified) return null;
+  return (
+    <div className="border-b bg-amber-50 text-amber-950">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm">
+        <p>{interpolate(t.auth.unverifiedBanner, { email: user.email })}</p>
+        <InlineAction
+          action={resendVerificationAction}
+          label={t.auth.resendVerification}
+          pendingLabel={t.common.pending}
+          showSuccess
+        />
+      </div>
     </div>
   );
 }
@@ -40,6 +61,9 @@ export default async function AppLayout({ children }: LayoutProps<"/[lang]">) {
           </div>
         </div>
       </header>
+      <Suspense>
+        <UnverifiedEmailBanner />
+      </Suspense>
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-6">{children}</div>
     </div>
   );

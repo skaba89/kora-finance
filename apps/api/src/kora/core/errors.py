@@ -57,6 +57,22 @@ class BusinessRuleError(KoraError):
     code = "regle_metier"
 
 
+class TooManyRequestsError(KoraError):
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    code = "trop_de_demandes"
+
+
+class ServiceUnavailableError(KoraError):
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    code = "service_indisponible"
+
+
+class InvalidLinkError(KoraError):
+    """Lien reçu par email inconnu, expiré, déjà utilisé ou révoqué."""
+
+    code = "lien_invalide"
+
+
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(KoraError)
     def _handle(_: Request, exc: KoraError) -> JSONResponse:

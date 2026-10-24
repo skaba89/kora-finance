@@ -61,3 +61,43 @@ export async function waitForNextTotpStep() {
   const remaining = 30_000 - (Date.now() % 30_000);
   await new Promise((resolve) => setTimeout(resolve, remaining + 500));
 }
+
+const MAILPIT = process.env.E2E_MAILPIT_URL ?? "http://localhost:58025";
+
+type MailpitSummary = { ID: string; Subject: string };
+
+/**
+ * Lien du dernier email reçu par `to` dont le sujet correspond, lu dans Mailpit (le
+ * vrai email envoyé par le worker en SMTP). Attend qu'au moins `count` emails de ce
+ * type soient arrivés (après un renvoi, seul le plus récent lien est valable).
+ * Renvoie le chemin + la requête, à ouvrir sur l'URL de base des tests.
+ */
+export async function emailLink(to: string, subject: RegExp, count = 1): Promise<string> {
+  const query = new URLSearchParams({ query: `to:"${to}"` });
+  let found: MailpitSummary | undefined;
+  await expect
+    .poll(
+      async () => {
+        const response = await fetch(`${MAILPIT}/api/v1/search?${query}`);
+        const { messages } = (await response.json()) as { messages: MailpitSummary[] };
+        // Mailpit renvoie les messages du plus récent au plus ancien.
+        const matching = messages.filter((m) => subject.test(m.Subject));
+        found = matching[0];
+        return matching.length;
+      },
+      { message: `email « ${subject} » pour ${to}`, timeout: 20_000 },
+    )
+    .toBeGreaterThanOrEqual(count);
+  const message = (await (await fetch(`${MAILPIT}/api/v1/message/${found!.ID}`)).json()) as { Text: string };
+  const url = message.Text.match(/https?:\/\/\S+\?jeton=[A-Za-z0-9_-]+/)?.[0];
+  expect(url, "lien absent de l'email").toBeTruthy();
+  const { pathname, search } = new URL(url!);
+  return pathname + search;
+}
+
+/** Confirme l'adresse de l'utilisateur connecté via le lien reçu par email. */
+export async function verifyEmail(page: Page, email: string, sent = 1) {
+  await page.goto(await emailLink(email, /Confirmez votre adresse email/, sent));
+  await page.getByRole("button", { name: "Confirmer mon adresse" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Adresse email confirmée" })).toBeVisible();
+}

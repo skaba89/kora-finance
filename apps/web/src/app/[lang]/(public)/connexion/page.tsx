@@ -16,7 +16,13 @@ export async function generateMetadata(): Promise<Metadata> {
 async function Notice({ searchParams }: { searchParams: PageProps<"/[lang]/connexion">["searchParams"] }) {
   const { t } = await getDictionary();
   const params = await searchParams;
-  const message = params.inscrit ? t.auth.registered : params.deconnecte ? t.auth.loggedOut : null;
+  const message = params.inscrit
+    ? t.auth.registered
+    : params.reinitialise
+      ? t.auth.passwordReset
+      : params.deconnecte
+        ? t.auth.loggedOut
+        : null;
   return message ? (
     <p role="status" className="rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-900">
       {message}
@@ -57,6 +63,9 @@ export default async function LoginPage(props: PageProps<"/[lang]/connexion">) {
         <Suspense fallback={<div className="bg-muted h-48 animate-pulse rounded" />}>
           <LoginForm searchParams={props.searchParams} />
         </Suspense>
+        <Link href="/mot-de-passe-oublie" className="text-sm underline underline-offset-4">
+          {t.auth.forgotLink}
+        </Link>
         <p className="text-muted-foreground text-sm">
           {t.auth.noAccount}{" "}
           <Link href="/inscription" className="text-foreground underline underline-offset-4">

@@ -20,9 +20,13 @@ import {
  *    l'URL visible reste sans préfixe.
  */
 
-/** Pages accessibles sans session ; les deux premières redirigent si déjà connecté. */
-const GUEST_ONLY = ["/connexion", "/inscription"];
-const PUBLIC = ["/hors-connexion", "/connexion/verification"];
+/** Pages ouvertes depuis un lien reçu par email (jeton dans l'URL). */
+const TOKEN_PAGES = ["/reinitialisation-mot-de-passe", "/verification-email", "/invitation"];
+
+/** Pages réservées aux visiteurs non connectés (redirigent vers les dossiers sinon). */
+const GUEST_ONLY = ["/connexion", "/inscription", "/mot-de-passe-oublie"];
+/** Pages accessibles avec ou sans session. */
+const PUBLIC = ["/hors-connexion", "/connexion/verification", ...TOKEN_PAGES];
 
 type Tokens = { access_token: string; refresh_token: string; expires_in: number };
 
@@ -79,10 +83,14 @@ async function refreshTokens(request: NextRequest, refreshToken: string): Promis
   return (await response.json()) as Tokens;
 }
 
-function withSecurityHeaders(response: NextResponse, csp: string): NextResponse {
+function withSecurityHeaders(
+  response: NextResponse,
+  csp: string,
+  referrer = "strict-origin-when-cross-origin",
+): NextResponse {
   response.headers.set("Content-Security-Policy", csp);
   response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Referrer-Policy", referrer);
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   return response;
 }
@@ -152,6 +160,8 @@ export async function proxy(request: NextRequest) {
     response = withSecurityHeaders(
       NextResponse.rewrite(url, { request: { headers: requestHeaders } }),
       csp,
+      // Le jeton à usage unique de l'URL ne doit fuiter dans aucun en-tête Referer.
+      matches(path, TOKEN_PAGES) ? "no-referrer" : undefined,
     );
   }
 
