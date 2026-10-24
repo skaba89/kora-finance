@@ -30,6 +30,16 @@ résultat, TFT, exports PDF/Excel, saisie hors-ligne des brouillons.
 - Les à-nouveaux reproduisent exactement le bilan de clôture.
 - Jeu de données de référence validé par un expert-comptable.
 
+Découpage (2026-10-24) :
+- ✅ **2a** Journaux, écritures en partie double (brouillon → validée), numérotation sans
+  trou par journal et exercice, écritures validées immuables (contre-passation), saisie web.
+- **2b** Balance générale et grand livre (agrégats SQL paginés).
+- **2c** Lettrage des comptes de tiers.
+- **2d** Verrouillage de période, clôture / réouverture d'exercice, à-nouveaux.
+- **2e** Bilan, compte de résultat, TFT (correspondances SYSCOHADA à valider par un expert).
+- **2f** Exports PDF et Excel.
+- **2g** Pièces jointes (stockage S3), saisie guidée, brouillons hors connexion.
+
 ## Phase 3 — Trésorerie, Mobile Money et rapprochement
 Comptes bancaires, caisses, portefeuilles (adaptateur par opérateur), import CSV/Excel
 avec détection du format (PDF au cas par cas, limites signalées explicitement),

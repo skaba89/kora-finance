@@ -15,5 +15,9 @@
 | `taxes:read` | Consulter les taux de taxes | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | `taxes:manage` | Paramétrer les taux de taxes | — | ✅ | ✅ | ✅ | ✅ | — | — |
 | `audit:read` | Consulter et vérifier le journal d'audit | — | ✅ | — | ✅ | ✅ | — | — |
+| `journals:manage` | Créer et paramétrer les journaux comptables | — | ✅ | ✅ | ✅ | ✅ | — | — |
+| `entries:read` | Consulter les journaux et les écritures | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| `entries:write` | Saisir et modifier des écritures en brouillon | — | ✅ | ✅ | ✅ | ✅ | — | — |
+| `entries:post` | Valider des écritures (numérotation définitive) et les contre-passer | — | ✅ | ✅ | ✅ | ✅ | — | — |
 
 SUPER_ADMIN : aucune permission sur les dossiers (administration de la plateforme uniquement). PARTENAIRE_FINANCIER : accès limité aux dossiers de financement partagés (phase 6).

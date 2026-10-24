@@ -4,6 +4,7 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,6 +12,7 @@ from fastapi.testclient import TestClient
 from kora.tenancy.permissions import ROLE_PERMISSIONS, Permission, render_markdown
 from kora.tenancy.roles import Role
 from tests.conftest import CompanyFixture, UserFixture
+from tests.ledger_helpers import entry_body
 
 MakeCompany = Callable[..., CompanyFixture]
 MakeUser = Callable[..., UserFixture]
@@ -116,8 +118,38 @@ def _probe(permission: Permission, client: TestClient, s: Scenario, make_user: M
         Permission.AUDIT_READ: lambda: (
             client.get(f"{base}/audit-events", headers=s.headers).status_code
         ),
+        Permission.JOURNALS_MANAGE: lambda: (
+            client.post(
+                f"{base}/journals",
+                headers=s.headers,
+                json={
+                    "code": f"T{uuid.uuid4().hex[:6].upper()}",
+                    "label": "Test",
+                    "kind": "OPERATIONS_DIVERSES",
+                },
+            ).status_code
+        ),
+        Permission.ENTRIES_READ: lambda: (
+            client.get(f"{base}/entries", headers=s.headers).status_code
+        ),
+        Permission.ENTRIES_WRITE: lambda: _create_draft(client, base, s).status_code,
+        Permission.ENTRIES_POST: lambda: (
+            client.post(
+                f"{base}/entries/{_draft_id_or_random(client, base, s)}/post", headers=s.headers
+            ).status_code
+        ),
     }
     return calls[permission]()
+
+
+def _create_draft(client: TestClient, base: str, s: Scenario) -> Any:
+    body = entry_body(client, base, s.headers, [("571", 1000, 0), ("701", 0, 1000)])
+    return client.post(f"{base}/entries", headers=s.headers, json=body)
+
+
+def _draft_id_or_random(client: TestClient, base: str, s: Scenario) -> str:
+    created = _create_draft(client, base, s)
+    return str(created.json()["id"]) if created.status_code == 201 else str(uuid.uuid4())
 
 
 TENANT_ROLES = [

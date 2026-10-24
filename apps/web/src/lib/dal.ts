@@ -66,6 +66,53 @@ export async function getInvitations(companyId: string) {
   );
 }
 
+export async function getJournals(companyId: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/journals", {
+      params: { path: { company_id: companyId } },
+    }),
+  );
+}
+
+/** Tous les comptes actifs (sélecteur de saisie) : quelques centaines, en pages de 200. */
+export async function getActiveAccounts(companyId: string) {
+  const client = await api();
+  const accounts = [];
+  for (let offset = 0; ; offset += 200) {
+    const page = await read(
+      client.GET("/api/v1/companies/{company_id}/accounts", {
+        params: { path: { company_id: companyId }, query: { active_only: true, limit: 200, offset } },
+      }),
+    );
+    accounts.push(...page.items);
+    if (accounts.length >= page.total || page.items.length === 0) return accounts;
+  }
+}
+
+export type EntriesQuery = {
+  journal_id?: string;
+  status?: "DRAFT" | "POSTED";
+  q?: string;
+  limit: number;
+  offset: number;
+};
+
+export async function getEntries(companyId: string, query: EntriesQuery) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/entries", {
+      params: { path: { company_id: companyId }, query },
+    }),
+  );
+}
+
+export async function getEntry(companyId: string, entryId: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/entries/{entry_id}", {
+      params: { path: { company_id: companyId, entry_id: entryId } },
+    }),
+  );
+}
+
 export async function getAuditEvents(companyId: string, limit: number, offset: number) {
   return read(
     (await api()).GET("/api/v1/companies/{company_id}/audit-events", {

@@ -12,10 +12,14 @@ async function CompanyNav({ params }: { params: Params }) {
   const { companyId } = await params;
   const [{ t }, company] = await Promise.all([getDictionary(), getCompany(companyId)]);
   const base = `/dossiers/${companyId}`;
+  const accounting = [
+    { href: `${base}/ecritures`, label: t.nav.entries, permission: "entries:read" },
+  ].filter((item) => can(company, item.permission));
   const settings = [
     { href: `${base}/parametres/entreprise`, label: t.nav.company, permission: "company:read" },
     { href: `${base}/parametres/exercices`, label: t.nav.fiscalYears, permission: "fiscal_years:read" },
     { href: `${base}/parametres/plan-comptable`, label: t.nav.chart, permission: "accounts:read" },
+    { href: `${base}/parametres/journaux`, label: t.nav.journals, permission: "entries:read" },
     { href: `${base}/parametres/taxes`, label: t.nav.taxes, permission: "taxes:read" },
     { href: `${base}/parametres/utilisateurs`, label: t.nav.members, permission: "members:read" },
   ].filter((item) => can(company, item.permission));
@@ -32,6 +36,16 @@ async function CompanyNav({ params }: { params: Params }) {
       <NavLink href={base} exact>
         {t.nav.dashboard}
       </NavLink>
+      {accounting.length > 0 ? (
+        <p className="text-muted-foreground mt-3 hidden px-3 text-xs font-medium uppercase md:block">
+          {t.nav.accounting}
+        </p>
+      ) : null}
+      {accounting.map((item) => (
+        <NavLink key={item.href} href={item.href}>
+          {item.label}
+        </NavLink>
+      ))}
       <p className="text-muted-foreground mt-3 hidden px-3 text-xs font-medium uppercase md:block">
         {t.nav.settings}
       </p>

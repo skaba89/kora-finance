@@ -64,8 +64,9 @@ allowed-confusables = ["–", "×", "’"]
 # Handlers FastAPI : paramètres injectés (corps, contexte, session, filtres…).
 "src/kora/api/**" = ["PLR0917"]
 "alembic/**" = ["N999"]
-# Migrations générées : longues contraintes CHECK sur une ligne.
-"alembic/versions/**" = ["N999", "E501"]
+# Migrations : longues contraintes CHECK sur une ligne ; DDL et données figées construits
+# à partir de constantes du fichier (aucune saisie utilisateur).
+"alembic/versions/**" = ["N999", "E501", "S608"]
 
 [tool.mypy]
 python_version = "3.13"

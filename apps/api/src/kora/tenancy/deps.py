@@ -64,3 +64,7 @@ AccountsManage = Annotated[TenantContext, Depends(require(Permission.ACCOUNTS_MA
 TaxesRead = Annotated[TenantContext, Depends(require(Permission.TAXES_READ))]
 TaxesManage = Annotated[TenantContext, Depends(require(Permission.TAXES_MANAGE))]
 AuditRead = Annotated[TenantContext, Depends(require(Permission.AUDIT_READ))]
+JournalsManage = Annotated[TenantContext, Depends(require(Permission.JOURNALS_MANAGE))]
+EntriesRead = Annotated[TenantContext, Depends(require(Permission.ENTRIES_READ))]
+EntriesWrite = Annotated[TenantContext, Depends(require(Permission.ENTRIES_WRITE))]
+EntriesPost = Annotated[TenantContext, Depends(require(Permission.ENTRIES_POST))]

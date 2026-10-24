@@ -9,6 +9,7 @@ from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
 from kora.accounting.fiscal_defaults_gn import DEFAULT_TAX_RATES, DEFAULT_VALID_FROM
+from kora.accounting.journals import DEFAULT_JOURNALS, create_default_journals
 from kora.audit.service import record_event
 from kora.auth.service import RequestContext
 from kora.models.accounting import Account, TaxRate
@@ -66,6 +67,7 @@ def initialize_company(
             for rate in DEFAULT_TAX_RATES
         ],
     )
+    create_default_journals(session, company.id)
     record_event(
         session,
         action="company.accounting_initialized",
@@ -75,6 +77,7 @@ def initialize_company(
             "plan_comptable": CHART_REFERENCE,
             "nombre_comptes": len(chart),
             "taxes": [rate.code for rate in DEFAULT_TAX_RATES],
+            "journaux": [code for code, _, _ in DEFAULT_JOURNALS],
         },
         actor_user_id=actor_user_id,
         ip_address=ctx.ip_address,

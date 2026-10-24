@@ -43,6 +43,8 @@ class Account(Base):
 
     __table_args__ = (
         UniqueConstraint("tenant_id", "number"),
+        # Cible des clés étrangères composites : un compte n'est référencé que par son dossier.
+        UniqueConstraint("tenant_id", "id"),
         CheckConstraint("number ~ '^[1-9][0-9]{0,11}$'", name="number_digits"),
         CheckConstraint("length(trim(label)) > 0", name="label_not_blank"),
     )
