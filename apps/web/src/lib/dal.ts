@@ -137,6 +137,17 @@ export async function getLedger(
   );
 }
 
+export async function getLetterableLines(
+  companyId: string,
+  query: { account_id: string; status: "open" | "lettered" | "all"; limit: number; offset: number },
+) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/lettering/lines", {
+      params: { path: { company_id: companyId }, query },
+    }),
+  );
+}
+
 export async function getAuditEvents(companyId: string, limit: number, offset: number) {
   return read(
     (await api()).GET("/api/v1/companies/{company_id}/audit-events", {

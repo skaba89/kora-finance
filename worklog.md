@@ -223,3 +223,19 @@ et la RLS, puis l'auth, puis l'audit chaîné.
 
 **À valider par un expert-comptable** : présentation de la balance, traitement des
 à-nouveaux dans l'ouverture.
+
+## 2026-10-24 — Phase 2c : lettrage des comptes de tiers
+
+**Livré**
+- Migration 0006 : `letterings` + `lettering_lines` (RLS FORCE, clés composites) ;
+  déclencheur de contrainte **différé** : ≥ 2 lignes validées du compte lettré, somme nulle.
+- Service : lettrage manuel (contrôles explicites, code A, B, … AA par compte, numérotation
+  sous verrou), délettrage, lettrage automatique par référence de pièce (casse et espaces
+  ignorés) ; audit `lettering.created|deleted`. Permission `lettering:manage`.
+- API : `GET /lettering/lines` (tous exercices, solde non lettré), `POST /letterings`,
+  `POST /letterings/auto`, `DELETE /letterings/{id}`.
+- Web : page Lettrage (cases à cocher, écart en BigInt, bouton actif à écart nul, groupes
+  lettrés avec délettrage, pagination).
+
+**Vérifié** : tests du service, de la base (lettrage déséquilibré ou sur un autre compte
+refusé au commit), IDOR, matrice des permissions ; E2E desktop + mobile ; revue mobile.

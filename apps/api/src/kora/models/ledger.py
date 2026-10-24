@@ -143,6 +143,8 @@ class JournalLine(Base):
 
     __table_args__ = (
         UniqueConstraint("entry_id", "line_no"),
+        # Cible des clés étrangères composites (lettrage).
+        UniqueConstraint("tenant_id", "id"),
         ForeignKeyConstraint(
             ["tenant_id", "entry_id"],
             ["journal_entries.tenant_id", "journal_entries.id"],
@@ -184,5 +186,52 @@ class JournalSequence(Base):
             ["tenant_id", "fiscal_year_id"],
             ["fiscal_years.tenant_id", "fiscal_years.id"],
             ondelete="CASCADE",
+        ),
+    )
+
+
+class Lettering(Base):
+    """Lettrage : rapprochement de lignes validées d'un compte de tiers dont la somme
+    (débits - crédits) est nulle (ex. facture et règlement). Les lignes restent
+    immuables ; le lettrage est stocké à part et peut être défait."""
+
+    __tablename__ = "letterings"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"))
+    account_id: Mapped[uuid.UUID]
+    # Rang du lettrage sur le compte (1, 2, …) ; le code affiché (A, B, …, AA) en dérive.
+    sequence: Mapped[int] = mapped_column(Integer)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = created_at_column()
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "account_id", "sequence"),
+        ForeignKeyConstraint(
+            ["tenant_id", "account_id"], ["accounts.tenant_id", "accounts.id"], ondelete="RESTRICT"
+        ),
+        CheckConstraint("sequence > 0", name="sequence_positive"),
+    )
+
+
+class LetteringLine(Base):
+    __tablename__ = "lettering_lines"
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"))
+    lettering_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    # Une ligne n'appartient qu'à un seul lettrage.
+    line_id: Mapped[uuid.UUID] = mapped_column(primary_key=True, unique=True)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "lettering_id"],
+            ["letterings.tenant_id", "letterings.id"],
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "line_id"],
+            ["journal_lines.tenant_id", "journal_lines.id"],
+            ondelete="RESTRICT",
         ),
     )

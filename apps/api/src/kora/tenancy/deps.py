@@ -68,3 +68,4 @@ JournalsManage = Annotated[TenantContext, Depends(require(Permission.JOURNALS_MA
 EntriesRead = Annotated[TenantContext, Depends(require(Permission.ENTRIES_READ))]
 EntriesWrite = Annotated[TenantContext, Depends(require(Permission.ENTRIES_WRITE))]
 EntriesPost = Annotated[TenantContext, Depends(require(Permission.ENTRIES_POST))]
+LetteringManage = Annotated[TenantContext, Depends(require(Permission.LETTERING_MANAGE))]

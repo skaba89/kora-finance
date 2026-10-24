@@ -31,6 +31,7 @@ class Permission(StrEnum):
     ENTRIES_READ = "entries:read"
     ENTRIES_WRITE = "entries:write"
     ENTRIES_POST = "entries:post"
+    LETTERING_MANAGE = "lettering:manage"
 
 
 DESCRIPTIONS: dict[Permission, str] = {
@@ -49,6 +50,7 @@ DESCRIPTIONS: dict[Permission, str] = {
     Permission.ENTRIES_READ: "Consulter les journaux et les écritures",
     Permission.ENTRIES_WRITE: "Saisir et modifier des écritures en brouillon",
     Permission.ENTRIES_POST: "Valider des écritures (numérotation définitive) et les contre-passer",
+    Permission.LETTERING_MANAGE: "Lettrer et délettrer les comptes de tiers",
 }
 
 _READ = frozenset(
@@ -68,6 +70,7 @@ _ACCOUNTING = _READ | {
     Permission.JOURNALS_MANAGE,
     Permission.ENTRIES_WRITE,
     Permission.ENTRIES_POST,
+    Permission.LETTERING_MANAGE,
 }
 _FULL = frozenset(Permission)
 
