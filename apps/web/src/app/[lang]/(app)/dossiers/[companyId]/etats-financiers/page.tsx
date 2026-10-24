@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { ExportLinks } from "@/components/ledger/export-links";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -172,6 +173,13 @@ export default async function StatementsPage({ params, searchParams }: PageProps
           {s.netResult} : <span className="font-medium tabular-nums">{formatMoney(BigInt(data.net_result), currency, locale)}</span>
         </span>
         {!hasPrevious ? <span className="text-muted-foreground">{s.noPrevious}</span> : null}
+        <ExportLinks
+          companyId={companyId}
+          kind="etats-financiers"
+          fiscalYearId={year.id}
+          dateTo={dateTo}
+          label={t.reports.export}
+        />
       </div>
       {!data.balanced ? (
         <Alert variant="destructive" role="alert" className="mb-4">

@@ -330,6 +330,10 @@ export const en: typeof fr = {
     unknownAccount: "No account {number} in the chart of accounts.",
     chooseAccount: "Enter an account number to show its ledger.",
     draftsExcluded: "Drafts are not included in reports.",
+    export: "Export",
+    exportAccount: "Export this account",
+    exportAll: "Export the whole ledger",
+    exportJournal: "Export the year's journal",
   },
   lettering: {
     title: "Matching",

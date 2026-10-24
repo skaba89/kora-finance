@@ -13,7 +13,7 @@ Journal daté des sessions : `worklog.md`. Le lire en début de session.
 |---|---|---|
 | 0 | Fondations du dépôt : monorepo, Docker, CI, harnais de tests | ✅ livrée (2026-10-23) |
 | 1 | Socle : auth, multi-tenant + RLS, RBAC, organisation, plan comptable, taxes, audit chaîné, PWA | ✅ livrée (2026-10-23) ; 1g emails ✅ (2026-10-24) — reste listé dans `worklog.md` |
-| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅, 2c lettrage ✅, 2d clôture ✅, 2e bilan et CR ✅ (2026-10-24) ; 2e-bis TFT, 2f, 2g à venir (`docs/PLAN.md`) |
+| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅, 2c lettrage ✅, 2d clôture ✅, 2e bilan et CR ✅, 2f exports ✅ (2026-10-24) ; 2e-bis TFT, 2g à venir (`docs/PLAN.md`) |
 | 3 | Trésorerie, Mobile Money, rapprochement | — |
 | 4 | Ventes et achats | — |
 | 5 | Import et migration | — |
@@ -60,6 +60,7 @@ accounting/  plan SYSCOHADA (data/*.csv), taux de taxes versionnés, paramétrag
              closing.py (verrouillage de période, clôture, à-nouveaux, réouverture),
              statements.py + data/etats_*.csv (bilan et compte de résultat SYSCOHADA)
 audit/       journal chaîné SHA-256 (écriture, vérification)
+exports/     document neutre → Excel (openpyxl) ou PDF (reportlab, police DejaVu de l'image)
 api/v1/      routes ; `ROUTERS` = registre parcouru par les tests d'isolation
 worker/      acteurs Dramatiq (emails : préparation du jeton → deliver_email avec réessais)
 ```
@@ -203,6 +204,7 @@ d'écrire du code Next.** Points déjà rencontrés :
 | 2026-10-24 | Clôture, réouverture et déverrouillage réservés au dirigeant et à l'administrateur de cabinet (`fiscal_years:close`) ; verrouiller reste ouvert aux comptables | Actes engageants ; à confirmer avec les utilisateurs |
 | 2026-10-24 | États financiers pilotés par deux référentiels CSV versionnés (postes et formules ; affectation des comptes par préfixe le plus long et sens du solde) ; résultat de la période ajouté à CJ ; comptes non affectés signalés, jamais ignorés | Les règles se corrigent sans toucher au code de calcul ; des tests garantissent que chaque compte du plan est affecté et que XI = produits − charges |
 | 2026-10-24 | TFT séparé (2e-bis) | Méthode SYSCOHADA du TFT à valider par un expert-comptable avant implémentation |
+| 2026-10-24 | Exports : document neutre rendu en Excel (montants numériques exacts, Decimal) ou PDF (A4, police DejaVu installée dans l'image, pas de repli silencieux) ; relayés en flux par une route Next (BFF) ; chaque export tracé dans l'audit ; PDF limité à 20 000 lignes (Excel au-delà) | Pas d'accès direct du navigateur à l'API ; traçabilité des sorties de données |
 | 2026-10-24 | Dépôt GitHub **privé** `skaba89/kora-finance` ; livraisons par branche + pull request, fusion seulement si la CI est verte | La protection de branche exige GitHub Pro sur un dépôt privé (non active) |
 
 ## À valider par un expert-comptable guinéen

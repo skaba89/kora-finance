@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Fragment } from "react";
 
+import { ExportLinks } from "@/components/ledger/export-links";
 import { PeriodFilter } from "@/components/ledger/period-filter";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -118,6 +119,18 @@ export default async function BalancePage({ params, searchParams }: PageProps<"/
           {r.includeZero}
         </label>
       </PeriodFilter>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
+        <span className="text-muted-foreground">{r.export}</span>
+        <ExportLinks
+          companyId={companyId}
+          kind="balance"
+          fiscalYearId={year.id}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          label={r.export}
+        />
+      </div>
 
       {balance.balanced === false ? (
         <Alert variant="destructive" role="alert" className="mb-4">

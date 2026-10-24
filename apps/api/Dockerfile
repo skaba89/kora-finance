@@ -10,6 +10,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_LINK_MODE=copy \
     PATH=/opt/venv/bin:$PATH
 COPY --from=ghcr.io/astral-sh/uv:0.13.4 /uv /usr/local/bin/uv
+# Police Unicode des exports PDF (accents, espaces insécables, tirets) : DejaVu Sans.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # --- Dépendances de production uniquement
@@ -28,6 +32,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/src \
     PATH=/opt/venv/bin:$PATH
+# Police Unicode des exports PDF (accents, espaces insécables, tirets) : DejaVu Sans.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
 RUN groupadd --system --gid 10001 kora && useradd --system --uid 10001 --gid kora kora
 WORKDIR /app
 COPY --from=deps /opt/venv /opt/venv

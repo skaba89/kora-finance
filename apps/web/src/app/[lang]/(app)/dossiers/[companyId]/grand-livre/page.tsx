@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { ExportLinks } from "@/components/ledger/export-links";
 import { PeriodFilter } from "@/components/ledger/period-filter";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -96,6 +97,34 @@ export default async function LedgerPage({ params, searchParams }: PageProps<"/[
           />
         </div>
       </PeriodFilter>
+
+      <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+        {account ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-muted-foreground">{r.exportAccount}</span>
+            <ExportLinks
+              companyId={companyId}
+              kind="grand-livre"
+              fiscalYearId={year.id}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              accountId={account.id}
+              label={r.exportAccount}
+            />
+          </div>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-muted-foreground">{r.exportAll}</span>
+          <ExportLinks
+            companyId={companyId}
+            kind="grand-livre"
+            fiscalYearId={year.id}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            label={r.exportAll}
+          />
+        </div>
+      </div>
 
       {!number ? <p className="text-muted-foreground text-sm">{r.chooseAccount}</p> : null}
       {number && !account ? (

@@ -19,6 +19,8 @@ dependencies = [
     "cryptography>=50.0,<50.1",
     "segno>=1.6,<1.7",
     "email-validator>=2.3,<2.4",
+    "openpyxl>=3.1.5,<3.2",
+    "reportlab>=5.0.1,<5.1",
 ]
 
 [dependency-groups]
@@ -30,6 +32,8 @@ dev = [
     "mypy>=2.4,<2.5",
     "hypothesis>=6.170,<6.171",
     "time-machine>=3.5,<3.6",
+    "types-openpyxl==3.1.5.20260827",
+    "types-reportlab==5.0.0.20261006",
 ]
 
 # Pas de paquet installable : le code vit dans src/ et PYTHONPATH=src
