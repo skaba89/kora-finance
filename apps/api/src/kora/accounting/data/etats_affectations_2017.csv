@@ -1,0 +1,125 @@
+prefixe;si_debiteur;si_crediteur;note
+1;DA;DA;Repli de sécurité : aucun compte de classe 1 du plan n'y tombe.
+10;CA;CA;
+105;CD;CD;
+106;CE;CE;
+109;CB;CB;Capital non appelé : vient en diminution des capitaux propres.
+11;CG;CG;
+111;CF;CF;
+112;CF;CF;
+113;CF;CF;
+12;CH;CH;Report à nouveau créditeur (121) ou débiteur (129).
+13;CJ;CJ;Résultat d'exercices antérieurs non encore affecté : à affecter par une écriture.
+14;CL;CL;
+15;CM;CM;
+16;DA;DA;
+17;DB;DB;
+18;DA;DA;Comptes de liaison : à valider.
+19;DC;DC;
+2;AS;AS;Repli de sécurité.
+21;AD;AD;
+22;AJ;AJ;
+23;AK;AK;
+234;AL;AL;
+235;AL;AL;
+238;AL;AL;
+24;AM;AM;
+245;AN;AN;
+25;AP;AP;
+26;AR;AR;
+27;AS;AS;
+28;AM#amort;AM#amort;Repli : amortissements non détaillés.
+281;AD#amort;AD#amort;
+282;AJ#amort;AJ#amort;
+283;AK#amort;AK#amort;Les amortissements des aménagements (234, 235, 238) sont ici avec les bâtiments : à détailler.
+284;AM#amort;AM#amort;Les amortissements du matériel de transport (245) sont ici avec le matériel : à détailler.
+29;AS#amort;AS#amort;
+291;AD#amort;AD#amort;
+292;AJ#amort;AJ#amort;
+293;AK#amort;AK#amort;
+294;AM#amort;AM#amort;
+295;AP#amort;AP#amort;
+296;AR#amort;AR#amort;
+297;AS#amort;AS#amort;
+3;BB;BB;
+39;BB#amort;BB#amort;
+4;BJ;DM;Repli de sécurité.
+40;BH;DJ;Fournisseur débiteur : avance versée.
+41;BI;DI;Client créditeur : avance reçue.
+42;BJ;DK;
+43;BJ;DK;
+44;BJ;DK;
+45;BJ;DM;
+46;BJ;DM;
+47;BJ;DM;
+478;BU;BU;
+479;DV;DV;
+48;BA;DH;
+49;BJ#amort;BJ#amort;
+490;BH#amort;BH#amort;
+491;BI#amort;BI#amort;
+498;BA#amort;BA#amort;
+499;DN;DN;
+5;BS;DR;Repli de sécurité.
+50;BQ;BQ;
+51;BR;BR;
+52;BS;DR;
+53;BS;DR;
+54;BS;DR;
+55;BS;DR;Monnaie électronique (Mobile Money) : avec la trésorerie, à valider.
+56;BS;DR;
+565;BS;DQ;
+57;BS;DR;
+58;BS;DR;
+59;BS#amort;BS#amort;
+590;BQ#amort;BQ#amort;
+591;BR#amort;BR#amort;
+599;DN;DN;
+6;RJ;RJ;Repli de sécurité.
+60;RE;RE;
+601;RA;RA;
+602;RC;RC;
+603;RB;RB;Variations de stocks non détaillées (6031/6032/6033 absents du plan préchargé) : à valider.
+6031;RB;RB;
+6032;RD;RD;
+6033;RF;RF;
+61;RG;RG;
+62;RH;RH;
+63;RH;RH;
+64;RI;RI;
+65;RJ;RJ;
+659;RL;RL;
+66;RK;RK;
+67;RM;RM;
+679;RN;RN;
+68;RL;RL;
+687;RN;RN;
+69;RL;RL;
+697;RN;RN;
+7;TH;TH;Repli de sécurité.
+70;TB;TB;
+701;TA;TA;
+705;TC;TC;
+706;TC;TC;
+707;TD;TD;
+71;TG;TG;
+72;TF;TF;
+73;TE;TE;
+75;TH;TH;
+759;TJ;TJ;
+77;TK;TK;
+779;TL;TL;
+78;TI;TI;
+787;TM;TM;
+79;TJ;TJ;
+797;TL;TL;
+8;RP;RP;Repli de sécurité.
+81;RO;RO;
+82;TN;TN;
+83;RP;RP;
+84;TO;TO;
+85;RP;RP;
+86;TO;TO;
+87;RQ;RQ;
+88;TO;TO;Subventions d'équilibre : à valider.
+89;RS;RS;

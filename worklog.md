@@ -260,3 +260,23 @@ refusé au commit), IDOR, matrice des permissions ; E2E desktop + mobile ; revue
 clôture » testé compte par compte ; bénéfice (131) et perte (139) ; réouverture puis
 nouvelle clôture après correction ; réouverture refusée si l'exercice suivant est clôturé ;
 déclencheur testé en SQL direct ; matrice des permissions ; E2E desktop + mobile.
+
+## 2026-10-24 — Phase 2e : bilan et compte de résultat
+
+**Livré**
+- Référentiels versionnés `SYSCOHADA_REVISE_2017_ETATS_V1` : postes AD…BZ, CA…DZ, TA…XI
+  avec formules des totaux (`etats_syscohada_2017.csv`) ; affectation des comptes par
+  préfixe le plus long et sens du solde, avec une note par choix incertain
+  (`etats_affectations_2017.csv`). Validés au chargement (codes, formules, ordre).
+- `accounting/statements.py` : calcul sur écritures validées à une date ; colonnes brut,
+  amortissements et dépréciations, net à l'actif ; résultat de la période ajouté à CJ ;
+  comptes non affectés listés. API `GET /financial-statements` avec comparatif N-1.
+- Web : page États financiers (Bilan / Compte de résultat), postes vides masqués par
+  défaut, fiches sur téléphone, avertissement « à valider par un expert-comptable ».
+
+**Vérifié** : chaque compte du plan affecté au bon état ; XI se développe exactement en
+produits − charges ; BZ et DZ couvrent chaque poste une fois ; jeu de référence calculé à
+la main (y compris amortissement et découvert bancaire) ; comparatif N-1 après clôture ;
+bilan équilibré sur 40 écritures aléatoires couvrant tout le plan.
+
+**Reste** : TFT (2e-bis), exports PDF/Excel (2f), pièces jointes et hors-ligne (2g).

@@ -125,6 +125,64 @@
         "title": "AccountUpdate",
         "type": "object"
       },
+      "AssetLineOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "depreciation": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Depreciation",
+            "type": "string"
+          },
+          "gross": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Gross",
+            "type": "string"
+          },
+          "is_total": {
+            "title": "Is Total",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "net": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Net",
+            "type": "string"
+          },
+          "previous_net": {
+            "anyOf": [
+              {
+                "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+                "pattern": "^-?(0|[1-9][0-9]*)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Net"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "is_total",
+          "gross",
+          "depreciation",
+          "net",
+          "previous_net"
+        ],
+        "title": "AssetLineOut",
+        "type": "object"
+      },
       "AssignmentCreate": {
         "additionalProperties": false,
         "properties": {
@@ -1304,6 +1362,80 @@
           "code"
         ],
         "title": "ErrorResponse",
+        "type": "object"
+      },
+      "FinancialStatementsOut": {
+        "properties": {
+          "assets": {
+            "items": {
+              "$ref": "#/components/schemas/AssetLineOut"
+            },
+            "title": "Assets",
+            "type": "array"
+          },
+          "balanced": {
+            "description": "Total actif = total passif et tous les comptes affectés",
+            "title": "Balanced",
+            "type": "boolean"
+          },
+          "income_statement": {
+            "items": {
+              "$ref": "#/components/schemas/StatementLineOut"
+            },
+            "title": "Income Statement",
+            "type": "array"
+          },
+          "liabilities": {
+            "items": {
+              "$ref": "#/components/schemas/StatementLineOut"
+            },
+            "title": "Liabilities",
+            "type": "array"
+          },
+          "net_result": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Net Result",
+            "type": "string"
+          },
+          "period": {
+            "$ref": "#/components/schemas/PeriodRef"
+          },
+          "previous_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PeriodRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reference": {
+            "description": "Version du référentiel d'affectation des comptes",
+            "title": "Reference",
+            "type": "string"
+          },
+          "unmapped_accounts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmapped Accounts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reference",
+          "period",
+          "previous_period",
+          "assets",
+          "liabilities",
+          "income_statement",
+          "net_result",
+          "balanced",
+          "unmapped_accounts"
+        ],
+        "title": "FinancialStatementsOut",
         "type": "object"
       },
       "FirmCreate": {
@@ -2592,6 +2724,32 @@
         "title": "PeriodOut",
         "type": "object"
       },
+      "PeriodRef": {
+        "properties": {
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "fiscal_year_id": {
+            "format": "uuid",
+            "title": "Fiscal Year Id",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fiscal_year_id",
+          "start_date",
+          "date_to"
+        ],
+        "title": "PeriodRef",
+        "type": "object"
+      },
       "ReadyResponse": {
         "properties": {
           "database": {
@@ -2771,6 +2929,50 @@
         ],
         "title": "Role",
         "type": "string"
+      },
+      "StatementLineOut": {
+        "properties": {
+          "amount": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "is_total": {
+            "title": "Is Total",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "previous_amount": {
+            "anyOf": [
+              {
+                "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+                "pattern": "^-?(0|[1-9][0-9]*)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Amount"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "is_total",
+          "amount",
+          "previous_amount"
+        ],
+        "title": "StatementLineOut",
+        "type": "object"
       },
       "TaxRateCreate": {
         "additionalProperties": false,
@@ -5861,6 +6063,114 @@
         "summary": "Reverse Entry",
         "tags": [
           "comptabilité générale"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/financial-statements": {
+      "get": {
+        "description": "Bilan et compte de résultat SYSCOHADA révisé sur les écritures validées, avec\nl'exercice précédent en comparaison (s'il existe dans Kora).",
+        "operationId": "financial_statements_api_v1_companies__company_id__financial_statements_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fiscal_year_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fiscal Year Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialStatementsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Financial Statements",
+        "tags": [
+          "états financiers"
         ]
       }
     },

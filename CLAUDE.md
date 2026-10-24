@@ -13,7 +13,7 @@ Journal daté des sessions : `worklog.md`. Le lire en début de session.
 |---|---|---|
 | 0 | Fondations du dépôt : monorepo, Docker, CI, harnais de tests | ✅ livrée (2026-10-23) |
 | 1 | Socle : auth, multi-tenant + RLS, RBAC, organisation, plan comptable, taxes, audit chaîné, PWA | ✅ livrée (2026-10-23) ; 1g emails ✅ (2026-10-24) — reste listé dans `worklog.md` |
-| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅, 2c lettrage ✅, 2d clôture ✅ (2026-10-24) ; 2e–2g à venir (`docs/PLAN.md`) |
+| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅, 2c lettrage ✅, 2d clôture ✅, 2e bilan et CR ✅ (2026-10-24) ; 2e-bis TFT, 2f, 2g à venir (`docs/PLAN.md`) |
 | 3 | Trésorerie, Mobile Money, rapprochement | — |
 | 4 | Ventes et achats | — |
 | 5 | Import et migration | — |
@@ -57,7 +57,8 @@ accounting/  plan SYSCOHADA (data/*.csv), taux de taxes versionnés, paramétrag
              journals.py (journaux par défaut), entries.py (écritures en partie double),
              reports.py (balance, grand livre : agrégats SQL sur écritures validées),
              lettering.py (lettrage des comptes de tiers, stocké hors des lignes immuables),
-             closing.py (verrouillage de période, clôture, à-nouveaux, réouverture)
+             closing.py (verrouillage de période, clôture, à-nouveaux, réouverture),
+             statements.py + data/etats_*.csv (bilan et compte de résultat SYSCOHADA)
 audit/       journal chaîné SHA-256 (écriture, vérification)
 api/v1/      routes ; `ROUTERS` = registre parcouru par les tests d'isolation
 worker/      acteurs Dramatiq (emails : préparation du jeton → deliver_email avec réessais)
@@ -200,13 +201,17 @@ d'écrire du code Next.** Points déjà rencontrés :
 | 2026-10-24 | Lettrage stocké à part (`letterings`, `lettering_lines`), équilibre vérifié par un déclencheur **différé** ; comptes lettrables = classe 4 ; lettrage automatique **uniquement** par référence de pièce identique | Les lignes validées restent immuables ; pas de rapprochement deviné (le rapprochement probabiliste viendra avec la trésorerie, phase 3) |
 | 2026-10-24 | Clôture : à-nouveaux générés (origine CLOSING) = soldes des classes 1–5 + résultat en 131/139, sans affectation ; réouverture = **contre-passation** des à-nouveaux (jamais de suppression) ; exercice clôturé et période verrouillée refusés par la base | Les à-nouveaux reproduisent exactement le bilan ; piste d'audit complète |
 | 2026-10-24 | Clôture, réouverture et déverrouillage réservés au dirigeant et à l'administrateur de cabinet (`fiscal_years:close`) ; verrouiller reste ouvert aux comptables | Actes engageants ; à confirmer avec les utilisateurs |
+| 2026-10-24 | États financiers pilotés par deux référentiels CSV versionnés (postes et formules ; affectation des comptes par préfixe le plus long et sens du solde) ; résultat de la période ajouté à CJ ; comptes non affectés signalés, jamais ignorés | Les règles se corrigent sans toucher au code de calcul ; des tests garantissent que chaque compte du plan est affecté et que XI = produits − charges |
+| 2026-10-24 | TFT séparé (2e-bis) | Méthode SYSCOHADA du TFT à valider par un expert-comptable avant implémentation |
 | 2026-10-24 | Dépôt GitHub **privé** `skaba89/kora-finance` ; livraisons par branche + pull request, fusion seulement si la CI est verte | La protection de branche exige GitHub Pro sur un dépôt privé (non active) |
 
 ## À valider par un expert-comptable guinéen
 
 Nomenclature du plan SYSCOHADA révisé à précharger · journaux par défaut (AC, VT, BQ,
 CA, MM, OD, AN) · interdiction d'imputer sur un compte de regroupement · comptes lettrables (classe 4) · comptes 131/139 et classes de résultat (6, 7, 8) à la clôture ·
-report du résultat sans affectation · réouverture d'un exercice clôturé · méthode du tableau des flux de
+report du résultat sans affectation · réouverture d'un exercice clôturé · **affectation des comptes
+aux postes du bilan et du compte de résultat** (`accounting/data/etats_affectations_2017.csv`,
+colonne `note`) · présentation des états · comptes 13 non affectés présentés en CJ · méthode du tableau des flux de
 trésorerie · taux de TVA et autres taxes en vigueur, format de déclaration · mentions
 légales obligatoires des factures · durée de conservation des pièces · pertinence de
 l'import FEC (format français) pour les cabinets guinéens.
