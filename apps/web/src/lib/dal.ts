@@ -113,6 +113,30 @@ export async function getEntry(companyId: string, entryId: string) {
   );
 }
 
+export type PeriodQuery = { fiscal_year_id: string; date_from?: string; date_to?: string };
+
+export async function getTrialBalance(
+  companyId: string,
+  query: PeriodQuery & { class?: number; prefix?: string; include_zero?: boolean },
+) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/trial-balance", {
+      params: { path: { company_id: companyId }, query },
+    }),
+  );
+}
+
+export async function getLedger(
+  companyId: string,
+  query: PeriodQuery & { account_id: string; limit: number; offset: number },
+) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/ledger", {
+      params: { path: { company_id: companyId }, query },
+    }),
+  );
+}
+
 export async function getAuditEvents(companyId: string, limit: number, offset: number) {
   return read(
     (await api()).GET("/api/v1/companies/{company_id}/audit-events", {

@@ -33,7 +33,7 @@ résultat, TFT, exports PDF/Excel, saisie hors-ligne des brouillons.
 Découpage (2026-10-24) :
 - ✅ **2a** Journaux, écritures en partie double (brouillon → validée), numérotation sans
   trou par journal et exercice, écritures validées immuables (contre-passation), saisie web.
-- **2b** Balance générale et grand livre (agrégats SQL paginés).
+- ✅ **2b** Balance générale et grand livre (agrégats SQL paginés).
 - **2c** Lettrage des comptes de tiers.
 - **2d** Verrouillage de période, clôture / réouverture d'exercice, à-nouveaux.
 - **2e** Bilan, compte de résultat, TFT (correspondances SYSCOHADA à valider par un expert).

@@ -14,6 +14,8 @@ async function CompanyNav({ params }: { params: Params }) {
   const base = `/dossiers/${companyId}`;
   const accounting = [
     { href: `${base}/ecritures`, label: t.nav.entries, permission: "entries:read" },
+    { href: `${base}/balance`, label: t.nav.balance, permission: "entries:read" },
+    { href: `${base}/grand-livre`, label: t.nav.ledger, permission: "entries:read" },
   ].filter((item) => can(company, item.permission));
   const settings = [
     { href: `${base}/parametres/entreprise`, label: t.nav.company, permission: "company:read" },

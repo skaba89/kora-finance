@@ -44,6 +44,20 @@ Money = Annotated[
 ]
 
 
+# Solde signé (positif = débiteur, négatif = créditeur), en chaîne. Sortie uniquement.
+SignedMoney = Annotated[
+    int,
+    PlainSerializer(str, return_type=str),
+    WithJsonSchema(
+        {
+            "type": "string",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+        }
+    ),
+]
+
+
 class RequestBody(BaseModel):
     """Base des corps de requête : tout champ inconnu est refusé (pas d'ignorance silencieuse)."""
 

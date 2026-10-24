@@ -13,7 +13,7 @@ Journal daté des sessions : `worklog.md`. Le lire en début de session.
 |---|---|---|
 | 0 | Fondations du dépôt : monorepo, Docker, CI, harnais de tests | ✅ livrée (2026-10-23) |
 | 1 | Socle : auth, multi-tenant + RLS, RBAC, organisation, plan comptable, taxes, audit chaîné, PWA | ✅ livrée (2026-10-23) ; 1g emails ✅ (2026-10-24) — reste listé dans `worklog.md` |
-| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅ (2026-10-24) ; 2b–2g à venir (`docs/PLAN.md`) |
+| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅ (2026-10-24) ; 2c–2g à venir (`docs/PLAN.md`) |
 | 3 | Trésorerie, Mobile Money, rapprochement | — |
 | 4 | Ventes et achats | — |
 | 5 | Import et migration | — |
@@ -54,7 +54,8 @@ email/       envoi SMTP générique / boîte mémoire (tests), gabarits FR/EN, q
 tenancy/     rôles, matrice de permissions (source unique), résolution du rôle, dépendances
 organization/ dossiers, membres, invitations, exercices, cabinets
 accounting/  plan SYSCOHADA (data/*.csv), taux de taxes versionnés, paramétrage initial,
-             journals.py (journaux par défaut), entries.py (écritures en partie double)
+             journals.py (journaux par défaut), entries.py (écritures en partie double),
+             reports.py (balance, grand livre : agrégats SQL sur écritures validées)
 audit/       journal chaîné SHA-256 (écriture, vérification)
 api/v1/      routes ; `ROUTERS` = registre parcouru par les tests d'isolation
 worker/      acteurs Dramatiq (emails : préparation du jeton → deliver_email avec réessais)
@@ -156,6 +157,10 @@ d'écrire du code Next.** Points déjà rencontrés :
   `getByLabel` peut alors trouver deux champs ; préférer `getByRole`, qui ignore le masqué.
 - `crypto.randomUUID()` n'existe qu'en HTTPS/localhost (absent en E2E sur http://web:3000) :
   utiliser `uuidV4()` de `lib/uuid.ts`.
+- Tableaux larges (balance, grand livre) : fiches `sm:hidden` sur téléphone + tableau
+  `hidden sm:table`. En E2E, `getByRole` ignore la variante masquée (rôle `row` sur
+  ordinateur, `listitem` sur mobile, voir `e2e/etats.spec.ts`).
+- Montants affichés avec des espaces fines insécables (fr-FR) : dans une regex, `\s`.
 - Montants : chaînes de chiffres (unités mineures) de bout en bout ; saisie par
   `parseAmount`, sommes en BigInt (`lib/amounts.ts`), affichage par `formatMoney`.
 
@@ -189,6 +194,7 @@ d'écrire du code Next.** Points déjà rencontrés :
 | 2026-10-24 | Écriture : brouillon libre → validée = numérotée (séquence verrouillée par journal et exercice) et **immuable** ; correction par contre-passation | Numérotation sans trou et piste d'audit exigées par la comptabilité |
 | 2026-10-24 | Immuabilité, équilibre et appartenance au dossier **imposés par PostgreSQL** (déclencheurs, clés étrangères composites `(tenant_id, id)`) | Défense en profondeur : aucun bogue applicatif ne peut produire une écriture déséquilibrée ou croisée |
 | 2026-10-24 | Imputation refusée sur un compte qui a des sous-comptes ; à-nouveaux datés du 1er jour de l'exercice | Conventions usuelles, à confirmer par un expert-comptable guinéen |
+| 2026-10-24 | États sur écritures **validées** uniquement ; à-nouveaux (journal A_NOUVEAUX) toujours dans le solde d'ouverture ; soldes signés en chaîne (`SignedMoney`) | Présentation SYSCOHADA usuelle (balance à 6 colonnes), à confirmer par un expert-comptable |
 | 2026-10-24 | Dépôt GitHub **privé** `skaba89/kora-finance` ; livraisons par branche + pull request, fusion seulement si la CI est verte | La protection de branche exige GitHub Pro sur un dépôt privé (non active) |
 
 ## À valider par un expert-comptable guinéen

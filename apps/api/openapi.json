@@ -279,6 +279,122 @@
         "title": "AuditVerificationOut",
         "type": "object"
       },
+      "BalanceRowOut": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "closing_credit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Closing Credit",
+            "type": "string"
+          },
+          "closing_debit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Closing Debit",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "opening_credit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Opening Credit",
+            "type": "string"
+          },
+          "opening_debit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Opening Debit",
+            "type": "string"
+          },
+          "period_credit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Period Credit",
+            "type": "string"
+          },
+          "period_debit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Period Debit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "number",
+          "label",
+          "opening_debit",
+          "opening_credit",
+          "period_debit",
+          "period_credit",
+          "closing_debit",
+          "closing_credit"
+        ],
+        "title": "BalanceRowOut",
+        "type": "object"
+      },
+      "BalanceTotals": {
+        "properties": {
+          "closing_credit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Closing Credit",
+            "type": "string"
+          },
+          "closing_debit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Closing Debit",
+            "type": "string"
+          },
+          "opening_credit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Opening Credit",
+            "type": "string"
+          },
+          "opening_debit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Opening Debit",
+            "type": "string"
+          },
+          "period_credit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Period Credit",
+            "type": "string"
+          },
+          "period_debit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Period Debit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "opening_debit",
+          "opening_credit",
+          "period_debit",
+          "period_credit",
+          "closing_debit",
+          "closing_credit"
+        ],
+        "title": "BalanceTotals",
+        "type": "object"
+      },
       "ChangePasswordRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1547,6 +1663,172 @@
         "title": "JournalUpdate",
         "type": "object"
       },
+      "LedgerAccountOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "label"
+        ],
+        "title": "LedgerAccountOut",
+        "type": "object"
+      },
+      "LedgerLineOut": {
+        "properties": {
+          "balance": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Balance",
+            "type": "string"
+          },
+          "credit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Credit",
+            "type": "string"
+          },
+          "debit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Debit",
+            "type": "string"
+          },
+          "entry_date": {
+            "format": "date",
+            "title": "Entry Date",
+            "type": "string"
+          },
+          "entry_id": {
+            "format": "uuid",
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "journal_code": {
+            "title": "Journal Code",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          }
+        },
+        "required": [
+          "entry_id",
+          "entry_date",
+          "journal_code",
+          "number",
+          "reference",
+          "label",
+          "debit",
+          "credit",
+          "balance"
+        ],
+        "title": "LedgerLineOut",
+        "type": "object"
+      },
+      "LedgerOut": {
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/LedgerAccountOut"
+          },
+          "closing": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Closing",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerLineOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "opening": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Opening",
+            "type": "string"
+          },
+          "period": {
+            "$ref": "#/components/schemas/PeriodOut"
+          },
+          "period_credit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Period Credit",
+            "type": "string"
+          },
+          "period_debit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Period Debit",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "account",
+          "period",
+          "opening",
+          "period_debit",
+          "period_credit",
+          "closing",
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "LedgerOut",
+        "type": "object"
+      },
       "LegalForm": {
         "description": "Formes juridiques (Acte uniforme OHADA + entreprise individuelle).\n\nÀ valider par un expert-comptable guinéen : liste et libellés usuels en Guinée.",
         "enum": [
@@ -1945,6 +2227,32 @@
         "title": "Page[EntrySummaryOut]",
         "type": "object"
       },
+      "PeriodOut": {
+        "properties": {
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "fiscal_year_id": {
+            "format": "uuid",
+            "title": "Fiscal Year Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fiscal_year_id",
+          "date_from",
+          "date_to"
+        ],
+        "title": "PeriodOut",
+        "type": "object"
+      },
       "ReadyResponse": {
         "properties": {
           "database": {
@@ -2341,6 +2649,42 @@
           "expires_in"
         ],
         "title": "TokenResponse",
+        "type": "object"
+      },
+      "TrialBalanceOut": {
+        "properties": {
+          "balanced": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balanced"
+          },
+          "period": {
+            "$ref": "#/components/schemas/PeriodOut"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/BalanceRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/BalanceTotals"
+          }
+        },
+        "required": [
+          "period",
+          "rows",
+          "totals",
+          "balanced"
+        ],
+        "title": "TrialBalanceOut",
         "type": "object"
       },
       "UserOut": {
@@ -5954,6 +6298,168 @@
         ]
       }
     },
+    "/api/v1/companies/{company_id}/ledger": {
+      "get": {
+        "description": "Grand livre d'un compte : solde d'ouverture, mouvements avec solde progressif\n(exact sur chaque page), solde de clôture.",
+        "operationId": "ledger_api_v1_companies__company_id__ledger_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fiscal_year_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fiscal Year Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "description": "Taille de page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "description": "Taille de page",
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Décalage",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Décalage",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ledger",
+        "tags": [
+          "états comptables"
+        ]
+      }
+    },
     "/api/v1/companies/{company_id}/members": {
       "get": {
         "operationId": "list_members_api_v1_companies__company_id__members_get",
@@ -6642,6 +7148,176 @@
         "summary": "Verify Tax Rate",
         "tags": [
           "paramétrage comptable"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/trial-balance": {
+      "get": {
+        "description": "Balance à six colonnes : soldes d'ouverture, mouvements de la période, soldes de\nclôture. `balanced` est faux si la balance n'est pas équilibrée (anomalie).",
+        "operationId": "trial_balance_api_v1_companies__company_id__trial_balance_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fiscal_year_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fiscal Year Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "class",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Class"
+            }
+          },
+          {
+            "in": "query",
+            "name": "prefix",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9]{1,12}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prefix"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_zero",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Zero",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrialBalanceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Trial Balance",
+        "tags": [
+          "états comptables"
         ]
       }
     },
