@@ -202,3 +202,24 @@ et la RLS, puis l'auth, puis l'audit chaîné.
 
 **Reste à faire (phase 2)** : 2b balance et grand livre, 2c lettrage, 2d clôture et
 à-nouveaux, 2e états financiers, 2f exports, 2g pièces jointes et hors-ligne.
+
+## 2026-10-24 — Phase 2b : balance générale et grand livre
+
+**Livré**
+- `accounting/reports.py` : balance à six colonnes (ouverture, mouvements, clôture) en
+  une requête agrégée ; grand livre d'un compte avec solde progressif (fonction de
+  fenêtre, NUMERIC) exact sur chaque page. Écritures validées uniquement ; à-nouveaux
+  toujours dans l'ouverture.
+- API `GET /trial-balance` (filtres classe, préfixe, comptes sans mouvement ; indicateur
+  `balanced`, null si filtré) et `GET /ledger` ; soldes signés en chaîne.
+- Web : pages Balance (sous-totaux par classe en BigInt, lien vers le grand livre) et
+  Grand livre (pagination) ; présentation en fiches sur téléphone.
+
+**Vérifié**
+- Jeu de référence calculé à la main (à-nouveaux, vente avec TVA, achat, encaissement,
+  brouillon exclu) ; concordance balance ↔ grand livre sur 25 écritures aléatoires ;
+  pagination du solde progressif ; isolation (routes couvertes automatiquement).
+- Revue visuelle : la balance à 6 colonnes débordait sur téléphone → fiches par compte.
+
+**À valider par un expert-comptable** : présentation de la balance, traitement des
+à-nouveaux dans l'ouverture.

@@ -101,3 +101,25 @@ export async function verifyEmail(page: Page, email: string, sent = 1) {
   await page.getByRole("button", { name: "Confirmer mon adresse" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Adresse email confirmée" })).toBeVisible();
 }
+
+export async function fillLine(page: Page, n: number, account: string, side: "Débit" | "Crédit", amount: string) {
+  const line = page.getByRole("listitem", { name: `Ligne ${n}` });
+  await line.getByLabel("Compte").fill(account);
+  await line.getByLabel(side).fill(amount);
+}
+
+/** Saisit et valide une écriture à deux lignes depuis l'écran de saisie. */
+export async function postEntry(
+  page: Page,
+  companyId: string,
+  entry: { journal: string; date: string; label: string; debit: string; credit: string; amount: string },
+) {
+  await page.goto(`/dossiers/${companyId}/ecritures/nouvelle`);
+  await page.getByRole("combobox", { name: "Journal" }).selectOption({ label: entry.journal });
+  await page.getByLabel("Date").fill(entry.date);
+  await page.getByRole("textbox", { name: "Libellé", exact: true }).fill(entry.label);
+  await fillLine(page, 1, entry.debit, "Débit", entry.amount);
+  await fillLine(page, 2, entry.credit, "Crédit", entry.amount);
+  await page.getByRole("button", { name: "Enregistrer et valider" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(entry.label);
+}

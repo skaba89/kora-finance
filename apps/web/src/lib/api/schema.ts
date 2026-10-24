@@ -582,6 +582,27 @@ export interface paths {
         patch: operations["update_journal_api_v1_companies__company_id__journals__journal_id__patch"];
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ledger
+         * @description Grand livre d'un compte : solde d'ouverture, mouvements avec solde progressif
+         *     (exact sur chaque page), solde de clôture.
+         */
+        get: operations["ledger_api_v1_companies__company_id__ledger_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/members": {
         parameters: {
             query?: never;
@@ -650,6 +671,27 @@ export interface paths {
         put?: never;
         /** Verify Tax Rate */
         post: operations["verify_tax_rate_api_v1_companies__company_id__tax_rates__tax_rate_id__verification_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/trial-balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Trial Balance
+         * @description Balance à six colonnes : soldes d'ouverture, mouvements de la période, soldes de
+         *     clôture. `balanced` est faux si la balance n'est pas équilibrée (anomalie).
+         */
+        get: operations["trial_balance_api_v1_companies__company_id__trial_balance_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -907,6 +949,81 @@ export interface components {
             ok: boolean;
             /** Reason */
             reason: string | null;
+        };
+        /** BalanceRowOut */
+        BalanceRowOut: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /**
+             * Closing Credit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            closing_credit: string;
+            /**
+             * Closing Debit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            closing_debit: string;
+            /** Label */
+            label: string;
+            /** Number */
+            number: string;
+            /**
+             * Opening Credit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            opening_credit: string;
+            /**
+             * Opening Debit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            opening_debit: string;
+            /**
+             * Period Credit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            period_credit: string;
+            /**
+             * Period Debit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            period_debit: string;
+        };
+        /** BalanceTotals */
+        BalanceTotals: {
+            /**
+             * Closing Credit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            closing_credit: string;
+            /**
+             * Closing Debit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            closing_debit: string;
+            /**
+             * Opening Credit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            opening_credit: string;
+            /**
+             * Opening Debit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            opening_debit: string;
+            /**
+             * Period Credit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            period_credit: string;
+            /**
+             * Period Debit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            period_debit: string;
         };
         /** ChangePasswordRequest */
         ChangePasswordRequest: {
@@ -1384,6 +1501,87 @@ export interface components {
             /** Label */
             label?: string | null;
         };
+        /** LedgerAccountOut */
+        LedgerAccountOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /** Number */
+            number: string;
+        };
+        /** LedgerLineOut */
+        LedgerLineOut: {
+            /**
+             * Balance
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            balance: string;
+            /**
+             * Credit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            credit: string;
+            /**
+             * Debit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            debit: string;
+            /**
+             * Entry Date
+             * Format: date
+             */
+            entry_date: string;
+            /**
+             * Entry Id
+             * Format: uuid
+             */
+            entry_id: string;
+            /** Journal Code */
+            journal_code: string;
+            /** Label */
+            label: string;
+            /** Number */
+            number: number | null;
+            /** Reference */
+            reference: string | null;
+        };
+        /** LedgerOut */
+        LedgerOut: {
+            account: components["schemas"]["LedgerAccountOut"];
+            /**
+             * Closing
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            closing: string;
+            /** Items */
+            items: components["schemas"]["LedgerLineOut"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /**
+             * Opening
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            opening: string;
+            period: components["schemas"]["PeriodOut"];
+            /**
+             * Period Credit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            period_credit: string;
+            /**
+             * Period Debit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            period_debit: string;
+            /** Total */
+            total: number;
+        };
         /**
          * LegalForm
          * @description Formes juridiques (Acte uniforme OHADA + entreprise individuelle).
@@ -1559,6 +1757,24 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** PeriodOut */
+        PeriodOut: {
+            /**
+             * Date From
+             * Format: date
+             */
+            date_from: string;
+            /**
+             * Date To
+             * Format: date
+             */
+            date_to: string;
+            /**
+             * Fiscal Year Id
+             * Format: uuid
+             */
+            fiscal_year_id: string;
+        };
         /** ReadyResponse */
         ReadyResponse: {
             /**
@@ -1711,6 +1927,15 @@ export interface components {
              * @constant
              */
             token_type: "bearer";
+        };
+        /** TrialBalanceOut */
+        TrialBalanceOut: {
+            /** Balanced */
+            balanced: boolean | null;
+            period: components["schemas"]["PeriodOut"];
+            /** Rows */
+            rows: components["schemas"]["BalanceRowOut"][];
+            totals: components["schemas"]["BalanceTotals"];
         };
         /** UserOut */
         UserOut: {
@@ -4229,6 +4454,74 @@ export interface operations {
             };
         };
     };
+    ledger_api_v1_companies__company_id__ledger_get: {
+        parameters: {
+            query: {
+                account_id: string;
+                fiscal_year_id: string;
+                date_from?: string | null;
+                date_to?: string | null;
+                /** @description Taille de page */
+                limit?: number;
+                /** @description Décalage */
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_members_api_v1_companies__company_id__members_get: {
         parameters: {
             query?: never;
@@ -4691,6 +4984,72 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    trial_balance_api_v1_companies__company_id__trial_balance_get: {
+        parameters: {
+            query: {
+                fiscal_year_id: string;
+                date_from?: string | null;
+                date_to?: string | null;
+                class?: number | null;
+                prefix?: string | null;
+                include_zero?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrialBalanceOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

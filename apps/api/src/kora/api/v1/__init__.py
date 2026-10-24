@@ -3,7 +3,7 @@
 
 from fastapi import APIRouter
 
-from kora.api.v1 import accounting, auth, companies, firms, invitations, ledger, mfa
+from kora.api.v1 import accounting, auth, companies, firms, invitations, ledger, mfa, reports
 
 PREFIX = "/api/v1"
 
@@ -13,6 +13,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     companies.router,
     accounting.router,
     ledger.router,
+    reports.router,
     firms.router,
     invitations.router,
 )

@@ -1,12 +1,6 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-import { createCompany, registerAndLogin } from "./helpers";
-
-async function fillLine(page: Page, n: number, account: string, side: "Débit" | "Crédit", amount: string) {
-  const line = page.getByRole("listitem", { name: `Ligne ${n}` });
-  await line.getByLabel("Compte").fill(account);
-  await line.getByLabel(side).fill(amount);
-}
+import { createCompany, fillLine, registerAndLogin } from "./helpers";
 
 test("saisie d'une écriture équilibrée, validation numérotée puis contre-passation", async ({ page }) => {
   await registerAndLogin(page);

@@ -8,39 +8,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.conftest import CompanyFixture
-from tests.ledger_helpers import account_id, entry_body, journal_id
+from tests.ledger_helpers import Ledger, account_id, journal_id
 
 MakeCompany = Callable[..., CompanyFixture]
-
-
-class Ledger:
-    """Raccourcis d'appel à l'API pour un dossier."""
-
-    def __init__(self, client: TestClient, company: CompanyFixture) -> None:
-        self.client = client
-        self.company = company
-        self.base = f"/api/v1/companies/{company.id}"
-
-    def body(self, lines: list[tuple[str, int, int]], **kwargs: Any) -> dict[str, Any]:
-        return entry_body(self.client, self.base, self.company.headers, lines, **kwargs)
-
-    def create(self, lines: list[tuple[str, int, int]], **kwargs: Any) -> Any:
-        return self.client.post(
-            f"{self.base}/entries", headers=self.company.headers, json=self.body(lines, **kwargs)
-        )
-
-    def post(self, entry_id: str) -> Any:
-        return self.client.post(
-            f"{self.base}/entries/{entry_id}/post", headers=self.company.headers
-        )
-
-    def posted(self, lines: list[tuple[str, int, int]], **kwargs: Any) -> dict[str, Any]:
-        created = self.create(lines, **kwargs)
-        assert created.status_code == 201, created.text
-        response = self.post(created.json()["id"])
-        assert response.status_code == 200, response.text
-        result: dict[str, Any] = response.json()
-        return result
 
 
 @pytest.fixture
