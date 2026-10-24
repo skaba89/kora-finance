@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { api } from "@/lib/api/server";
 import type { components } from "@/lib/api/schema";
+import { interpolate } from "@/lib/i18n/interpolate";
 
 import type { ActionState } from "./state";
 import { actionDictionary, failure, field } from "./support";
@@ -165,4 +166,41 @@ export async function toggleJournalAction(
   if (!response.ok) return failure(error);
   refresh();
   return { status: "success" };
+}
+
+export async function letterAction(
+  companyId: string,
+  accountId: string,
+  _: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const lineIds = formData.getAll("line_id").filter((v): v is string => typeof v === "string" && UUID.test(v));
+  const { error, response } = await (await api()).POST("/api/v1/companies/{company_id}/letterings", {
+    params: { path: { company_id: companyId } },
+    body: { account_id: accountId, line_ids: lineIds },
+  });
+  if (!response.ok) return failure(error);
+  refresh();
+  return { status: "success" };
+}
+
+export async function unletterAction(companyId: string, letteringId: string, _: ActionState): Promise<ActionState> {
+  const { error, response } = await (await api()).DELETE(
+    "/api/v1/companies/{company_id}/letterings/{lettering_id}",
+    { params: { path: { company_id: companyId, lettering_id: letteringId } } },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  return { status: "success" };
+}
+
+export async function autoLetterAction(companyId: string, accountId: string, _: ActionState): Promise<ActionState> {
+  const { data, error } = await (await api()).POST("/api/v1/companies/{company_id}/letterings/auto", {
+    params: { path: { company_id: companyId } },
+    body: { account_id: accountId },
+  });
+  if (!data) return failure(error);
+  const t = await actionDictionary();
+  refresh();
+  return { status: "success", message: interpolate(t.lettering.autoDone, { count: data.created }) };
 }

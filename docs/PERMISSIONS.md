@@ -19,5 +19,6 @@
 | `entries:read` | Consulter les journaux et les écritures | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | `entries:write` | Saisir et modifier des écritures en brouillon | — | ✅ | ✅ | ✅ | ✅ | — | — |
 | `entries:post` | Valider des écritures (numérotation définitive) et les contre-passer | — | ✅ | ✅ | ✅ | ✅ | — | — |
+| `lettering:manage` | Lettrer et délettrer les comptes de tiers | — | ✅ | ✅ | ✅ | ✅ | — | — |
 
 SUPER_ADMIN : aucune permission sur les dossiers (administration de la plateforme uniquement). PARTENAIRE_FINANCIER : accès limité aux dossiers de financement partagés (phase 6).

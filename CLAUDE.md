@@ -13,7 +13,7 @@ Journal daté des sessions : `worklog.md`. Le lire en début de session.
 |---|---|---|
 | 0 | Fondations du dépôt : monorepo, Docker, CI, harnais de tests | ✅ livrée (2026-10-23) |
 | 1 | Socle : auth, multi-tenant + RLS, RBAC, organisation, plan comptable, taxes, audit chaîné, PWA | ✅ livrée (2026-10-23) ; 1g emails ✅ (2026-10-24) — reste listé dans `worklog.md` |
-| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅ (2026-10-24) ; 2c–2g à venir (`docs/PLAN.md`) |
+| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅, 2c lettrage ✅ (2026-10-24) ; 2d–2g à venir (`docs/PLAN.md`) |
 | 3 | Trésorerie, Mobile Money, rapprochement | — |
 | 4 | Ventes et achats | — |
 | 5 | Import et migration | — |
@@ -55,7 +55,8 @@ tenancy/     rôles, matrice de permissions (source unique), résolution du rôl
 organization/ dossiers, membres, invitations, exercices, cabinets
 accounting/  plan SYSCOHADA (data/*.csv), taux de taxes versionnés, paramétrage initial,
              journals.py (journaux par défaut), entries.py (écritures en partie double),
-             reports.py (balance, grand livre : agrégats SQL sur écritures validées)
+             reports.py (balance, grand livre : agrégats SQL sur écritures validées),
+             lettering.py (lettrage des comptes de tiers, stocké hors des lignes immuables)
 audit/       journal chaîné SHA-256 (écriture, vérification)
 api/v1/      routes ; `ROUTERS` = registre parcouru par les tests d'isolation
 worker/      acteurs Dramatiq (emails : préparation du jeton → deliver_email avec réessais)
@@ -195,12 +196,13 @@ d'écrire du code Next.** Points déjà rencontrés :
 | 2026-10-24 | Immuabilité, équilibre et appartenance au dossier **imposés par PostgreSQL** (déclencheurs, clés étrangères composites `(tenant_id, id)`) | Défense en profondeur : aucun bogue applicatif ne peut produire une écriture déséquilibrée ou croisée |
 | 2026-10-24 | Imputation refusée sur un compte qui a des sous-comptes ; à-nouveaux datés du 1er jour de l'exercice | Conventions usuelles, à confirmer par un expert-comptable guinéen |
 | 2026-10-24 | États sur écritures **validées** uniquement ; à-nouveaux (journal A_NOUVEAUX) toujours dans le solde d'ouverture ; soldes signés en chaîne (`SignedMoney`) | Présentation SYSCOHADA usuelle (balance à 6 colonnes), à confirmer par un expert-comptable |
+| 2026-10-24 | Lettrage stocké à part (`letterings`, `lettering_lines`), équilibre vérifié par un déclencheur **différé** ; comptes lettrables = classe 4 ; lettrage automatique **uniquement** par référence de pièce identique | Les lignes validées restent immuables ; pas de rapprochement deviné (le rapprochement probabiliste viendra avec la trésorerie, phase 3) |
 | 2026-10-24 | Dépôt GitHub **privé** `skaba89/kora-finance` ; livraisons par branche + pull request, fusion seulement si la CI est verte | La protection de branche exige GitHub Pro sur un dépôt privé (non active) |
 
 ## À valider par un expert-comptable guinéen
 
 Nomenclature du plan SYSCOHADA révisé à précharger · journaux par défaut (AC, VT, BQ,
-CA, MM, OD, AN) · interdiction d'imputer sur un compte de regroupement · méthode du tableau des flux de
+CA, MM, OD, AN) · interdiction d'imputer sur un compte de regroupement · comptes lettrables (classe 4) · méthode du tableau des flux de
 trésorerie · taux de TVA et autres taxes en vigueur, format de déclaration · mentions
 légales obligatoires des factures · durée de conservation des pièces · pertinence de
 l'import FEC (format français) pour les cabinets guinéens.

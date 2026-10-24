@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from kora.tenancy.permissions import ROLE_PERMISSIONS, Permission, render_markdown
 from kora.tenancy.roles import Role
 from tests.conftest import CompanyFixture, UserFixture
-from tests.ledger_helpers import entry_body
+from tests.ledger_helpers import account_id, entry_body
 
 MakeCompany = Callable[..., CompanyFixture]
 MakeUser = Callable[..., UserFixture]
@@ -133,6 +133,13 @@ def _probe(permission: Permission, client: TestClient, s: Scenario, make_user: M
             client.get(f"{base}/entries", headers=s.headers).status_code
         ),
         Permission.ENTRIES_WRITE: lambda: _create_draft(client, base, s).status_code,
+        Permission.LETTERING_MANAGE: lambda: (
+            client.post(
+                f"{base}/letterings/auto",
+                headers=s.headers,
+                json={"account_id": account_id(client, base, s.headers, "411")},
+            ).status_code
+        ),
         Permission.ENTRIES_POST: lambda: (
             client.post(
                 f"{base}/entries/{_draft_id_or_random(client, base, s)}/post", headers=s.headers
