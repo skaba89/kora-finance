@@ -27,6 +27,10 @@ class Permission(StrEnum):
     TAXES_READ = "taxes:read"
     TAXES_MANAGE = "taxes:manage"
     AUDIT_READ = "audit:read"
+    JOURNALS_MANAGE = "journals:manage"
+    ENTRIES_READ = "entries:read"
+    ENTRIES_WRITE = "entries:write"
+    ENTRIES_POST = "entries:post"
 
 
 DESCRIPTIONS: dict[Permission, str] = {
@@ -41,6 +45,10 @@ DESCRIPTIONS: dict[Permission, str] = {
     Permission.TAXES_READ: "Consulter les taux de taxes",
     Permission.TAXES_MANAGE: "Paramétrer les taux de taxes",
     Permission.AUDIT_READ: "Consulter et vérifier le journal d'audit",
+    Permission.JOURNALS_MANAGE: "Créer et paramétrer les journaux comptables",
+    Permission.ENTRIES_READ: "Consulter les journaux et les écritures",
+    Permission.ENTRIES_WRITE: "Saisir et modifier des écritures en brouillon",
+    Permission.ENTRIES_POST: "Valider des écritures (numérotation définitive) et les contre-passer",
 }
 
 _READ = frozenset(
@@ -49,6 +57,7 @@ _READ = frozenset(
         Permission.FISCAL_YEARS_READ,
         Permission.ACCOUNTS_READ,
         Permission.TAXES_READ,
+        Permission.ENTRIES_READ,
     }
 )
 _ACCOUNTING = _READ | {
@@ -56,6 +65,9 @@ _ACCOUNTING = _READ | {
     Permission.FISCAL_YEARS_MANAGE,
     Permission.ACCOUNTS_MANAGE,
     Permission.TAXES_MANAGE,
+    Permission.JOURNALS_MANAGE,
+    Permission.ENTRIES_WRITE,
+    Permission.ENTRIES_POST,
 }
 _FULL = frozenset(Permission)
 

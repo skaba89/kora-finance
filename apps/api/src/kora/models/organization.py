@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from enum import StrEnum
 
-from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, String, text
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -32,6 +32,7 @@ class FiscalYear(Base):
     created_at: Mapped[datetime] = created_at_column()
 
     __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
         CheckConstraint("end_date > start_date", name="dates_ordered"),
         CheckConstraint("status IN ('OPEN', 'CLOSED')", name="status_valid"),
         # Deux exercices d'un même dossier ne peuvent pas se chevaucher.

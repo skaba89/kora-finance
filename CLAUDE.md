@@ -13,7 +13,7 @@ Journal daté des sessions : `worklog.md`. Le lire en début de session.
 |---|---|---|
 | 0 | Fondations du dépôt : monorepo, Docker, CI, harnais de tests | ✅ livrée (2026-10-23) |
 | 1 | Socle : auth, multi-tenant + RLS, RBAC, organisation, plan comptable, taxes, audit chaîné, PWA | ✅ livrée (2026-10-23) ; 1g emails ✅ (2026-10-24) — reste listé dans `worklog.md` |
-| 2 | Comptabilité générale + états financiers | — |
+| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅ (2026-10-24) ; 2b–2g à venir (`docs/PLAN.md`) |
 | 3 | Trésorerie, Mobile Money, rapprochement | — |
 | 4 | Ventes et achats | — |
 | 5 | Import et migration | — |
@@ -53,7 +53,8 @@ auth/        mots de passe argon2id, JWT, refresh tokens rotatifs, 2FA TOTP,
 email/       envoi SMTP générique / boîte mémoire (tests), gabarits FR/EN, quotas Redis
 tenancy/     rôles, matrice de permissions (source unique), résolution du rôle, dépendances
 organization/ dossiers, membres, invitations, exercices, cabinets
-accounting/  plan SYSCOHADA (data/*.csv), taux de taxes versionnés, paramétrage initial
+accounting/  plan SYSCOHADA (data/*.csv), taux de taxes versionnés, paramétrage initial,
+             journals.py (journaux par défaut), entries.py (écritures en partie double)
 audit/       journal chaîné SHA-256 (écriture, vérification)
 api/v1/      routes ; `ROUTERS` = registre parcouru par les tests d'isolation
 worker/      acteurs Dramatiq (emails : préparation du jeton → deliver_email avec réessais)
@@ -151,6 +152,12 @@ d'écrire du code Next.** Points déjà rencontrés :
   après hydratation (voir `components/nav-link.tsx`).
 - Les tests E2E tournent sur desktop et mobile (Pixel 5) : une colonne masquée sur
   mobile (`hidden sm:table-cell`) n'est pas visible pour Playwright.
+- Après une navigation client, Next 16 **garde la page précédente dans le DOM (masquée)** :
+  `getByLabel` peut alors trouver deux champs ; préférer `getByRole`, qui ignore le masqué.
+- `crypto.randomUUID()` n'existe qu'en HTTPS/localhost (absent en E2E sur http://web:3000) :
+  utiliser `uuidV4()` de `lib/uuid.ts`.
+- Montants : chaînes de chiffres (unités mineures) de bout en bout ; saisie par
+  `parseAmount`, sommes en BigInt (`lib/amounts.ts`), affichage par `formatMoney`.
 
 ## Décisions d'architecture
 
@@ -178,10 +185,16 @@ d'écrire du code Next.** Points déjà rencontrés :
 | 2026-10-24 | Inviter une personne sans compte exige une **adresse vérifiée** chez l'invitant ; quota de 20 invitations / dossier / 24 h, 3 emails de compte / heure | Empêcher l'usage de Kora pour envoyer du spam ou inonder une boîte |
 | 2026-10-24 | Vérification d'adresse et liens d'email : action par **bouton (POST)**, pas à l'ouverture du lien ; `Referrer-Policy: no-referrer` sur ces pages | Les antivirus de messagerie visitent les liens ; le jeton ne doit pas fuiter |
 | 2026-10-24 | Invitations limitées aux **dossiers d'entreprise** ; cabinets en phase 8 (avec leurs écrans) | L'ajout d'un collaborateur de cabinet exige encore un compte existant |
+| 2026-10-24 | Montants transmis en **chaînes de chiffres** dans l'API (type `Money`) | JavaScript perd la précision au-delà de 2^53 ; aucun flottant ne doit toucher un montant |
+| 2026-10-24 | Écriture : brouillon libre → validée = numérotée (séquence verrouillée par journal et exercice) et **immuable** ; correction par contre-passation | Numérotation sans trou et piste d'audit exigées par la comptabilité |
+| 2026-10-24 | Immuabilité, équilibre et appartenance au dossier **imposés par PostgreSQL** (déclencheurs, clés étrangères composites `(tenant_id, id)`) | Défense en profondeur : aucun bogue applicatif ne peut produire une écriture déséquilibrée ou croisée |
+| 2026-10-24 | Imputation refusée sur un compte qui a des sous-comptes ; à-nouveaux datés du 1er jour de l'exercice | Conventions usuelles, à confirmer par un expert-comptable guinéen |
+| 2026-10-24 | Dépôt GitHub **privé** `skaba89/kora-finance` ; livraisons par branche + pull request, fusion seulement si la CI est verte | La protection de branche exige GitHub Pro sur un dépôt privé (non active) |
 
 ## À valider par un expert-comptable guinéen
 
-Nomenclature du plan SYSCOHADA révisé à précharger · méthode du tableau des flux de
+Nomenclature du plan SYSCOHADA révisé à précharger · journaux par défaut (AC, VT, BQ,
+CA, MM, OD, AN) · interdiction d'imputer sur un compte de regroupement · méthode du tableau des flux de
 trésorerie · taux de TVA et autres taxes en vigueur, format de déclaration · mentions
 légales obligatoires des factures · durée de conservation des pièces · pertinence de
 l'import FEC (format français) pour les cabinets guinéens.

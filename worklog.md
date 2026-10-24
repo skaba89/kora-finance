@@ -165,3 +165,40 @@ et la RLS, puis l'auth, puis l'audit chaîné.
   (antérieur à 1g).
 - Toujours en suspens depuis la phase 1 : messages d'erreur API traduits, vérification
   planifiée de la chaîne d'audit + ancrage externe, CI jamais exécutée sur GitHub.
+
+## 2026-10-24 — Mise en ligne GitHub et CI
+
+- Dépôt privé https://github.com/skaba89/kora-finance créé, `main` poussée.
+- Premier run CI : échec du job « Contrat » — sur machine vierge, le journal du build
+  Docker se mêlait au contrat exporté. Corrigé (`scripts/check-contract.sh` : image
+  construite d'abord, export validé). Run suivant : **6/6 jobs verts**.
+- Protection de branche : **non active** (GitHub Pro requis pour un dépôt privé).
+  Livraisons désormais par branche + pull request, fusion après CI verte.
+
+## 2026-10-24 — Phase 2a : journaux et saisie en partie double
+
+**Livré**
+- Migration 0005 : `journals`, `journal_entries`, `journal_lines`, `journal_sequences`
+  (RLS FORCE), clés étrangères composites `(tenant_id, id)`, déclencheurs : création en
+  brouillon uniquement, validation refusée si déséquilibrée (< 2 lignes, ∑D ≠ ∑C, total
+  nul), écriture validée et ses lignes ni modifiables ni supprimables (tout rôle).
+  Journaux par défaut ajoutés aux dossiers existants.
+- Service : brouillons (création idempotente par identifiant client), validation
+  (équilibre, exercice ouvert, comptes actifs et non regroupés, à-nouveaux au 1er jour),
+  numéro sans trou par journal et exercice, contre-passation liée ; audit `entry.posted`,
+  `entry.reversed`, `journal.*`.
+- Permissions `journals:manage`, `entries:read|write|post` (docs/PERMISSIONS.md régénéré).
+- API : `/journals`, `/entries` (filtres, pagination, totaux de page en une requête),
+  `/entries/{id}/post|reversal` ; montants en chaînes (`Money`).
+- Web : liste filtrée, saisie (lignes dynamiques, recherche de compte, écart en BigInt),
+  détail, validation, suppression de brouillon, contre-passation, page Journaux.
+
+**Vérifié**
+- `make check` : **289 tests pytest** dont 40 séquences Hypothesis (aucun déséquilibre,
+  numérotation continue), 20 validations simultanées (numéros 1..20 sans doublon),
+  déclencheurs testés avec le rôle applicatif **et** le propriétaire ; 35 tests Vitest.
+- `make e2e` : **36/36, trois fois de suite** ; revue visuelle mobile/desktop.
+- Bug trouvé par les E2E : `crypto.randomUUID` absent hors HTTPS → `lib/uuid.ts`.
+
+**Reste à faire (phase 2)** : 2b balance et grand livre, 2c lettrage, 2d clôture et
+à-nouveaux, 2e états financiers, 2f exports, 2g pièces jointes et hors-ligne.
