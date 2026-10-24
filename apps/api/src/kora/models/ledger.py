@@ -52,6 +52,12 @@ class EntryStatus(StrEnum):
     POSTED = "POSTED"
 
 
+class EntryOrigin(StrEnum):
+    MANUAL = "MANUAL"
+    # À-nouveaux générés par la clôture (et leurs contre-passations à la réouverture).
+    CLOSING = "CLOSING"
+
+
 class Journal(Base):
     __tablename__ = "journals"
 
@@ -92,6 +98,7 @@ class JournalEntry(Base):
     reference: Mapped[str | None] = mapped_column(String(60))
     label: Mapped[str] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(8), server_default=EntryStatus.DRAFT.value)
+    origin: Mapped[str] = mapped_column(String(16), server_default=EntryOrigin.MANUAL.value)
     # Écriture contre-passée par celle-ci (une seule contre-passation par écriture).
     reversal_of_id: Mapped[uuid.UUID | None] = mapped_column(unique=True)
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
@@ -117,6 +124,7 @@ class JournalEntry(Base):
             ondelete="RESTRICT",
         ),
         CheckConstraint("status IN ('DRAFT', 'POSTED')", name="status_valid"),
+        CheckConstraint("origin IN ('MANUAL', 'CLOSING')", name="origin_valid"),
         CheckConstraint(
             "(status = 'DRAFT' AND number IS NULL AND posted_at IS NULL) OR "
             "(status = 'POSTED' AND number > 0 AND posted_at IS NOT NULL)",

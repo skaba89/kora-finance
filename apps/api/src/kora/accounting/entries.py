@@ -29,6 +29,7 @@ from kora.models.common import utcnow
 from kora.models.ledger import (
     MAX_LINE_AMOUNT,
     MAX_LINES_PER_ENTRY,
+    EntryOrigin,
     EntryStatus,
     Journal,
     JournalEntry,
@@ -91,6 +92,11 @@ def _fiscal_year_for(session: Session, company_id: uuid.UUID, day: date) -> Fisc
         )
     if fiscal_year.status != FiscalYearStatus.OPEN:
         raise BusinessRuleError(f"L'exercice qui couvre le {day:%d/%m/%Y} est clôturé.")
+    if fiscal_year.locked_until is not None and day <= fiscal_year.locked_until:
+        raise BusinessRuleError(
+            f"Période verrouillée jusqu'au {fiscal_year.locked_until:%d/%m/%Y} : "
+            "aucune écriture ne peut y être saisie ou validée."
+        )
     return fiscal_year
 
 
@@ -303,7 +309,9 @@ def _next_number(
     return sequence.last_number
 
 
-def _post(session: Session, actor: Actor, entry: JournalEntry) -> None:
+def _post(session: Session, actor: Actor, entry: JournalEntry, *, system: bool = False) -> None:
+    """Contrôle et valide. `system` : écriture générée par la clôture (à-nouveaux), qui
+    reporte des soldes existants : comptes désactivés ou devenus de regroupement admis."""
     lines = list(
         session.execute(
             select(JournalLine)
@@ -334,9 +342,13 @@ def _post(session: Session, actor: Actor, entry: JournalEntry) -> None:
         )
     accounts = _accounts(session, actor.company_id, {line.account_id for line in lines})
     inactive = sorted(a.number for a in accounts.values() if not a.is_active)
-    if inactive:
+    if inactive and not system:
         raise BusinessRuleError("Comptes désactivés : " + ", ".join(inactive) + ".")
-    grouping = _accounts_with_subaccounts(session, actor.company_id, list(accounts.values()))
+    grouping = (
+        []
+        if system
+        else _accounts_with_subaccounts(session, actor.company_id, list(accounts.values()))
+    )
     if grouping:
         raise BusinessRuleError(
             "Ces comptes ont des sous-comptes : imputez l'écriture sur un sous-compte.",
@@ -371,6 +383,25 @@ def _post(session: Session, actor: Actor, entry: JournalEntry) -> None:
     )
 
 
+def apply_generated(session: Session, actor: Actor, entry: JournalEntry, data: EntryData) -> None:
+    """Écriture générée par le système (à-nouveaux) : mêmes contrôles de structure, sans
+    l'exigence de comptes actifs (on reporte des soldes existants)."""
+    _check_lines_shape(data.lines)
+    entry.journal_id = _get_journal(session, actor.company_id, data.journal_id).id
+    entry.fiscal_year_id = _fiscal_year_for(session, actor.company_id, data.entry_date).id
+    entry.entry_date = data.entry_date
+    entry.label = data.label
+    entry.reference = data.reference
+    session.add(entry)
+    session.flush()
+    _write_lines(session, actor, entry, data.lines)
+    session.flush()
+
+
+def post_generated(session: Session, actor: Actor, entry: JournalEntry) -> None:
+    _post(session, actor, entry, system=True)
+
+
 def post_entry(session: Session, actor: Actor, entry_id: uuid.UUID) -> JournalEntry:
     entry = _lock_entry(session, actor, entry_id)
     _require_draft(entry)
@@ -380,7 +411,12 @@ def post_entry(session: Session, actor: Actor, entry_id: uuid.UUID) -> JournalEn
 
 
 def reverse_entry(
-    session: Session, actor: Actor, entry_id: uuid.UUID, *, reversal_date: date
+    session: Session,
+    actor: Actor,
+    entry_id: uuid.UUID,
+    *,
+    reversal_date: date,
+    commit: bool = True,
 ) -> JournalEntry:
     """Contre-passation : écriture validée inverse (débits ↔ crédits), liée à l'originale."""
     original = _lock_entry(session, actor, entry_id)
@@ -420,13 +456,15 @@ def reverse_entry(
         created_by_user_id=actor.user_id,
         status=EntryStatus.DRAFT,
         reversal_of_id=original.id,
+        # La contre-passation d'à-nouveaux générés garde leur origine.
+        origin=original.origin,
     )
     _apply(session, actor, reversal, data)
     session.add(reversal)
     session.flush()
     _write_lines(session, actor, reversal, data.lines)
     session.flush()
-    _post(session, actor, reversal)
+    _post(session, actor, reversal, system=original.origin == EntryOrigin.CLOSING)
     _audit(
         session,
         actor,
@@ -434,7 +472,8 @@ def reverse_entry(
         original.id,
         {"journal": journal.code, "numero": original.number, "contre_passation": str(reversal.id)},
     )
-    session.commit()
+    if commit:
+        session.commit()
     return reversal
 
 

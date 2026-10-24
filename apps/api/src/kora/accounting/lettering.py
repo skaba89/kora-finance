@@ -5,6 +5,10 @@ Lettrer, c'est rapprocher des lignes validées d'un même compte dont la somme
 paiement global… Le solde non lettré d'un compte client ou fournisseur donne ce qui
 reste dû. La base vérifie elle-même l'équilibre de chaque lettrage (migration 0006).
 
+Les à-nouveaux générés par la clôture (origine CLOSING) ne se lettrent pas : ils
+reportent un solde global, alors que les factures et règlements d'origine restent
+lettrables d'un exercice à l'autre. Sans cela, le solde non lettré serait compté deux fois.
+
 Comptes lettrables : comptes de tiers, classe 4. À valider par un expert-comptable
 guinéen (faut-il y ajouter d'autres comptes, par exemple 47 ou certains 5x ?).
 """
@@ -24,6 +28,7 @@ from kora.audit.service import record_event
 from kora.core.errors import BusinessRuleError, ConflictError, NotFoundError
 from kora.models.accounting import Account
 from kora.models.ledger import (
+    EntryOrigin,
     EntryStatus,
     Journal,
     JournalEntry,
@@ -122,6 +127,7 @@ def list_lines(
             JournalLine.tenant_id == company_id,
             JournalLine.account_id == account.id,
             JournalEntry.status == EntryStatus.POSTED,
+            JournalEntry.origin == EntryOrigin.MANUAL,
         )
     )
     if status == "open":
@@ -146,6 +152,7 @@ def list_lines(
             JournalLine.tenant_id == company_id,
             JournalLine.account_id == account.id,
             JournalEntry.status == EntryStatus.POSTED,
+            JournalEntry.origin == EntryOrigin.MANUAL,
             LetteringLine.line_id.is_(None),
         )
     ).scalar_one()
@@ -229,7 +236,7 @@ def letter(
     if len(unique_ids) < 2:
         raise BusinessRuleError("Un lettrage rapproche au moins deux lignes.")
     rows = session.execute(
-        select(JournalLine, JournalEntry.status, LetteringLine.lettering_id)
+        select(JournalLine, JournalEntry.status, LetteringLine.lettering_id, JournalEntry.origin)
         .join(JournalEntry, JournalEntry.id == JournalLine.entry_id)
         .outerjoin(LetteringLine, LetteringLine.line_id == JournalLine.id)
         .where(JournalLine.tenant_id == actor.company_id, JournalLine.id.in_(unique_ids))
@@ -237,13 +244,15 @@ def letter(
     if len(rows) != len(unique_ids):
         raise BusinessRuleError("Ligne introuvable dans ce dossier.")
     errors = []
-    if any(line.account_id != account.id for line, _, _ in rows):
+    if any(origin != EntryOrigin.MANUAL for *_, origin in rows):
+        errors.append("Les à-nouveaux générés par la clôture ne se lettrent pas.")
+    if any(line.account_id != account.id for line, *_ in rows):
         errors.append(f"Toutes les lignes doivent être sur le compte {account.number}.")
-    if any(status != EntryStatus.POSTED for _, status, _ in rows):
+    if any(status != EntryStatus.POSTED for _, status, *_ in rows):
         errors.append("Seules les lignes d'écritures validées se lettrent.")
-    if any(existing is not None for _, _, existing in rows):
+    if any(existing is not None for _, _, existing, _ in rows):
         errors.append("Une de ces lignes est déjà lettrée.")
-    net = sum(line.debit - line.credit for line, _, _ in rows)
+    net = sum(line.debit - line.credit for line, *_ in rows)
     if net != 0:
         errors.append(f"Les lignes ne s'équilibrent pas (écart {net}).")
     if errors:
@@ -288,6 +297,7 @@ def auto_letter_by_reference(session: Session, actor: Actor, account_id: uuid.UU
             JournalLine.tenant_id == actor.company_id,
             JournalLine.account_id == account.id,
             JournalEntry.status == EntryStatus.POSTED,
+            JournalEntry.origin == EntryOrigin.MANUAL,
             JournalEntry.reference.is_not(None),
             LetteringLine.line_id.is_(None),
         )

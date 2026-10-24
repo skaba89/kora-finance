@@ -9,7 +9,8 @@
 | `members:read` | Voir les utilisateurs ayant accès au dossier | — | ✅ | ✅ | ✅ | ✅ | — | — |
 | `members:manage` | Ajouter, modifier ou retirer des utilisateurs du dossier | — | ✅ | — | ✅ | — | — | — |
 | `fiscal_years:read` | Consulter les exercices comptables | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |
-| `fiscal_years:manage` | Créer des exercices comptables | — | ✅ | ✅ | ✅ | ✅ | — | — |
+| `fiscal_years:manage` | Créer des exercices et verrouiller des périodes | — | ✅ | ✅ | ✅ | ✅ | — | — |
+| `fiscal_years:close` | Clôturer, rouvrir un exercice et déverrouiller une période | — | ✅ | — | ✅ | — | — | — |
 | `accounts:read` | Consulter le plan comptable | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | `accounts:manage` | Personnaliser le plan comptable | — | ✅ | ✅ | ✅ | ✅ | — | — |
 | `taxes:read` | Consulter les taux de taxes | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |

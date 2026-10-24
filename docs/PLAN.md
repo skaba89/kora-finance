@@ -35,7 +35,7 @@ Découpage (2026-10-24) :
   trou par journal et exercice, écritures validées immuables (contre-passation), saisie web.
 - ✅ **2b** Balance générale et grand livre (agrégats SQL paginés).
 - ✅ **2c** Lettrage des comptes de tiers.
-- **2d** Verrouillage de période, clôture / réouverture d'exercice, à-nouveaux.
+- ✅ **2d** Verrouillage de période, clôture / réouverture d'exercice, à-nouveaux.
 - **2e** Bilan, compte de résultat, TFT (correspondances SYSCOHADA à valider par un expert).
 - **2f** Exports PDF et Excel.
 - **2g** Pièces jointes (stockage S3), saisie guidée, brouillons hors connexion.
