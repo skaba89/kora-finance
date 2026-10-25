@@ -33,7 +33,8 @@ added=()
 while IFS= read -r line; do
   [[ "$line" =~ ^([A-Z0-9_]+)= ]] || continue
   name="${BASH_REMATCH[1]}"
-  if ! grep -q "^${name}=" "$TARGET"; then
+  # Une variable commentée dans la cible (« # NOM=… ») est un choix délibéré : on n'y touche pas.
+  if ! grep -qE "^(#[[:space:]]*)?${name}=" "$TARGET"; then
     render "$line" >> "$TARGET"
     added+=("$name")
   fi
