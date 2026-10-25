@@ -13,7 +13,7 @@ Journal daté des sessions : `worklog.md`. Le lire en début de session.
 |---|---|---|
 | 0 | Fondations du dépôt : monorepo, Docker, CI, harnais de tests | ✅ livrée (2026-10-23) |
 | 1 | Socle : auth, multi-tenant + RLS, RBAC, organisation, plan comptable, taxes, audit chaîné, PWA | ✅ livrée (2026-10-23) ; 1g emails ✅ (2026-10-24) — reste listé dans `worklog.md` |
-| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅, 2c lettrage ✅, 2d clôture ✅, 2e bilan et CR ✅, 2f exports ✅ (2026-10-24), 2g1 pièces justificatives ✅ (2026-10-25) ; 2e-bis TFT, 2g2 saisie guidée, 2g3 brouillons hors connexion à venir (`docs/PLAN.md`) |
+| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅, 2c lettrage ✅, 2d clôture ✅, 2e bilan et CR ✅, 2f exports ✅ (2026-10-24), 2g1 pièces justificatives ✅, 2g2 saisie guidée ✅ (2026-10-25) ; 2e-bis TFT, 2g3 brouillons hors connexion à venir (`docs/PLAN.md`) |
 | 3 | Trésorerie, Mobile Money, rapprochement | — |
 | 4 | Ventes et achats | — |
 | 5 | Import et migration | — |
@@ -60,7 +60,8 @@ accounting/  plan SYSCOHADA (data/*.csv), taux de taxes versionnés, paramétrag
              reports.py (balance, grand livre : agrégats SQL sur écritures validées),
              lettering.py (lettrage des comptes de tiers, stocké hors des lignes immuables),
              closing.py (verrouillage de période, clôture, à-nouveaux, réouverture),
-             statements.py + data/etats_*.csv (bilan et compte de résultat SYSCOHADA)
+             statements.py + data/etats_*.csv (bilan et compte de résultat SYSCOHADA),
+             guided.py + data/saisie_guidee_v1.csv (saisie guidée : opération → écriture)
 audit/       journal chaîné SHA-256 (écriture, vérification)
 storage/     objets chiffrés (AES-256-GCM, clé par objet enveloppée par KORA_ENCRYPTION_KEYS)
              dans un service S3 compatible (boto3, adressage par chemin)
@@ -218,6 +219,8 @@ d'écrire du code Next.** Points déjà rencontrés :
 | 2026-10-25 | Type de fichier lu dans le **contenu** (PDF, JPEG, PNG, WebP), jamais l'extension ; 10 Mo et 20 pièces par écriture (paramétrables) ; même fichier sur la même écriture = une seule pièce | Pas de fichier exécutable stocké ; réessais en 3G sans doublon |
 | 2026-10-25 | Pièce d'une écriture validée **non retirable** (service + déclencheur PostgreSQL) ; ajout toujours possible ; pièce jamais modifiée | Conservation des justificatifs ; durée légale à valider par un expert-comptable |
 | 2026-10-25 | Envoi en **corps brut** (pas de multipart) ; côté web par Server Action (limite portée à 11 Mo), photos réduites dans le navigateur (2000 px, JPEG) ; consultation par une route BFF | Pas de dépendance multipart ; envoi léger en 3G ; le navigateur ne parle jamais au stockage |
+| 2026-10-25 | Saisie guidée : 7 opérations fixes (vente encaissée, facture client, règlement client, dépense payée, facture fournisseur, règlement fournisseur, virement interne) ; natures des recettes/dépenses dans un CSV versionné ; l'**API construit l'écriture** (aperçu puis brouillon idempotent), le web ne fait que transmettre les choix | Une seule source de vérité comptable ; correspondances corrigeables sans code, à valider par un expert-comptable |
+| 2026-10-25 | Saisie guidée : montant saisi **TTC**, TVA = taux TVA_NORMAL du dossier à la date (HT arrondi au plus proche, TVA = complément), avertissement si le taux n'est pas vérifié ; comptes proposés = comptes d'imputation (sous-comptes à la place du parent) ; journal = VT/AC pour les factures, BQ/MM/CA selon le compte de trésorerie | Pas de taux codé en dur ; aucune imputation sur un compte de regroupement |
 
 ## À valider par un expert-comptable guinéen
 
@@ -227,5 +230,5 @@ report du résultat sans affectation · réouverture d'un exercice clôturé · 
 aux postes du bilan et du compte de résultat** (`accounting/data/etats_affectations_2017.csv`,
 colonne `note`) · présentation des états · comptes 13 non affectés présentés en CJ · méthode du tableau des flux de
 trésorerie · taux de TVA et autres taxes en vigueur, format de déclaration · mentions
-légales obligatoires des factures · durée de conservation des pièces · ajout d'une pièce à une écriture d'un exercice clôturé (autorisé aujourd'hui) · pertinence de
+légales obligatoires des factures · durée de conservation des pièces · ajout d'une pièce à une écriture d'un exercice clôturé (autorisé aujourd'hui) · **correspondances de la saisie guidée** (`accounting/data/saisie_guidee_v1.csv`, comptes 4431/4452 pour la TVA, journaux par opération, virement interne sans compte 585) · pertinence de
 l'import FEC (format français) pour les cabinets guinéens.

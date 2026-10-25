@@ -13,6 +13,7 @@ async function CompanyNav({ params }: { params: Params }) {
   const [{ t }, company] = await Promise.all([getDictionary(), getCompany(companyId)]);
   const base = `/dossiers/${companyId}`;
   const accounting = [
+    { href: `${base}/saisie-guidee`, label: t.nav.guided, permission: "entries:write" },
     { href: `${base}/ecritures`, label: t.nav.entries, permission: "entries:read" },
     { href: `${base}/balance`, label: t.nav.balance, permission: "entries:read" },
     { href: `${base}/grand-livre`, label: t.nav.ledger, permission: "entries:read" },

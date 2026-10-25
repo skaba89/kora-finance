@@ -339,3 +339,29 @@ last version », clé limitée au bucket) et lancer la vérification ; quota de 
 dans le navigateur selon sa politique CSP (le téléchargement fonctionne partout) ;
 purge des objets orphelins si worker et stockage sont tous deux indisponibles (journalisé
 en erreur) ; 2g2 saisie guidée, 2g3 brouillons hors connexion.
+
+## 2026-10-25 — Phase 2g2 : saisie guidée
+
+**Livré**
+- `accounting/guided.py` : 7 opérations (vente encaissée, facture client, règlement client,
+  dépense payée, facture fournisseur, règlement fournisseur, virement entre comptes) →
+  écriture en partie double. Natures des recettes (5) et des dépenses (14) dans
+  `data/saisie_guidee_v1.csv` (compte, TVA possible, note), référence `SAISIE_GUIDEE_V1`.
+- Comptes proposés = comptes d'imputation actifs du dossier (un sous-compte 5521 remplace
+  552) ; trésorerie 52/55/57, clients 411, fournisseurs 401 ; journal VT/AC ou BQ/MM/CA.
+- TVA : montant TTC, taux TVA_NORMAL daté du dossier, comptes du taux (4431 / 4452),
+  avertissement tant que le taux n'est pas vérifié auprès de la DGI.
+- API `GET /guided-entries/options`, `POST /guided-entries/preview`, `POST /guided-entries`
+  (brouillon, idempotent par identifiant client) ; permission `entries:write`.
+- Web : page « Saisie guidée » (choix de l'opération en cartes, formulaire, aperçu de
+  l'écriture, enregistrement en brouillon ou validation directe si `entries:post`).
+
+**Vérifié** : chaque opération (lignes, journal, libellé), ventilation de la TVA, sous-comptes,
+refus des choix incohérents (nature d'un autre sens, compte client utilisé comme fournisseur,
+TVA sur une assurance, virement vers le même compte, journal désactivé, date hors exercice),
+idempotence, droits ; propriété : toute opération, tout montant, tout taux → écriture
+équilibrée. E2E desktop + mobile.
+
+**Reste** : salaires et emprunts (non couverts : charges sociales et intérêts à paramétrer),
+choix de 4432/4454 pour la TVA sur services, validation de toutes les correspondances par
+un expert-comptable ; 2g3 brouillons hors connexion.

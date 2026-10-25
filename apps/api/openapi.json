@@ -31,6 +31,30 @@
         "title": "AcceptInvitationRequest",
         "type": "object"
       },
+      "AccountChoice": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "label"
+        ],
+        "title": "AccountChoice",
+        "type": "object"
+      },
       "AccountCreate": {
         "additionalProperties": false,
         "properties": {
@@ -1675,6 +1699,366 @@
         "title": "ForgotPasswordRequest",
         "type": "object"
       },
+      "GuidedCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "description": "Montant total (TTC)",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "entry_date": {
+            "format": "date",
+            "title": "Entry Date",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Identifiant choisi par le client : rend l'enregistrement idempotent.",
+            "title": "Id"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "nature_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nature Account Id"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/Operation"
+          },
+          "party_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Party Account Id"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "target_treasury_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Treasury Account Id"
+          },
+          "treasury_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Treasury Account Id"
+          },
+          "vat_included": {
+            "default": false,
+            "title": "Vat Included",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "operation",
+          "entry_date",
+          "amount"
+        ],
+        "title": "GuidedCreate",
+        "type": "object"
+      },
+      "GuidedCreated": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "GuidedCreated",
+        "type": "object"
+      },
+      "GuidedIn": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "description": "Montant total (TTC)",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "entry_date": {
+            "format": "date",
+            "title": "Entry Date",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "nature_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nature Account Id"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/Operation"
+          },
+          "party_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Party Account Id"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "target_treasury_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Treasury Account Id"
+          },
+          "treasury_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Treasury Account Id"
+          },
+          "vat_included": {
+            "default": false,
+            "title": "Vat Included",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "operation",
+          "entry_date",
+          "amount"
+        ],
+        "title": "GuidedIn",
+        "type": "object"
+      },
+      "GuidedOptions": {
+        "properties": {
+          "natures": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/NatureChoiceOut"
+              },
+              "type": "array"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Sense"
+            },
+            "title": "Natures",
+            "type": "object"
+          },
+          "operations": {
+            "items": {
+              "$ref": "#/components/schemas/OperationOut"
+            },
+            "title": "Operations",
+            "type": "array"
+          },
+          "party_accounts": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/AccountChoice"
+              },
+              "type": "array"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/Party"
+            },
+            "title": "Party Accounts",
+            "type": "object"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "treasury_accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountChoice"
+            },
+            "title": "Treasury Accounts",
+            "type": "array"
+          },
+          "vat": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VatOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Taux TVA_NORMAL en vigueur à la date demandée"
+          }
+        },
+        "required": [
+          "reference",
+          "operations",
+          "natures",
+          "treasury_accounts",
+          "party_accounts",
+          "vat"
+        ],
+        "title": "GuidedOptions",
+        "type": "object"
+      },
+      "GuidedPreview": {
+        "properties": {
+          "journal_code": {
+            "title": "Journal Code",
+            "type": "string"
+          },
+          "journal_label": {
+            "title": "Journal Label",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewLine"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "vat_amount": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Vat Amount",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "journal_code",
+          "journal_label",
+          "label",
+          "reference",
+          "lines",
+          "vat_amount",
+          "warnings"
+        ],
+        "title": "GuidedPreview",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2660,6 +3044,100 @@
         "title": "MfaVerifyRequest",
         "type": "object"
       },
+      "NatureChoiceOut": {
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/AccountChoice"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "label_en": {
+            "title": "Label En",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "vat_possible": {
+            "title": "Vat Possible",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "label_en",
+          "vat_possible",
+          "note",
+          "account"
+        ],
+        "title": "NatureChoiceOut",
+        "type": "object"
+      },
+      "Operation": {
+        "enum": [
+          "VENTE_COMPTANT",
+          "FACTURE_CLIENT",
+          "ENCAISSEMENT_CLIENT",
+          "ACHAT_COMPTANT",
+          "FACTURE_FOURNISSEUR",
+          "PAIEMENT_FOURNISSEUR",
+          "VIREMENT_INTERNE"
+        ],
+        "title": "Operation",
+        "type": "string"
+      },
+      "OperationOut": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/Operation"
+          },
+          "nature": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sense"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "party": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Party"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target_treasury": {
+            "title": "Target Treasury",
+            "type": "boolean"
+          },
+          "treasury": {
+            "title": "Treasury",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "nature",
+          "treasury",
+          "target_treasury",
+          "party"
+        ],
+        "title": "OperationOut",
+        "type": "object"
+      },
       "Page_AccountOut_": {
         "properties": {
           "items": {
@@ -2753,6 +3231,14 @@
         "title": "Page[EntrySummaryOut]",
         "type": "object"
       },
+      "Party": {
+        "enum": [
+          "CLIENT",
+          "FOURNISSEUR"
+        ],
+        "title": "Party",
+        "type": "string"
+      },
       "PeriodOut": {
         "properties": {
           "date_from": {
@@ -2803,6 +3289,44 @@
           "date_to"
         ],
         "title": "PeriodRef",
+        "type": "object"
+      },
+      "PreviewLine": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_label": {
+            "title": "Account Label",
+            "type": "string"
+          },
+          "account_number": {
+            "title": "Account Number",
+            "type": "string"
+          },
+          "credit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Credit",
+            "type": "string"
+          },
+          "debit": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Debit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "account_number",
+          "account_label",
+          "debit",
+          "credit"
+        ],
+        "title": "PreviewLine",
         "type": "object"
       },
       "ReadyResponse": {
@@ -2983,6 +3507,14 @@
           "PARTENAIRE_FINANCIER"
         ],
         "title": "Role",
+        "type": "string"
+      },
+      "Sense": {
+        "enum": [
+          "PRODUIT",
+          "CHARGE"
+        ],
+        "title": "Sense",
         "type": "string"
       },
       "StatementLineOut": {
@@ -3365,6 +3897,24 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "VatOut": {
+        "properties": {
+          "rate_basis_points": {
+            "title": "Rate Basis Points",
+            "type": "integer"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rate_basis_points",
+          "verified"
+        ],
+        "title": "VatOut",
         "type": "object"
       },
       "VerifyEmailRequest": {
@@ -7887,6 +8437,313 @@
         "summary": "Reopen Fiscal Year",
         "tags": [
           "clôture"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/guided-entries": {
+      "post": {
+        "operationId": "create_guided_entry_api_v1_companies__company_id__guided_entries_post",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuidedCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuidedCreated"
+                }
+              }
+            },
+            "description": "Déjà enregistrée"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuidedCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Guided Entry",
+        "tags": [
+          "saisie guidée"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/guided-entries/options": {
+      "get": {
+        "operationId": "guided_options_api_v1_companies__company_id__guided_entries_options_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "on",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "On"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuidedOptions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Guided Options",
+        "tags": [
+          "saisie guidée"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/guided-entries/preview": {
+      "post": {
+        "operationId": "preview_guided_entry_api_v1_companies__company_id__guided_entries_preview_post",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuidedIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuidedPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Guided Entry",
+        "tags": [
+          "saisie guidée"
         ]
       }
     },

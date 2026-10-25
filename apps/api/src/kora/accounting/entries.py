@@ -101,6 +101,11 @@ def _fiscal_year_for(session: Session, company_id: uuid.UUID, day: date) -> Fisc
     return fiscal_year
 
 
+def check_entry_date(session: Session, company_id: uuid.UUID, day: date) -> None:
+    """Refuse une date hors exercice ouvert ou dans une période verrouillée."""
+    _fiscal_year_for(session, company_id, day)
+
+
 def _check_lines_shape(lines: Sequence[LineData]) -> None:
     if not lines:
         raise BusinessRuleError("Une écriture comporte au moins une ligne.")
