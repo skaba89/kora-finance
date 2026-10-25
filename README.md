@@ -49,5 +49,28 @@ make help    # toutes les commandes
   127.0.0.1:53900. Après une mise à jour du dépôt, `make env` complète `.env` avec les
   nouvelles variables sans toucher aux valeurs existantes.
 
+### Vérifier un stockage S3 de production (Backblaze B2 ou autre)
+
+`make storage-check` vérifie le stockage de la pile locale. Pour tester un bucket de
+production depuis ce poste avant le déploiement (le secret est saisi sans écho et
+n'apparaît ni à l'écran ni dans l'historique du shell) :
+
+```bash
+read -rs KORA_S3_SECRET_ACCESS_KEY && export KORA_S3_SECRET_ACCESS_KEY
+docker compose run --rm --no-deps \
+  -e KORA_S3_ENDPOINT_URL=https://s3.<région>.backblazeb2.com \
+  -e KORA_S3_REGION=<région> \
+  -e KORA_S3_BUCKET=<bucket> \
+  -e KORA_S3_ACCESS_KEY_ID=<keyID> \
+  -e KORA_S3_SECRET_ACCESS_KEY \
+  api python -m kora.scripts.check_storage
+unset KORA_S3_SECRET_ACCESS_KEY
+```
+
+La commande écrit, relit et supprime un objet chiffré, et signale un point d'accès non
+https ou une clé qui voit d'autres buckets (code de sortie 0 = tout est bon). Sur B2 :
+bucket privé, sans Object Lock, règle de cycle de vie « Keep only the last version »,
+clé d'application limitée au bucket.
+
 Documentation projet : `CLAUDE.md` (architecture, règles, décisions, avancement),
 `docs/PLAN.md` (phases et critères d'acceptation), `worklog.md` (journal daté).
