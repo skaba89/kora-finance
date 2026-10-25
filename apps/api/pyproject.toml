@@ -21,6 +21,8 @@ dependencies = [
     "email-validator>=2.3,<2.4",
     "openpyxl>=3.1.5,<3.2",
     "reportlab>=5.0.1,<5.1",
+    # Publié chaque jour : version exacte, au moins deux semaines d'ancienneté.
+    "boto3==1.43.111",
 ]
 
 [dependency-groups]
@@ -34,6 +36,7 @@ dev = [
     "time-machine>=3.5,<3.6",
     "types-openpyxl==3.1.5.20260827",
     "types-reportlab==5.0.0.20261006",
+    "types-boto3[s3]==1.43.111",
 ]
 
 # Pas de paquet installable : le code vit dans src/ et PYTHONPATH=src

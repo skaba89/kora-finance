@@ -39,7 +39,9 @@ Découpage (2026-10-24) :
 - ✅ **2e** Bilan et compte de résultat (référentiel d'affectation versionné, à valider par un expert).
 - **2e-bis** Tableau des flux de trésorerie (méthode à valider par un expert-comptable).
 - ✅ **2f** Exports PDF et Excel.
-- **2g** Pièces jointes (stockage S3), saisie guidée, brouillons hors connexion.
+- **2g1** Pièces justificatives (stockage S3 chiffré). ✅
+- **2g2** Saisie guidée pour non-comptables (« j'ai payé une facture », « j'ai reçu un paiement »).
+- **2g3** Brouillons hors connexion avec synchronisation.
 
 ## Phase 3 — Trésorerie, Mobile Money et rapprochement
 Comptes bancaires, caisses, portefeuilles (adaptateur par opérateur), import CSV/Excel

@@ -13,7 +13,7 @@ Journal daté des sessions : `worklog.md`. Le lire en début de session.
 |---|---|---|
 | 0 | Fondations du dépôt : monorepo, Docker, CI, harnais de tests | ✅ livrée (2026-10-23) |
 | 1 | Socle : auth, multi-tenant + RLS, RBAC, organisation, plan comptable, taxes, audit chaîné, PWA | ✅ livrée (2026-10-23) ; 1g emails ✅ (2026-10-24) — reste listé dans `worklog.md` |
-| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅, 2c lettrage ✅, 2d clôture ✅, 2e bilan et CR ✅, 2f exports ✅ (2026-10-24) ; 2e-bis TFT, 2g à venir (`docs/PLAN.md`) |
+| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅, 2c lettrage ✅, 2d clôture ✅, 2e bilan et CR ✅, 2f exports ✅ (2026-10-24), 2g1 pièces justificatives ✅ (2026-10-25) ; 2e-bis TFT, 2g2 saisie guidée, 2g3 brouillons hors connexion à venir (`docs/PLAN.md`) |
 | 3 | Trésorerie, Mobile Money, rapprochement | — |
 | 4 | Ventes et achats | — |
 | 5 | Import et migration | — |
@@ -33,13 +33,15 @@ apps/api/openapi.json         contrat d'API exporté (committé, vérifié en CI
 apps/web/      Next.js 16 App Router + TypeScript strict + Tailwind 4 + shadcn/ui (radix-nova)
 apps/web/src/lib/api/schema.ts  types TS générés depuis openapi.json (ne pas éditer)
 infra/postgres/init-roles.sh  rôles et bases PostgreSQL (local + CI)
+infra/garage/  Garage (S3 local) : configuration + bootstrap.py (nœud, clé, buckets ; idempotent)
 scripts/       init-env.sh (secrets locaux), check-contract.sh
 .github/workflows/ci.yml      CI : mêmes commandes `make` qu'en local
 ```
 
 Pile locale (`docker-compose.yml`, ports sur 127.0.0.1 uniquement) :
-postgres 16 (55432) · redis 7 (56379) · mailpit (UI 58025) · migrate (one-shot) · api (8100) ·
-worker · web (3100).
+postgres 16 (55432) · redis 7 (56379) · mailpit (UI 58025) · storage = Garage v2.4.1 (S3 53900) ·
+storage-init (one-shot) · migrate (one-shot) · api (8100) · worker · web (3100).
+Buckets : `kora` (pile), `kora-test` (pytest, contre le vrai Garage).
 Profils : `tools` (api-tools, web-tools), `e2e` (Playwright).
 
 ### Backend (`apps/api/src/kora`)
@@ -60,6 +62,10 @@ accounting/  plan SYSCOHADA (data/*.csv), taux de taxes versionnés, paramétrag
              closing.py (verrouillage de période, clôture, à-nouveaux, réouverture),
              statements.py + data/etats_*.csv (bilan et compte de résultat SYSCOHADA)
 audit/       journal chaîné SHA-256 (écriture, vérification)
+storage/     objets chiffrés (AES-256-GCM, clé par objet enveloppée par KORA_ENCRYPTION_KEYS)
+             dans un service S3 compatible (boto3, adressage par chemin)
+attachments/ pièces justificatives des écritures (type lu dans le contenu, dédoublonnage
+             par SHA-256, conservation après validation, purge différée par le worker)
 exports/     document neutre → Excel (openpyxl) ou PDF (reportlab, police DejaVu de l'image)
 api/v1/      routes ; `ROUTERS` = registre parcouru par les tests d'isolation
 worker/      acteurs Dramatiq (emails : préparation du jeton → deliver_email avec réessais)
@@ -206,6 +212,11 @@ d'écrire du code Next.** Points déjà rencontrés :
 | 2026-10-24 | TFT séparé (2e-bis) | Méthode SYSCOHADA du TFT à valider par un expert-comptable avant implémentation |
 | 2026-10-24 | Exports : document neutre rendu en Excel (montants numériques exacts, Decimal) ou PDF (A4, police DejaVu installée dans l'image, pas de repli silencieux) ; relayés en flux par une route Next (BFF) ; chaque export tracé dans l'audit ; PDF limité à 20 000 lignes (Excel au-delà) | Pas d'accès direct du navigateur à l'API ; traçabilité des sorties de données |
 | 2026-10-24 | Dépôt GitHub **privé** `skaba89/kora-finance` ; livraisons par branche + pull request, fusion seulement si la CI est verte | La protection de branche exige GitHub Pro sur un dépôt privé (non active) |
+| 2026-10-25 | Stockage S3 local = **Garage v2.4.1** (image officielle `dxflrs/garage`), initialisé par son API d'administration ; production = fournisseur S3 managé (à choisir), en https | MinIO ne publie plus d'images gratuites ; Garage est versionné et léger. Le code ne dépend que de l'API S3 |
+| 2026-10-25 | Pièces **chiffrées par l'application** (AES-256-GCM, clé aléatoire par objet, enveloppée par les clés maîtres ; nom de l'objet en donnée authentifiée) ; empreinte SHA-256 vérifiée à chaque lecture | Le fournisseur de stockage ne voit jamais le contenu ; une altération ou une substitution d'objet est détectée |
+| 2026-10-25 | Type de fichier lu dans le **contenu** (PDF, JPEG, PNG, WebP), jamais l'extension ; 10 Mo et 20 pièces par écriture (paramétrables) ; même fichier sur la même écriture = une seule pièce | Pas de fichier exécutable stocké ; réessais en 3G sans doublon |
+| 2026-10-25 | Pièce d'une écriture validée **non retirable** (service + déclencheur PostgreSQL) ; ajout toujours possible ; pièce jamais modifiée | Conservation des justificatifs ; durée légale à valider par un expert-comptable |
+| 2026-10-25 | Envoi en **corps brut** (pas de multipart) ; côté web par Server Action (limite portée à 11 Mo), photos réduites dans le navigateur (2000 px, JPEG) ; consultation par une route BFF | Pas de dépendance multipart ; envoi léger en 3G ; le navigateur ne parle jamais au stockage |
 
 ## À valider par un expert-comptable guinéen
 
@@ -215,5 +226,5 @@ report du résultat sans affectation · réouverture d'un exercice clôturé · 
 aux postes du bilan et du compte de résultat** (`accounting/data/etats_affectations_2017.csv`,
 colonne `note`) · présentation des états · comptes 13 non affectés présentés en CJ · méthode du tableau des flux de
 trésorerie · taux de TVA et autres taxes en vigueur, format de déclaration · mentions
-légales obligatoires des factures · durée de conservation des pièces · pertinence de
+légales obligatoires des factures · durée de conservation des pièces · ajout d'une pièce à une écriture d'un exercice clôturé (autorisé aujourd'hui) · pertinence de
 l'import FEC (format français) pour les cabinets guinéens.

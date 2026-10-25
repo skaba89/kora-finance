@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { AttachmentsSection } from "@/components/attachments/attachments-section";
 import { ActionForm } from "@/components/forms/action-form";
 import { Field } from "@/components/forms/field";
 import { InlineAction } from "@/components/forms/inline-action";
@@ -64,6 +65,7 @@ export default async function EntryPage({ params }: PageProps<"/[lang]/dossiers/
           canPost={can(company, "entries:post")}
           labels={editorLabels(t)}
         />
+        <AttachmentsSection companyId={companyId} entryId={entry.id} posted={false} canWrite t={t} locale={locale} />
         <div className="mt-8 flex flex-wrap gap-3 border-t pt-6">
           {can(company, "entries:post") ? (
             <InlineAction
@@ -175,6 +177,15 @@ export default async function EntryPage({ params }: PageProps<"/[lang]/dossiers/
           </TableRow>
         </TableFooter>
       </Table>
+
+      <AttachmentsSection
+        companyId={companyId}
+        entryId={entry.id}
+        posted={entry.status === "POSTED"}
+        canWrite={can(company, "entries:write")}
+        t={t}
+        locale={locale}
+      />
 
       {canReverse ? (
         <Card className="mt-8 max-w-md">

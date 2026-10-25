@@ -80,7 +80,11 @@ def test_boite_en_memoire_reservee_aux_tests() -> None:
 
 
 def test_production_exige_le_chiffrement_smtp_et_https() -> None:
-    common = {"env": Environment.PRODUCTION, "email_backend": "smtp"}
+    common = {
+        "env": Environment.PRODUCTION,
+        "email_backend": "smtp",
+        "s3_endpoint_url": "https://s3.fournisseur.example",
+    }
     with pytest.raises(ValidationError, match="SMTP_SECURITY"):
         _settings(**common, smtp_security="none", web_public_url="https://app.kora.gn")
     with pytest.raises(ValidationError, match="https"):

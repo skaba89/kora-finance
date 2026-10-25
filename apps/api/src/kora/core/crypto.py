@@ -22,3 +22,11 @@ def encrypt(plaintext: str) -> bytes:
 
 def decrypt(token: bytes) -> str:
     return _cipher().decrypt(token).decode()
+
+
+def encrypt_bytes(plaintext: bytes) -> bytes:
+    return _cipher().encrypt(plaintext)
+
+
+def decrypt_bytes(token: bytes) -> bytes:
+    return _cipher().decrypt(token)

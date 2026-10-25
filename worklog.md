@@ -300,3 +300,38 @@ bilan équilibré sur 40 écritures aléatoires couvrant tout le plan.
 nom de fichier sans accent ni balise (bogue trouvé : les lettres accentuées étaient
 supprimées → normalisation NFKD), téléchargements réels en E2E ; PDF rendus en image et
 relus (colonne « Réf. » élargie, zéros des lignes de détail masqués).
+
+## 2026-10-25 — Phase 2g1 : pièces justificatives
+
+**Livré**
+- Stockage S3 local : Garage v2.4.1 (image officielle, publiée le 8 septembre), service
+  `storage` + `storage-init` (`infra/garage/bootstrap.py`, API d'administration, idempotent).
+  Buckets `kora` et `kora-test`. Secrets Garage et clé S3 générés par `make env`, qui
+  complète désormais un `.env` existant sans toucher aux valeurs présentes.
+- Dépendances : boto3 / botocore 1.43.111 (Amazon, Apache-2.0, publiés le 9 octobre ;
+  versions quotidiennes → version exacte), stubs `types-boto3[s3]`.
+- `kora/storage` : chiffrement AES-256-GCM par l'application (clé par objet, enveloppée par
+  `KORA_ENCRYPTION_KEYS`, nom de l'objet authentifié). `kora/attachments` : type lu dans le
+  contenu (PDF/JPEG/PNG/WebP), 10 Mo, 20 pièces par écriture, dédoublonnage SHA-256,
+  intégrité vérifiée à chaque lecture, audit `attachment.added` / `attachment.removed`.
+- Migration 0008 : table `attachments` (RLS), déclencheur : pièce jamais modifiée, non
+  supprimable si l'écriture est validée. Suppression d'un brouillon = pièces purgées ;
+  objet non supprimable sur le moment → tâche worker `delete_stored_object` (réessais).
+- API : `POST/GET /entries/{id}/attachments`, `GET /attachments/{id}/content`,
+  `DELETE /attachments/{id}` (lecture : `entries:read`, écriture : `entries:write`).
+- Web : section « Pièces justificatives » sur la fiche d'écriture (brouillon et validée),
+  photos réduites dans le navigateur avant l'envoi, consultation par route BFF.
+- Production : `KORA_S3_ENDPOINT_URL` en https:// obligatoire (tests de configuration).
+
+**Vérifié** : contre le vrai Garage — objet chiffré (aucun octet du PDF lisible), altération
+et substitution d'objet détectées (409), purge après échec en base, retrait différé si le
+stockage ne répond pas, conservation imposée par PostgreSQL (rôle applicatif et
+propriétaire), lecteur sans droit d'écriture, isolation entre dossiers. E2E desktop +
+mobile : PDF, photo de 1 Mo réduite en JPEG, réessai sans doublon, faux PDF refusé,
+téléchargement, retrait, conservation après validation.
+
+**Reste** : fournisseur S3 de production à choisir (bucket privé, clé limitée au bucket,
+https) ; quota de stockage par dossier (avec les abonnements, phase 8) ; aperçu des PDF
+dans le navigateur selon sa politique CSP (le téléchargement fonctionne partout) ;
+purge des objets orphelins si worker et stockage sont tous deux indisponibles (journalisé
+en erreur) ; 2g2 saisie guidée, 2g3 brouillons hors connexion.
