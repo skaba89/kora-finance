@@ -34,7 +34,10 @@ apps/web/      Next.js 16 App Router + TypeScript strict + Tailwind 4 + shadcn/u
 apps/web/src/lib/api/schema.ts  types TS générés depuis openapi.json (ne pas éditer)
 infra/postgres/init-roles.sh  rôles et bases PostgreSQL (local + CI)
 infra/garage/  Garage (S3 local) : configuration + bootstrap.py (nœud, clé, buckets ; idempotent)
-scripts/       init-env.sh (secrets locaux), check-contract.sh
+scripts/       init-env.sh (secrets : .env local ou deploy/vps/.env), check-contract.sh
+deploy/vps/    production sur un VPS dédié : compose.yml (Caddy seul exposé), Caddyfile,
+               bootstrap-server.sh, deploy.sh, backup.sh / restore.sh + minuterie systemd
+               (guide : docs/DEPLOIEMENT.md)
 .github/workflows/ci.yml      CI : mêmes commandes `make` qu'en local
 ```
 
@@ -110,6 +113,7 @@ make web-test     # vitest
 make e2e          # Playwright (desktop + mobile) contre la pile démarrée
 make contract     # échoue si openapi.json / schema.ts ne sont pas à jour
 make storage-check  # écrit/relit/supprime un objet chiffré dans le S3 configuré (voir README)
+# Production (sur le serveur) : deploy/vps/deploy.sh, backup.sh, restore.sh — docs/DEPLOIEMENT.md
 ./scripts/check-contract.sh --write   # régénère le contrat après un changement d'API
 make api-lock     # après modification de apps/api/pyproject.toml
 ```
@@ -221,6 +225,9 @@ d'écrire du code Next.** Points déjà rencontrés :
 | 2026-10-25 | Envoi en **corps brut** (pas de multipart) ; côté web par Server Action (limite portée à 11 Mo), photos réduites dans le navigateur (2000 px, JPEG) ; consultation par une route BFF | Pas de dépendance multipart ; envoi léger en 3G ; le navigateur ne parle jamais au stockage |
 | 2026-10-25 | Saisie guidée : 7 opérations fixes (vente encaissée, facture client, règlement client, dépense payée, facture fournisseur, règlement fournisseur, virement interne) ; natures des recettes/dépenses dans un CSV versionné ; l'**API construit l'écriture** (aperçu puis brouillon idempotent), le web ne fait que transmettre les choix | Une seule source de vérité comptable ; correspondances corrigeables sans code, à valider par un expert-comptable |
 | 2026-10-25 | Saisie guidée : montant saisi **TTC**, TVA = taux TVA_NORMAL du dossier à la date (HT arrondi au plus proche, TVA = complément), avertissement si le taux n'est pas vérifié ; comptes proposés = comptes d'imputation (sous-comptes à la place du parent) ; journal = VT/AC pour les factures, BQ/MM/CA selon le compte de trésorerie | Pas de taux codé en dur ; aucune imputation sur un compte de regroupement |
+| 2026-10-25 | Production sur un **VPS OVH dédié** (pas sur le serveur de dev, qui héberge d'autres projets) : Compose + Caddy (HTTPS Let's Encrypt), images construites sur le serveur depuis `main`, migrations par le service `migrate` ; Render abandonné | Choix de l'utilisateur ; isolation des données financières ; pas de registre d'images à gérer |
+| 2026-10-25 | Sans nom de domaine : `<ip>.sslip.io` ; emails `KORA_EMAIL_BACKEND=disabled` (chaque email non envoyé journalisé sans destinataire, l'interface le signale) | Domaine et fournisseur SMTP pas encore choisis ; HTTPS exigé dès le départ |
+| 2026-10-25 | Sauvegardes : `pg_dump` (même version que le serveur) chiffré par l'application, vérifié par relecture, dans le bucket S3 sous `backups/`, 30 jours (7 toujours gardées) ; restauration testée (données, déclencheurs, RLS identiques) | Une sauvegarde non vérifiée ou non restaurable ne compte pas |
 
 ## À valider par un expert-comptable guinéen
 

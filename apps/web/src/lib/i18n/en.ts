@@ -53,6 +53,8 @@ export const en: typeof fr = {
     mainMenu: "Main menu",
   },
   auth: {
+    emailsDisabled: "Email sending is not enabled on this installation yet: password reset by email is unavailable. Contact your Kora administrator.",
+    unverifiedNoEmail: "Address {email} not confirmed: email sending is not enabled on this installation yet.",
     loginTitle: "Sign in",
     loginSubtitle: "Access your accounting files.",
     email: "Email address",

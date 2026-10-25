@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
+import { EmailsDisabledNotice } from "@/components/emails-disabled-notice";
 import { ActionForm } from "@/components/forms/action-form";
 import { Field } from "@/components/forms/field";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +25,9 @@ export default async function ForgotPasswordPage() {
         <CardDescription>{t.auth.forgotSubtitle}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        <Suspense fallback={null}>
+          <EmailsDisabledNotice message={t.auth.emailsDisabled} />
+        </Suspense>
         <ActionForm action={forgotPasswordAction} submitLabel={t.auth.forgotButton} pendingLabel={t.common.pending}>
           <Field label={t.auth.email} name="email" type="email" autoComplete="username" required />
         </ActionForm>

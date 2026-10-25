@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # Crée .env à partir de .env.example avec des secrets aléatoires. Si .env existe, n'y
 # ajoute que les variables nouvelles du modèle : les valeurs existantes ne changent jamais.
+# Usage : init-env.sh [modèle] [cible]  (chemins relatifs à la racine du dépôt ;
+# par défaut .env.example → .env, pour la production deploy/vps/env.example → deploy/vps/.env).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 umask 077
+TEMPLATE="${1:-.env.example}"
+TARGET="${2:-.env}"
 
 render() {
   local line="$1"
@@ -19,9 +23,9 @@ render() {
   fi
 }
 
-if [[ ! -e .env ]]; then
-  while IFS= read -r line; do render "$line"; done < .env.example > .env
-  echo ".env créé avec des secrets aléatoires (permissions 600)."
+if [[ ! -e "$TARGET" ]]; then
+  while IFS= read -r line; do render "$line"; done < "$TEMPLATE" > "$TARGET"
+  echo "$TARGET créé avec des secrets aléatoires (permissions 600)."
   exit 0
 fi
 
@@ -29,13 +33,13 @@ added=()
 while IFS= read -r line; do
   [[ "$line" =~ ^([A-Z0-9_]+)= ]] || continue
   name="${BASH_REMATCH[1]}"
-  if ! grep -q "^${name}=" .env; then
-    render "$line" >> .env
+  if ! grep -q "^${name}=" "$TARGET"; then
+    render "$line" >> "$TARGET"
     added+=("$name")
   fi
-done < .env.example
+done < "$TEMPLATE"
 if ((${#added[@]})); then
-  echo ".env complété : ${added[*]}" >&2
+  echo "$TARGET complété : ${added[*]}" >&2
 else
-  echo ".env existe déjà et est complet : rien à faire." >&2
+  echo "$TARGET existe déjà et est complet : rien à faire." >&2
 fi

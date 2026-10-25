@@ -5,6 +5,7 @@ requête HTTP : une panne du fournisseur ne bloque pas l'utilisateur et l'envoi 
 réessayé.
 """
 
+import logging
 import smtplib
 import ssl
 from dataclasses import asdict, dataclass
@@ -12,6 +13,8 @@ from email.message import EmailMessage
 from email.utils import make_msgid, parseaddr
 
 from kora.core.config import Settings, get_settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -66,5 +69,12 @@ def send(message: OutgoingEmail) -> None:
     settings = get_settings()
     if settings.email_backend == "memory":
         OUTBOX.append(message)
+        return
+    if settings.email_backend == "disabled":
+        # Jamais le contenu ni le destinataire : liens à usage unique, données personnelles.
+        logger.warning(
+            "Email non envoyé : envoi désactivé (KORA_EMAIL_BACKEND=disabled)",
+            extra={"sujet": message.subject},
+        )
         return
     _send_smtp(_mime(message, settings), settings)

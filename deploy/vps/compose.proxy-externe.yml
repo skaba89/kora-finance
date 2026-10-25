@@ -1,0 +1,23 @@
+# Mode « proxy existant » : un autre reverse proxy du serveur (déjà propriétaire des ports
+# 80/443) publie Kora. Le serveur web rejoint le réseau Docker partagé « kora-edge » sous
+# le nom « kora-web » ; aucun port n'est publié par cette pile. Bloc à ajouter au proxy :
+#
+#   <domaine> {
+#   	encode zstd gzip
+#   	request_body {
+#   		max_size 12MB
+#   	}
+#   	header Strict-Transport-Security "max-age=31536000"
+#   	reverse_proxy kora-web:3000
+#   }
+services:
+  web:
+    networks:
+      default: {}
+      edge:
+        aliases: [kora-web]
+
+networks:
+  edge:
+    name: kora-edge
+    external: true

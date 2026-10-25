@@ -51,6 +51,8 @@ export const fr = {
     mainMenu: "Menu principal",
   },
   auth: {
+    emailsDisabled: "L'envoi d'emails n'est pas encore activé sur cette installation : la réinitialisation par email est indisponible. Contactez l'administrateur de Kora.",
+    unverifiedNoEmail: "Adresse {email} non confirmée : l'envoi d'emails n'est pas encore activé sur cette installation.",
     loginTitle: "Connexion",
     loginSubtitle: "Accédez à vos dossiers comptables.",
     email: "Adresse email",

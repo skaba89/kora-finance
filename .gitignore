@@ -11,3 +11,7 @@
 .ruff_cache/
 .coverage
 htmlcov/
+
+# Production : copies locales des sauvegardes (deploy/vps/backup.sh)
+deploy/vps/backups/
+*.dump
