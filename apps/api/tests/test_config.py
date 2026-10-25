@@ -5,7 +5,8 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from kora.core.config import Environment, Settings
+from kora.core.config import Environment, Settings, get_settings
+from kora.email import sender
 
 PRODUCTION: dict[str, Any] = {
     "env": Environment.PRODUCTION,
@@ -38,3 +39,22 @@ def test_reglages_non_chiffres_refuses_en_production(
 
 def test_stockage_http_accepte_en_local() -> None:
     assert Settings(env=Environment.TEST, s3_endpoint_url="http://storage:3900").s3_bucket
+
+
+def test_emails_desactives_acceptes_en_production() -> None:
+    settings = Settings(**{**PRODUCTION, "email_backend": "disabled", "smtp_security": "none"})
+    assert settings.email_backend == "disabled"
+
+
+def test_email_non_envoye_mais_journalise(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setattr(get_settings(), "email_backend", "disabled")
+    sender.OUTBOX.clear()
+    with caplog.at_level("WARNING", logger="kora.email.sender"):
+        sender.send(
+            sender.OutgoingEmail("awa@exemple.gn", "Réinitialisation", "lien", "<p>lien</p>")
+        )
+    assert sender.OUTBOX == []
+    assert "envoi désactivé" in caplog.text
+    assert "awa@exemple.gn" not in caplog.text

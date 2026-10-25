@@ -1,0 +1,18 @@
+# Point d'entrée public : HTTPS automatique (Let's Encrypt), puis le serveur web Next.js.
+# L'API n'est jamais exposée : seul le serveur web l'appelle, sur le réseau Docker.
+{
+	email {$KORA_ACME_EMAIL}
+}
+
+{$KORA_DOMAIN} {
+	encode zstd gzip
+	# Pièces justificatives : 10 Mo au plus côté API, un peu de marge pour l'enveloppe.
+	request_body {
+		max_size 12MB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	reverse_proxy web:3000
+}

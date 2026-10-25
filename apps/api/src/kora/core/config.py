@@ -59,7 +59,9 @@ class Settings(BaseSettings):
 
     # --- Emails transactionnels (SMTP générique : tout fournisseur compatible)
     # « memory » : boîte d'envoi en mémoire, réservée aux tests automatisés.
-    email_backend: Literal["smtp", "memory"] = "smtp"
+    # « disabled » : aucun envoi (fournisseur pas encore choisi) ; chaque email non envoyé
+    # est journalisé et l'interface signale que l'envoi d'emails est inactif.
+    email_backend: Literal["smtp", "memory", "disabled"] = "smtp"
     email_from: str = "Kora Finance <no-reply@kora.local>"
     smtp_host: str = "localhost"
     smtp_port: int = Field(default=587, ge=1, le=65535)
@@ -98,7 +100,7 @@ class Settings(BaseSettings):
         if self.email_backend == "memory" and self.env != Environment.TEST:
             raise ValueError("KORA_EMAIL_BACKEND=memory est réservé aux tests.")
         if self.is_production:
-            if self.smtp_security == "none":
+            if self.email_backend == "smtp" and self.smtp_security == "none":
                 raise ValueError("KORA_SMTP_SECURITY=none est interdit en production.")
             if not self.web_public_url.startswith("https://"):
                 raise ValueError("KORA_WEB_PUBLIC_URL doit être en https:// en production.")

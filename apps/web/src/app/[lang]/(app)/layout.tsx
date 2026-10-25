@@ -6,6 +6,7 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Button } from "@/components/ui/button";
 import { logoutAction, resendVerificationAction } from "@/lib/actions/auth";
 import { getCurrentUser } from "@/lib/dal";
+import { emailsEnabled } from "@/lib/emails";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { getDictionary } from "@/lib/i18n/server";
 
@@ -27,8 +28,17 @@ async function UserMenu() {
 
 /** Rappel tant que l'adresse n'est pas confirmée (condition pour inviter quelqu'un). */
 async function UnverifiedEmailBanner() {
-  const [{ t }, user] = await Promise.all([getDictionary(), getCurrentUser()]);
+  const [{ t }, user, canSend] = await Promise.all([getDictionary(), getCurrentUser(), emailsEnabled()]);
   if (user.email_verified) return null;
+  if (!canSend) {
+    return (
+      <div className="border-b bg-amber-50 text-amber-950">
+        <p className="mx-auto w-full max-w-6xl px-4 py-2 text-sm">
+          {interpolate(t.auth.unverifiedNoEmail, { email: user.email })}
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="border-b bg-amber-50 text-amber-950">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm">

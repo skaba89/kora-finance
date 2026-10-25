@@ -365,3 +365,31 @@ idempotence, droits ; propriété : toute opération, tout montant, tout taux �
 **Reste** : salaires et emprunts (non couverts : charges sociales et intérêts à paramétrer),
 choix de 4432/4454 pour la TVA sur services, validation de toutes les correspondances par
 un expert-comptable ; 2g3 brouillons hors connexion.
+
+## 2026-10-25 — Déploiement sur VPS (préparation)
+
+**Décisions de l'utilisateur** : VPS OVH dédié à Kora (le serveur de dev héberge
+gestion-scolaire-pro, dont le Caddy tient les ports 80/443 : on n'y touche pas), pas
+encore de domaine, emails plus tard.
+
+**Livré**
+- `KORA_EMAIL_BACKEND=disabled` : aucun envoi, avertissement journalisé (sujet seulement) ;
+  page « mot de passe oublié » et bandeau d'adresse non confirmée le signalent.
+- `deploy/vps/` : pile de production (Caddy 2.11.6 seul exposé, HSTS, corps limité à
+  12 Mo), modèle `env.example` + `init-env.sh` (secrets générés, champs à remplir),
+  `bootstrap-server.sh` (Docker officiel, ufw, unattended-upgrades, fail2ban, swap, SSH
+  par clé), `deploy.sh` (main, build, vérification du stockage, migrations, démarrage),
+  `backup.sh` / `restore.sh` / minuterie systemd quotidienne.
+- `kora.scripts.backup` : envoi chiffré vérifié, liste, téléchargement, purge.
+- `scripts/init-env.sh` accepte un modèle et une cible. Guide `docs/DEPLOIEMENT.md`.
+
+**Vérifié** : 4 tests de sauvegarde (Garage) ; cycle réel sur la base de dev (dump de
+16 Mo → chiffré → téléchargé identique → restauré deux fois dans une base séparée, mêmes
+comptages, 6 déclencheurs et RLS forcée présents) ; pile de production lancée à blanc en
+`KORA_ENV=production` derrière Caddy (HTTPS local) : services sains, en-têtes de sécurité,
+API non joignable de l'extérieur, 6 parcours Playwright réussis, emails non envoyés
+journalisés sans adresse ; Caddyfile validé par Caddy.
+
+**Reste (côté utilisateur)** : commander le VPS, créer la clé B2 limitée au bucket,
+suivre docs/DEPLOIEMENT.md. Ensuite : vrai domaine, fournisseur SMTP, bucket de
+sauvegardes séparé avec Object Lock, supervision (alertes si la sauvegarde échoue).
