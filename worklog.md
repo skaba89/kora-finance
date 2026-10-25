@@ -330,8 +330,12 @@ propriétaire), lecteur sans droit d'écriture, isolation entre dossiers. E2E de
 mobile : PDF, photo de 1 Mo réduite en JPEG, réessai sans doublon, faux PDF refusé,
 téléchargement, retrait, conservation après validation.
 
-**Reste** : fournisseur S3 de production à choisir (bucket privé, clé limitée au bucket,
-https) ; quota de stockage par dossier (avec les abonnements, phase 8) ; aperçu des PDF
+- `make storage-check` / `python -m kora.scripts.check_storage` : vérification d'un stockage
+  (écriture, relecture, chiffrement, suppression de toutes les versions), alerte si http
+  ou clé non restreinte. L'utilisateur crée un bucket Backblaze B2 pour la production.
+
+**Reste** : configurer le bucket B2 de production (privé, sans Object Lock, « Keep only the
+last version », clé limitée au bucket) et lancer la vérification ; quota de stockage par dossier (avec les abonnements, phase 8) ; aperçu des PDF
 dans le navigateur selon sa politique CSP (le téléchargement fonctionne partout) ;
 purge des objets orphelins si worker et stockage sont tous deux indisponibles (journalisé
 en erreur) ; 2g2 saisie guidée, 2g3 brouillons hors connexion.

@@ -108,6 +108,7 @@ make api-test     # pytest contre une vraie base kora_test
 make web-test     # vitest
 make e2e          # Playwright (desktop + mobile) contre la pile démarrée
 make contract     # échoue si openapi.json / schema.ts ne sont pas à jour
+make storage-check  # écrit/relit/supprime un objet chiffré dans le S3 configuré (voir README)
 ./scripts/check-contract.sh --write   # régénère le contrat après un changement d'API
 make api-lock     # après modification de apps/api/pyproject.toml
 ```

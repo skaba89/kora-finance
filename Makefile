@@ -49,6 +49,9 @@ api-test: ## Tests pytest (vraie base kora_test)
 api-lock: ## Régénère uv.lock après modification de pyproject.toml
 	$(API) uv lock
 
+storage-check: ## Vérifie le stockage S3 de la pile (écriture, lecture, chiffrement, suppression)
+	$(COMPOSE) run --rm --no-deps api python -m kora.scripts.check_storage
+
 permissions-doc: ## Régénère docs/PERMISSIONS.md depuis la matrice du code
 	$(API_NODEPS) python -c "from kora.tenancy.permissions import render_markdown; print(render_markdown(), end='')" > docs/PERMISSIONS.md
 
