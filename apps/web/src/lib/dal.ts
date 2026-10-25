@@ -113,6 +113,14 @@ export async function getEntry(companyId: string, entryId: string) {
   );
 }
 
+export async function getAttachments(companyId: string, entryId: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/entries/{entry_id}/attachments", {
+      params: { path: { company_id: companyId, entry_id: entryId } },
+    }),
+  );
+}
+
 export type PeriodQuery = { fiscal_year_id: string; date_from?: string; date_to?: string };
 
 export async function getTrialBalance(

@@ -45,6 +45,9 @@ make help    # toutes les commandes
   SPF/DKIM/DMARC chez le fournisseur, sinon les emails finissent en indésirables),
   `KORA_WEB_PUBLIC_URL` (URL https du frontend, pour les liens).
 - En local, tous les emails sont capturés par Mailpit : http://localhost:58025.
+- Les pièces justificatives sont stockées (chiffrées) dans Garage, serveur S3 local sur
+  127.0.0.1:53900. Après une mise à jour du dépôt, `make env` complète `.env` avec les
+  nouvelles variables sans toucher aux valeurs existantes.
 
 Documentation projet : `CLAUDE.md` (architecture, règles, décisions, avancement),
 `docs/PLAN.md` (phases et critères d'acceptation), `worklog.md` (journal daté).

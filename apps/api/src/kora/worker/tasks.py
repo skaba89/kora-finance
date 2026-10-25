@@ -14,6 +14,7 @@ from kora.db.session import get_sessionmaker
 from kora.email import sender
 from kora.email.sender import OutgoingEmail
 from kora.organization import invitations
+from kora.storage import objects
 from kora.worker import broker as _broker  # noqa: F401  (enregistre le broker)
 
 configure_logging(get_settings().log_level)
@@ -46,6 +47,13 @@ def _prepare_and_deliver(prepare: Callable[[Session], OutgoingEmail | None]) -> 
         email = prepare(session)
     if email is not None:
         deliver_email.send(email.to_dict())
+
+
+@dramatiq.actor(max_retries=_RETRIES, min_backoff=_MIN_BACKOFF_MS, max_backoff=_MAX_BACKOFF_MS)
+def delete_stored_object(object_key: str) -> None:
+    """Suppression différée d'un objet dont la référence a déjà quitté la base."""
+    objects.delete(object_key)
+    logger.info("objet supprimé du stockage", extra={"objet": object_key})
 
 
 @dramatiq.actor(max_retries=_RETRIES, min_backoff=_MIN_BACKOFF_MS, max_backoff=_MAX_BACKOFF_MS)

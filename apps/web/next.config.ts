@@ -17,6 +17,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  experimental: {
+    serverActions: {
+      // Pièces justificatives (10 Mo au plus côté API) envoyées par Server Action.
+      bodySizeLimit: "11mb",
+    },
+  },
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

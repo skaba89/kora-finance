@@ -57,6 +57,11 @@ class BusinessRuleError(KoraError):
     code = "regle_metier"
 
 
+class PayloadTooLargeError(KoraError):
+    status_code = status.HTTP_413_CONTENT_TOO_LARGE
+    code = "fichier_trop_volumineux"
+
+
 class TooManyRequestsError(KoraError):
     status_code = status.HTTP_429_TOO_MANY_REQUESTS
     code = "trop_de_demandes"

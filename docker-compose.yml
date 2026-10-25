@@ -20,6 +20,16 @@ x-api-env: &api-env
   KORA_SMTP_SECURITY: none
   KORA_EMAIL_FROM: Kora Finance <no-reply@kora.local>
   KORA_WEB_PUBLIC_URL: ${KORA_PUBLIC_URL:-http://localhost:3100}
+  # Pièces justificatives : Garage en local. En production : point d'accès https:// du
+  # fournisseur S3, bucket privé, clé limitée à ce bucket.
+  KORA_S3_ENDPOINT_URL: http://storage:3900
+  KORA_S3_BUCKET: kora
+  KORA_S3_ACCESS_KEY_ID: ${KORA_S3_ACCESS_KEY_ID:?lancer make env}
+  KORA_S3_SECRET_ACCESS_KEY: ${KORA_S3_SECRET_ACCESS_KEY:?lancer make env}
+
+x-garage-env: &garage-env
+  GARAGE_RPC_SECRET: ${KORA_GARAGE_RPC_SECRET:?lancer make env}
+  GARAGE_ADMIN_TOKEN: ${KORA_GARAGE_ADMIN_TOKEN:?lancer make env}
 
 services:
   postgres:
@@ -69,6 +79,38 @@ services:
       timeout: 3s
       retries: 20
 
+  # Stockage S3 de développement (Garage, un nœud). Image sans shell : le contrôle de
+  # santé passe par la CLI de Garage ; l'initialisation par storage-init.
+  storage:
+    image: dxflrs/garage:v2.4.1
+    environment: *garage-env
+    volumes:
+      - ./infra/garage/garage.toml:/etc/garage.toml:ro
+      - garage_data:/var/lib/garage
+    ports:
+      - "127.0.0.1:${KORA_S3_PORT:-53900}:3900"
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Nœud, clé d'accès et buckets (« kora » pour la pile, « kora-test » pour pytest).
+  storage-init:
+    image: python:3.13-slim
+    user: "65534:65534"
+    command: ["python", "-I", "/bootstrap/bootstrap.py"]
+    volumes:
+      - ./infra/garage/bootstrap.py:/bootstrap/bootstrap.py:ro
+    environment:
+      GARAGE_ADMIN_URL: http://storage:3903
+      GARAGE_ADMIN_TOKEN: ${KORA_GARAGE_ADMIN_TOKEN:?lancer make env}
+      S3_ACCESS_KEY_ID: ${KORA_S3_ACCESS_KEY_ID:?lancer make env}
+      S3_SECRET_ACCESS_KEY: ${KORA_S3_SECRET_ACCESS_KEY:?lancer make env}
+      S3_BUCKETS: kora,kora-test
+    depends_on:
+      storage: { condition: service_healthy }
+
   # Les migrations sont une étape distincte : l'API ne modifie jamais le schéma au démarrage.
   migrate:
     build: { context: ./apps/api, target: runtime }
@@ -86,6 +128,7 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
+      storage-init: { condition: service_completed_successfully }
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
       interval: 5s
@@ -100,6 +143,7 @@ services:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
       mailpit: { condition: service_healthy }
+      storage-init: { condition: service_completed_successfully }
 
   web:
     build: { context: ./apps/web, target: runtime }
@@ -142,12 +186,17 @@ services:
       KORA_REDIS_URL: redis://redis:6379/15
       KORA_JWT_SECRET: ${KORA_JWT_SECRET:?lancer make env}
       KORA_ENCRYPTION_KEYS: ${KORA_ENCRYPTION_KEYS:?lancer make env}
+      KORA_S3_ENDPOINT_URL: http://storage:3900
+      KORA_S3_BUCKET: kora-test
+      KORA_S3_ACCESS_KEY_ID: ${KORA_S3_ACCESS_KEY_ID:?lancer make env}
+      KORA_S3_SECRET_ACCESS_KEY: ${KORA_S3_SECRET_ACCESS_KEY:?lancer make env}
       RUFF_CACHE_DIR: /tmp/ruff
       MYPY_CACHE_DIR: /tmp/mypy
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
       mailpit: { condition: service_healthy }
+      storage-init: { condition: service_completed_successfully }
 
   web-tools:
     profiles: ["tools"]
@@ -181,3 +230,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  garage_data:

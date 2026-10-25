@@ -21,6 +21,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from kora.attachments import service as attachments
 from kora.audit.service import record_event
 from kora.auth.service import RequestContext
 from kora.core.errors import BusinessRuleError, ConflictError, NotFoundError
@@ -281,8 +282,10 @@ def update_draft(
 def delete_draft(session: Session, actor: Actor, entry_id: uuid.UUID) -> None:
     entry = _lock_entry(session, actor, entry_id)
     _require_draft(entry)
+    keys = attachments.detach_all(session, actor.company_id, entry.id)
     session.delete(entry)
     session.commit()
+    attachments.purge(keys)
 
 
 # --- Validation

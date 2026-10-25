@@ -80,8 +80,20 @@ class Settings(BaseSettings):
     account_emails_per_hour: int = Field(default=3, ge=1)
     invitations_per_company_per_day: int = Field(default=20, ge=1)
 
+    # --- Stockage des pièces justificatives (S3 compatible : Garage en local, fournisseur
+    # S3 en production). Les objets sont chiffrés par l'application avant l'envoi.
+    s3_endpoint_url: str
+    s3_region: str = "garage"
+    s3_bucket: str
+    s3_access_key_id: str
+    s3_secret_access_key: SecretStr
+    s3_timeout_seconds: int = Field(default=20, ge=1, le=300)
+    # Taille maximale d'une pièce (les photos sont réduites dans le navigateur avant envoi).
+    attachment_max_bytes: int = Field(default=10 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024)
+    attachments_per_entry: int = Field(default=20, ge=1, le=100)
+
     @model_validator(mode="after")
-    def _check_email_settings(self) -> Self:
+    def _check_settings(self) -> Self:
         self.web_public_url = self.web_public_url.rstrip("/")
         if self.email_backend == "memory" and self.env != Environment.TEST:
             raise ValueError("KORA_EMAIL_BACKEND=memory est réservé aux tests.")
@@ -90,6 +102,8 @@ class Settings(BaseSettings):
                 raise ValueError("KORA_SMTP_SECURITY=none est interdit en production.")
             if not self.web_public_url.startswith("https://"):
                 raise ValueError("KORA_WEB_PUBLIC_URL doit être en https:// en production.")
+            if not self.s3_endpoint_url.startswith("https://"):
+                raise ValueError("KORA_S3_ENDPOINT_URL doit être en https:// en production.")
         return self
 
     @property
