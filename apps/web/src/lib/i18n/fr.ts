@@ -329,6 +329,10 @@ export const fr = {
     unknownAccount: "Aucun compte {number} dans le plan comptable.",
     chooseAccount: "Saisissez un numéro de compte pour afficher son grand livre.",
     draftsExcluded: "Les brouillons ne figurent pas dans les états.",
+    export: "Exporter",
+    exportAccount: "Exporter ce compte",
+    exportAll: "Exporter tout le grand livre",
+    exportJournal: "Exporter le journal de l'exercice",
   },
   lettering: {
     title: "Lettrage",

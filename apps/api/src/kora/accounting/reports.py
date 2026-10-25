@@ -274,3 +274,99 @@ def account_ledger(
         ],
         total_lines=int(count),
     )
+
+
+# --- Grand livre complet (exports)
+
+
+@dataclass(frozen=True)
+class AccountMovements:
+    account_id: uuid.UUID
+    number: str
+    label: str
+    opening: int
+    lines: list[LedgerLine]
+
+    @property
+    def period_debit(self) -> int:
+        return sum(line.debit for line in self.lines)
+
+    @property
+    def period_credit(self) -> int:
+        return sum(line.credit for line in self.lines)
+
+    @property
+    def closing(self) -> int:
+        return self.opening + self.period_debit - self.period_credit
+
+
+def full_ledger(session: Session, company_id: uuid.UUID, period: Period) -> list[AccountMovements]:
+    """Grand livre de tous les comptes mouvementés, en deux requêtes quel que soit le
+    nombre de comptes : soldes d'ouverture groupés, puis lignes avec solde progressif
+    partitionné par compte."""
+    balance = trial_balance(session, company_id, period, AccountFilter())
+    openings = {row.account_id: row.opening for row in balance}
+    labels = {row.account_id: (row.number, row.label) for row in balance}
+    rows = session.execute(
+        select(
+            JournalLine.account_id,
+            JournalEntry.id,
+            JournalEntry.entry_date,
+            Journal.code,
+            JournalEntry.number,
+            JournalEntry.reference,
+            func.coalesce(JournalLine.label, JournalEntry.label),
+            JournalLine.debit,
+            JournalLine.credit,
+            func.sum(JournalLine.debit - JournalLine.credit).over(
+                partition_by=JournalLine.account_id,
+                order_by=(
+                    JournalEntry.entry_date,
+                    Journal.code,
+                    JournalEntry.number,
+                    JournalLine.line_no,
+                    JournalLine.id,
+                ),
+            ),
+        )
+        .join(JournalEntry, JournalEntry.id == JournalLine.entry_id)
+        .join(Journal, Journal.id == JournalEntry.journal_id)
+        .where(
+            JournalLine.tenant_id == company_id,
+            JournalEntry.fiscal_year_id == period.fiscal_year.id,
+            JournalEntry.status == EntryStatus.POSTED,
+            JournalEntry.entry_date >= period.date_from,
+            JournalEntry.entry_date <= period.date_to,
+            Journal.kind != JournalKind.A_NOUVEAUX,
+        )
+        .order_by(
+            JournalLine.account_id,
+            JournalEntry.entry_date,
+            Journal.code,
+            JournalEntry.number,
+            JournalLine.line_no,
+            JournalLine.id,
+        )
+    ).all()
+    lines: dict[uuid.UUID, list[LedgerLine]] = {account_id: [] for account_id in openings}
+    for account_id, entry_id, day, code, number, reference, label, debit, credit, running in rows:
+        lines[account_id].append(
+            LedgerLine(
+                entry_id,
+                day,
+                code,
+                number,
+                reference,
+                label,
+                int(debit),
+                int(credit),
+                openings[account_id] + int(running),
+            )
+        )
+    return sorted(
+        (
+            AccountMovements(account_id, *labels[account_id], openings[account_id], account_lines)
+            for account_id, account_lines in lines.items()
+        ),
+        key=lambda movements: movements.number,
+    )

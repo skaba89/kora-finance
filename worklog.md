@@ -280,3 +280,23 @@ la main (y compris amortissement et découvert bancaire) ; comparatif N-1 après
 bilan équilibré sur 40 écritures aléatoires couvrant tout le plan.
 
 **Reste** : TFT (2e-bis), exports PDF/Excel (2f), pièces jointes et hors-ligne (2g).
+
+## 2026-10-24 — Phase 2f : exports PDF et Excel
+
+**Livré**
+- Dépendances (provenance vérifiée, versions de plus de deux semaines) : openpyxl 3.1.5 (MIT),
+  reportlab 5.0.1 (BSD ; la 5.1.0 avait deux jours), stubs de typage ; police
+  `fonts-dejavu-core` installée dans les images.
+- `kora/exports` : document neutre (sections, colonnes, lignes de total) rendu en Excel
+  (montants numériques, format #,##0, dates réelles) ou en PDF A4 (en-tête RCCM/NIF,
+  mentions, « Page x / y »). Balance, grand livre (un compte ou tous, en deux requêtes),
+  journal des écritures, états financiers (actif, passif, compte de résultat, N-1).
+- API `GET /exports/{trial-balance|ledger|entries|financial-statements}?format=pdf|xlsx` ;
+  chaque export tracé (`export.generated`) ; PDF refusé au-delà de 20 000 lignes.
+- Web : route de téléchargement BFF (flux), boutons PDF / Excel sur Balance, Grand livre,
+  Écritures, États financiers.
+
+**Vérifié** : contenus Excel recoupés avec l'API (montants numériques), PDF valides,
+nom de fichier sans accent ni balise (bogue trouvé : les lettres accentuées étaient
+supprimées → normalisation NFKD), téléchargements réels en E2E ; PDF rendus en image et
+relus (colonne « Réf. » élargie, zéros des lignes de détail masqués).

@@ -38,7 +38,7 @@ Découpage (2026-10-24) :
 - ✅ **2d** Verrouillage de période, clôture / réouverture d'exercice, à-nouveaux.
 - ✅ **2e** Bilan et compte de résultat (référentiel d'affectation versionné, à valider par un expert).
 - **2e-bis** Tableau des flux de trésorerie (méthode à valider par un expert-comptable).
-- **2f** Exports PDF et Excel.
+- ✅ **2f** Exports PDF et Excel.
 - **2g** Pièces jointes (stockage S3), saisie guidée, brouillons hors connexion.
 
 ## Phase 3 — Trésorerie, Mobile Money et rapprochement

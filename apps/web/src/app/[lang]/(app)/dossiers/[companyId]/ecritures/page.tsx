@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { ExportLinks } from "@/components/ledger/export-links";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { can, getCompany, getEntries, getJournals } from "@/lib/dal";
+import { can, getCompany, getEntries, getFiscalYears, getJournals } from "@/lib/dal";
 import { formatDate, formatMoney } from "@/lib/format";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { getDictionary } from "@/lib/i18n/server";
+import { pickFiscalYear } from "@/lib/periods";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getDictionary();
@@ -35,11 +37,13 @@ export default async function EntriesPage({
   const status = STATUSES.find((s) => s === statusParam);
   const page = Math.max(1, Number.parseInt(one(query.page) ?? "1", 10) || 1);
 
-  const [{ t, locale }, company, journals] = await Promise.all([
+  const [{ t, locale }, company, journals, years] = await Promise.all([
     getDictionary(),
     getCompany(companyId),
     getJournals(companyId),
+    getFiscalYears(companyId),
   ]);
+  const currentYear = pickFiscalYear(years, undefined, new Date().toISOString().slice(0, 10));
   const journal = journals.find((j) => j.id === journalParam);
   const entries = await getEntries(companyId, {
     q,
@@ -112,6 +116,18 @@ export default async function EntriesPage({
           {t.common.filter}
         </Button>
       </form>
+
+      {currentYear ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">{t.reports.exportJournal}</span>
+          <ExportLinks
+            companyId={companyId}
+            kind="ecritures"
+            fiscalYearId={currentYear.id}
+            label={t.reports.exportJournal}
+          />
+        </div>
+      ) : null}
 
       {entries.items.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t.entries.empty}</p>
