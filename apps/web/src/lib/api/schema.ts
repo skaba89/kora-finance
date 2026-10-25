@@ -711,6 +711,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/guided-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Guided Entry */
+        post: operations["create_guided_entry_api_v1_companies__company_id__guided_entries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/guided-entries/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Guided Options */
+        get: operations["guided_options_api_v1_companies__company_id__guided_entries_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/guided-entries/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Guided Entry */
+        post: operations["preview_guided_entry_api_v1_companies__company_id__guided_entries_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/invitations": {
         parameters: {
             query?: never;
@@ -1148,6 +1199,18 @@ export interface components {
             password: string;
             /** Token */
             token: string;
+        };
+        /** AccountChoice */
+        AccountChoice: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /** Number */
+            number: string;
         };
         /** AccountCreate */
         AccountCreate: {
@@ -1795,6 +1858,120 @@ export interface components {
              */
             email: string;
         };
+        /** GuidedCreate */
+        GuidedCreate: {
+            /**
+             * Amount
+             * @description Montant total (TTC)
+             */
+            amount: string;
+            /**
+             * Entry Date
+             * Format: date
+             */
+            entry_date: string;
+            /**
+             * Id
+             * @description Identifiant choisi par le client : rend l'enregistrement idempotent.
+             */
+            id?: string | null;
+            /** Label */
+            label?: string | null;
+            /** Nature Account Id */
+            nature_account_id?: string | null;
+            operation: components["schemas"]["Operation"];
+            /** Party Account Id */
+            party_account_id?: string | null;
+            /** Reference */
+            reference?: string | null;
+            /** Target Treasury Account Id */
+            target_treasury_account_id?: string | null;
+            /** Treasury Account Id */
+            treasury_account_id?: string | null;
+            /**
+             * Vat Included
+             * @default false
+             */
+            vat_included: boolean;
+        };
+        /** GuidedCreated */
+        GuidedCreated: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
+        /** GuidedIn */
+        GuidedIn: {
+            /**
+             * Amount
+             * @description Montant total (TTC)
+             */
+            amount: string;
+            /**
+             * Entry Date
+             * Format: date
+             */
+            entry_date: string;
+            /** Label */
+            label?: string | null;
+            /** Nature Account Id */
+            nature_account_id?: string | null;
+            operation: components["schemas"]["Operation"];
+            /** Party Account Id */
+            party_account_id?: string | null;
+            /** Reference */
+            reference?: string | null;
+            /** Target Treasury Account Id */
+            target_treasury_account_id?: string | null;
+            /** Treasury Account Id */
+            treasury_account_id?: string | null;
+            /**
+             * Vat Included
+             * @default false
+             */
+            vat_included: boolean;
+        };
+        /** GuidedOptions */
+        GuidedOptions: {
+            /** Natures */
+            natures: {
+                [key: string]: components["schemas"]["NatureChoiceOut"][];
+            };
+            /** Operations */
+            operations: components["schemas"]["OperationOut"][];
+            /** Party Accounts */
+            party_accounts: {
+                [key: string]: components["schemas"]["AccountChoice"][];
+            };
+            /** Reference */
+            reference: string;
+            /** Treasury Accounts */
+            treasury_accounts: components["schemas"]["AccountChoice"][];
+            /** @description Taux TVA_NORMAL en vigueur à la date demandée */
+            vat: components["schemas"]["VatOut"] | null;
+        };
+        /** GuidedPreview */
+        GuidedPreview: {
+            /** Journal Code */
+            journal_code: string;
+            /** Journal Label */
+            journal_label: string;
+            /** Label */
+            label: string;
+            /** Lines */
+            lines: components["schemas"]["PreviewLine"][];
+            /** Reference */
+            reference: string | null;
+            /**
+             * Vat Amount
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            vat_amount: string;
+            /** Warnings */
+            warnings: string[];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2238,6 +2415,35 @@ export interface components {
             /** Mfa Token */
             mfa_token: string;
         };
+        /** NatureChoiceOut */
+        NatureChoiceOut: {
+            account: components["schemas"]["AccountChoice"];
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+            /** Label En */
+            label_en: string;
+            /** Note */
+            note: string;
+            /** Vat Possible */
+            vat_possible: boolean;
+        };
+        /**
+         * Operation
+         * @enum {string}
+         */
+        Operation: "VENTE_COMPTANT" | "FACTURE_CLIENT" | "ENCAISSEMENT_CLIENT" | "ACHAT_COMPTANT" | "FACTURE_FOURNISSEUR" | "PAIEMENT_FOURNISSEUR" | "VIREMENT_INTERNE";
+        /** OperationOut */
+        OperationOut: {
+            code: components["schemas"]["Operation"];
+            nature: components["schemas"]["Sense"] | null;
+            party: components["schemas"]["Party"] | null;
+            /** Target Treasury */
+            target_treasury: boolean;
+            /** Treasury */
+            treasury: boolean;
+        };
         /** Page[AccountOut] */
         Page_AccountOut_: {
             /** Items */
@@ -2271,6 +2477,11 @@ export interface components {
             /** Total */
             total: number;
         };
+        /**
+         * Party
+         * @enum {string}
+         */
+        Party: "CLIENT" | "FOURNISSEUR";
         /** PeriodOut */
         PeriodOut: {
             /**
@@ -2306,6 +2517,28 @@ export interface components {
              * Format: date
              */
             start_date: string;
+        };
+        /** PreviewLine */
+        PreviewLine: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Account Label */
+            account_label: string;
+            /** Account Number */
+            account_number: string;
+            /**
+             * Credit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            credit: string;
+            /**
+             * Debit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            debit: string;
         };
         /** ReadyResponse */
         ReadyResponse: {
@@ -2381,6 +2614,11 @@ export interface components {
          * @enum {string}
          */
         Role: "SUPER_ADMIN" | "CABINET_ADMIN" | "CABINET_COLLABORATEUR" | "PME_DIRIGEANT" | "PME_COMPTABLE" | "PME_LECTEUR" | "PARTENAIRE_FINANCIER";
+        /**
+         * Sense
+         * @enum {string}
+         */
+        Sense: "PRODUIT" | "CHARGE";
         /** StatementLineOut */
         StatementLineOut: {
             /**
@@ -2517,6 +2755,13 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VatOut */
+        VatOut: {
+            /** Rate Basis Points */
+            rate_basis_points: number;
+            /** Verified */
+            verified: boolean;
         };
         /** VerifyEmailRequest */
         VerifyEmailRequest: {
@@ -5441,6 +5686,220 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FiscalYearOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_guided_entry_api_v1_companies__company_id__guided_entries_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuidedCreate"];
+            };
+        };
+        responses: {
+            /** @description Déjà enregistrée */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuidedCreated"];
+                };
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuidedCreated"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    guided_options_api_v1_companies__company_id__guided_entries_options_get: {
+        parameters: {
+            query?: {
+                on?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuidedOptions"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_guided_entry_api_v1_companies__company_id__guided_entries_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuidedIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuidedPreview"];
                 };
             };
             /** @description Unauthorized */

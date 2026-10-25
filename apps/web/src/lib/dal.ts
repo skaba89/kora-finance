@@ -113,6 +113,14 @@ export async function getEntry(companyId: string, entryId: string) {
   );
 }
 
+export async function getGuidedOptions(companyId: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/guided-entries/options", {
+      params: { path: { company_id: companyId } },
+    }),
+  );
+}
+
 export async function getAttachments(companyId: string, entryId: string) {
   return read(
     (await api()).GET("/api/v1/companies/{company_id}/entries/{entry_id}/attachments", {

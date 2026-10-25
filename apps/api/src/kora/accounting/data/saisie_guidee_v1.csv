@@ -1,0 +1,20 @@
+sens;code;libelle;libelle_en;compte;tva_possible;note
+PRODUIT;MARCHANDISES;Vente de marchandises;Sale of goods;701;oui;Revente en l'état de biens achetés.
+PRODUIT;PRODUITS_FINIS;Vente de produits fabriqués;Sale of manufactured products;702;oui;Biens produits par l'entreprise.
+PRODUIT;SERVICES;Prestation de services;Services;706;oui;
+PRODUIT;TRAVAUX;Travaux facturés;Invoiced works;705;oui;Bâtiment, travaux publics, installation.
+PRODUIT;ACCESSOIRES;Autres recettes (location, commissions…);Other income (rent, commissions…);707;oui;Produits accessoires.
+CHARGE;MARCHANDISES;Achat de marchandises à revendre;Goods for resale;601;oui;
+CHARGE;MATIERES;Matières premières;Raw materials;602;oui;Pour une activité de production.
+CHARGE;FOURNITURES;Fournitures (bureau, entretien, petit matériel);Supplies (office, cleaning, small equipment);604;oui;Achats stockés de fournitures consommables : à valider (604 ou 605 selon le suivi en stock).
+CHARGE;ENERGIE;Eau, électricité, carburant;Water, electricity, fuel;605;oui;Fournitures non stockables.
+CHARGE;TRANSPORT;Transport;Transport;618;oui;
+CHARGE;LOYER;Loyer et charges locatives;Rent;622;oui;
+CHARGE;ENTRETIEN;Entretien et réparations;Maintenance and repairs;624;oui;
+CHARGE;ASSURANCE;Assurance;Insurance;625;non;Assurances généralement hors champ de la TVA : à vérifier auprès de la DGI.
+CHARGE;PUBLICITE;Publicité;Advertising;627;oui;
+CHARGE;TELECOM;Téléphone et internet;Phone and internet;628;oui;
+CHARGE;FRAIS_BANCAIRES;Frais bancaires et Mobile Money;Bank and Mobile Money fees;631;oui;Frais de retrait et de transfert inclus.
+CHARGE;HONORAIRES;Honoraires (comptable, avocat, conseil);Professional fees;632;oui;
+CHARGE;IMPOTS;Impôts et taxes (hors impôt sur les bénéfices);Taxes (excluding income tax);641;non;Patente, contribution foncière… : 641 (directs) ou 645 (indirects) selon l'impôt, à valider.
+CHARGE;DIVERS;Autres dépenses;Other expenses;638;oui;Autres charges externes.
