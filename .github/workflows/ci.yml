@@ -79,10 +79,24 @@ jobs:
           path: apps/web/playwright-report
           retention-days: 7
 
+  restore:
+    name: Restauration synthétique (PostgreSQL + pièces chiffrées)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: python3 scripts/restore-drill.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: restore-drill-report
+          path: artifacts/restore-drill.json
+          if-no-files-found: error
+          retention-days: 30
+
   result:
     name: Résultat
     if: always()
-    needs: [secrets, api, web, contract, e2e]
+    needs: [secrets, api, web, contract, e2e, restore]
     runs-on: ubuntu-24.04
     steps:
       - name: Tous les jobs doivent réussir

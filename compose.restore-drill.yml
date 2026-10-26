@@ -1,0 +1,122 @@
+# Exercice synthétique uniquement. Piloté par scripts/restore-drill.py ; aucun port publié.
+name: kora-restore-drill
+
+x-db-env: &db-env
+  POSTGRES_USER: kora_admin
+  POSTGRES_PASSWORD: ${KORA_DRILL_ADMIN_PASSWORD:?}
+  POSTGRES_DB: postgres
+  KORA_DB_OWNER_PASSWORD: ${KORA_DRILL_OWNER_PASSWORD:?}
+  KORA_DB_APP_PASSWORD: ${KORA_DRILL_APP_PASSWORD:?}
+  KORA_DATABASES: kora_drill
+
+x-db: &db
+  image: postgres:16-alpine
+  environment: *db-env
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U kora_admin -d kora_drill"]
+    interval: 2s
+    timeout: 3s
+    retries: 60
+
+x-storage-env: &storage-env
+  GARAGE_RPC_SECRET: ${KORA_DRILL_RPC_SECRET:?}
+  GARAGE_ADMIN_TOKEN: ${KORA_DRILL_ADMIN_TOKEN:?}
+
+x-storage: &storage
+  image: dxflrs/garage:v2.4.1
+  environment: *storage-env
+  healthcheck:
+    test: ["CMD", "/garage", "status"]
+    interval: 2s
+    timeout: 3s
+    retries: 60
+
+x-api-env: &api-env
+  KORA_ENV: test
+  KORA_RESTORE_DRILL: synthetic-v1
+  KORA_EMAIL_BACKEND: memory
+  KORA_REDIS_URL: redis://redis:6379/15
+  KORA_JWT_SECRET: ${KORA_DRILL_JWT_SECRET:?}
+  KORA_ENCRYPTION_KEYS: ${KORA_DRILL_ENCRYPTION_KEY:?}
+  KORA_S3_REGION: garage
+  KORA_S3_BUCKET: kora-drill
+  KORA_S3_ACCESS_KEY_ID: ${KORA_DRILL_S3_KEY_ID:?}
+  KORA_S3_SECRET_ACCESS_KEY: ${KORA_DRILL_S3_SECRET:?}
+
+x-tools: &tools
+  image: kora-drill-tools:${KORA_DRILL_ID:?}
+  user: "${KORA_DRILL_UID:?}:${KORA_DRILL_GID:?}"
+  volumes:
+    - ${KORA_DRILL_ARCHIVE_DIR:?}:/drill
+
+x-init-env: &init-env
+  GARAGE_ADMIN_TOKEN: ${KORA_DRILL_ADMIN_TOKEN:?}
+  S3_ACCESS_KEY_ID: ${KORA_DRILL_S3_KEY_ID:?}
+  S3_SECRET_ACCESS_KEY: ${KORA_DRILL_S3_SECRET:?}
+  S3_BUCKETS: kora-drill
+
+x-init: &init
+  image: python:3.13-slim
+  command: ["python", "-I", "/bootstrap/bootstrap.py"]
+  volumes:
+    - ./infra/garage/bootstrap.py:/bootstrap/bootstrap.py:ro
+
+services:
+  postgres-source:
+    <<: *db
+    volumes:
+      - postgres_source:/var/lib/postgresql/data
+      - ./infra/postgres/init-roles.sh:/docker-entrypoint-initdb.d/10-init-roles.sh:ro
+  postgres-target:
+    <<: *db
+    volumes:
+      - postgres_target:/var/lib/postgresql/data
+      - ./infra/postgres/init-roles.sh:/docker-entrypoint-initdb.d/10-init-roles.sh:ro
+  storage-source:
+    <<: *storage
+    volumes:
+      - storage_source:/var/lib/garage
+      - ./infra/garage/garage.toml:/etc/garage.toml:ro
+  storage-target:
+    <<: *storage
+    volumes:
+      - storage_target:/var/lib/garage
+      - ./infra/garage/garage.toml:/etc/garage.toml:ro
+  init-source:
+    <<: *init
+    environment:
+      <<: *init-env
+      GARAGE_ADMIN_URL: http://storage-source:3903
+  init-target:
+    <<: *init
+    environment:
+      <<: *init-env
+      GARAGE_ADMIN_URL: http://storage-target:3903
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+  source-tools:
+    <<: *tools
+    build: { context: ./apps/api, target: dev }
+    environment:
+      <<: *api-env
+      KORA_DATABASE_URL: postgresql+psycopg://kora_app:${KORA_DRILL_APP_PASSWORD:?}@postgres-source:5432/kora_drill
+      KORA_DATABASE_MIGRATION_URL: postgresql+psycopg://kora_owner:${KORA_DRILL_OWNER_PASSWORD:?}@postgres-source:5432/kora_drill
+      KORA_S3_ENDPOINT_URL: http://storage-source:3900
+  target-tools:
+    <<: *tools
+    environment:
+      <<: *api-env
+      KORA_DATABASE_URL: postgresql+psycopg://kora_app:${KORA_DRILL_APP_PASSWORD:?}@postgres-target:5432/kora_drill
+      KORA_DATABASE_MIGRATION_URL: postgresql+psycopg://kora_owner:${KORA_DRILL_OWNER_PASSWORD:?}@postgres-target:5432/kora_drill
+      KORA_S3_ENDPOINT_URL: http://storage-target:3900
+
+volumes:
+  postgres_source:
+  postgres_target:
+  storage_source:
+  storage_target:

@@ -15,3 +15,6 @@ htmlcov/
 # Production : copies locales des sauvegardes (deploy/vps/backup.sh)
 deploy/vps/backups/
 *.dump
+
+# Rapports synthétiques de CI (aucune archive ni clé)
+/artifacts/
