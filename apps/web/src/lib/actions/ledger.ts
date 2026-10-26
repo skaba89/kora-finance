@@ -6,49 +6,13 @@ import { redirect } from "next/navigation";
 import { api } from "@/lib/api/server";
 import type { components } from "@/lib/api/schema";
 import { interpolate } from "@/lib/i18n/interpolate";
+import { parseEntryJson, UUID } from "@/lib/payloads";
 
 import type { ActionState } from "./state";
 import { actionDictionary, failure, field } from "./support";
 
-type EntryIn = components["schemas"]["EntryIn"];
 type JournalKind = components["schemas"]["JournalKind"];
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const DIGITS = /^(0|[1-9][0-9]{0,17})$/;
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-/** Corps d'écriture préparé par l'éditeur : revérifié ici (l'API revérifie aussi). */
-function parseEntry(raw: string): EntryIn | null {
-  let value: unknown;
-  try {
-    value = JSON.parse(raw);
-  } catch {
-    return null;
-  }
-  if (!value || typeof value !== "object") return null;
-  const v = value as Record<string, unknown>;
-  if (typeof v.journal_id !== "string" || !UUID.test(v.journal_id)) return null;
-  if (typeof v.entry_date !== "string" || !DATE.test(v.entry_date)) return null;
-  if (typeof v.label !== "string") return null;
-  if (v.reference !== null && typeof v.reference !== "string") return null;
-  if (!Array.isArray(v.lines)) return null;
-  const lines = [];
-  for (const line of v.lines as unknown[]) {
-    const l = line as Record<string, unknown>;
-    if (typeof l.account_id !== "string" || !UUID.test(l.account_id)) return null;
-    if (typeof l.debit !== "string" || !DIGITS.test(l.debit)) return null;
-    if (typeof l.credit !== "string" || !DIGITS.test(l.credit)) return null;
-    if (l.label !== null && typeof l.label !== "string") return null;
-    lines.push({ account_id: l.account_id, debit: l.debit, credit: l.credit, label: l.label });
-  }
-  return {
-    journal_id: v.journal_id,
-    entry_date: v.entry_date,
-    label: v.label,
-    reference: v.reference,
-    lines,
-  };
-}
 
 /**
  * Enregistre un brouillon (création ou modification), puis le valide si demandé.
@@ -60,7 +24,7 @@ export async function saveEntryAction(
   _: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const body = parseEntry(field(formData, "payload"));
+  const body = parseEntryJson(field(formData, "payload"));
   if (!body) {
     const t = await actionDictionary();
     return { status: "error", message: t.common.unexpectedError };

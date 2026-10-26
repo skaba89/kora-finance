@@ -13,7 +13,7 @@ Journal daté des sessions : `worklog.md`. Le lire en début de session.
 |---|---|---|
 | 0 | Fondations du dépôt : monorepo, Docker, CI, harnais de tests | ✅ livrée (2026-10-23) |
 | 1 | Socle : auth, multi-tenant + RLS, RBAC, organisation, plan comptable, taxes, audit chaîné, PWA | ✅ livrée (2026-10-23) ; 1g emails ✅ (2026-10-24) — reste listé dans `worklog.md` |
-| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅, 2c lettrage ✅, 2d clôture ✅, 2e bilan et CR ✅, 2f exports ✅ (2026-10-24), 2g1 pièces justificatives ✅, 2g2 saisie guidée ✅ (2026-10-25) ; 2e-bis TFT, 2g3 brouillons hors connexion à venir (`docs/PLAN.md`) |
+| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅, 2c lettrage ✅, 2d clôture ✅, 2e bilan et CR ✅, 2f exports ✅ (2026-10-24), 2g1 pièces justificatives ✅, 2g2 saisie guidée ✅ (2026-10-25), 2g3a saisie hors connexion ✅ (2026-10-26) ; 2g3b photos de pièces hors connexion, 2e-bis TFT à venir (`docs/PLAN.md`) |
 | 3 | Trésorerie, Mobile Money, rapprochement | — |
 | 4 | Ventes et achats | — |
 | 5 | Import et migration | — |
@@ -97,7 +97,10 @@ app/[lang]/(public) connexion, vérification 2FA, inscription
 app/[lang]/(app)    dossiers, paramètres du dossier, journal d'audit, sécurité du compte
 lib/dal.ts          lectures (API) ; lib/actions/*  Server Actions (mutations)
 lib/i18n            fr.ts (référence) / en.ts (mêmes clés, vérifié par TypeScript)
-public/sw.js        service worker : page hors connexion uniquement, rien d'authentifié en cache
+public/sw.js        service worker : pages publiques « hors connexion » et « saisie hors connexion »
+                    + /_next/static ; rien d'authentifié en cache
+lib/offline         saisie hors connexion : IndexedDB chiffrée (AES-GCM, clé non exportable),
+                    file d'attente, synchronisation idempotente (components/offline)
 ```
 
 ## Commandes
@@ -171,6 +174,12 @@ d'écrire du code Next.** Points déjà rencontrés :
   mobile (`hidden sm:table-cell`) n'est pas visible pour Playwright.
 - Après une navigation client, Next 16 **garde la page précédente dans le DOM (masquée)** :
   `getByLabel` peut alors trouver deux champs ; préférer `getByRole`, qui ignore le masqué.
+- Service worker, IndexedDB chiffrée et `crypto.subtle` exigent un contexte sécurisé : en E2E
+  (http://web:3000), `e2e/hors-connexion.spec.ts` lance le **Chromium complet**
+  (`channel: "chromium"`) avec `--unsafely-treat-insecure-origin-as-secure` ; le shell
+  headless par défaut ignore ce drapeau.
+- Liens vers `/hors-connexion/saisie` : `<a>` (navigation complète servie par le service
+  worker), jamais `<Link>`, qui échouerait sans réseau.
 - `crypto.randomUUID()` n'existe qu'en HTTPS/localhost (absent en E2E sur http://web:3000) :
   utiliser `uuidV4()` de `lib/uuid.ts`.
 - Tableaux larges (balance, grand livre) : fiches `sm:hidden` sur téléphone + tableau
@@ -228,6 +237,8 @@ d'écrire du code Next.** Points déjà rencontrés :
 | 2026-10-25 | Production sur un **VPS OVH dédié** (pas sur le serveur de dev, qui héberge d'autres projets) : Compose + Caddy (HTTPS Let's Encrypt), images construites sur le serveur depuis `main`, migrations par le service `migrate` ; Render abandonné | Choix de l'utilisateur ; isolation des données financières ; pas de registre d'images à gérer |
 | 2026-10-25 | Sans nom de domaine : `<ip>.sslip.io` ; emails `KORA_EMAIL_BACKEND=disabled` (chaque email non envoyé journalisé sans destinataire, l'interface le signale) | Domaine et fournisseur SMTP pas encore choisis ; HTTPS exigé dès le départ |
 | 2026-10-25 | Sauvegardes : `pg_dump` (même version que le serveur) chiffré par l'application, vérifié par relecture, dans le bucket S3 sous `backups/`, 30 jours (7 toujours gardées) ; restauration testée (données, déclencheurs, RLS identiques) | Une sauvegarde non vérifiée ou non restaurable ne compte pas |
+| 2026-10-26 | Saisie hors connexion : on **saisit** sans réseau, on ne **valide** rien ; chaque saisie devient un brouillon à la synchronisation (identifiant créé sur l'appareil = clé d'idempotence de l'API) ; données du dossier téléchargées à la demande, valables 7 jours ; saisie guidée sans aperçu (l'API calcule la TVA à la synchronisation) | La comptabilité reste décidée par le serveur (équilibre, périodes, audit) ; pas de seconde implémentation des règles de TVA dans le navigateur |
+| 2026-10-26 | Données hors connexion chiffrées dans IndexedDB (AES-256-GCM, clé WebCrypto **non exportable**, identifiant lié au chiffré), séparées par utilisateur, effacées à la déconnexion (avertissement si des saisies ne sont pas synchronisées) ; synchronisation par Server Action, verrou Web Locks entre onglets, sans Background Sync (absent sur iPhone et Firefox) | Protège contre la copie des fichiers du navigateur ; limite assumée et affichée : lisible par qui utilise le navigateur ouvert |
 
 ## À valider par un expert-comptable guinéen
 

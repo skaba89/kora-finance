@@ -58,12 +58,14 @@ function AccountSelect({
   label,
   accounts,
   placeholder,
+  initial,
 }: {
   id: string;
   name: string;
   label: string;
   accounts: AccountOption[];
   placeholder: string;
+  initial?: string | null;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -72,7 +74,7 @@ function AccountSelect({
         id={id}
         name={name}
         required
-        defaultValue={accounts.length === 1 ? accounts[0]?.id : ""}
+        defaultValue={initial ?? (accounts.length === 1 ? accounts[0]?.id : "")}
         className="border-input bg-background h-9 rounded-md border px-3 text-sm"
       >
         <option value="" disabled>
@@ -88,9 +90,24 @@ function AccountSelect({
   );
 }
 
+/** Valeurs de départ (saisie hors connexion reprise pour correction). */
+export type GuidedInitial = {
+  entryDate: string;
+  amount: string;
+  natureId: string | null;
+  treasuryId: string | null;
+  targetId: string | null;
+  partyId: string | null;
+  vatIncluded: boolean;
+  label: string | null;
+  reference: string | null;
+};
+
 /**
  * Formulaire d'une opération de saisie guidée. L'aperçu montre l'écriture exacte que
- * l'API enregistrera ; fonctionne aussi sans JavaScript (envoi classique).
+ * l'API enregistrera ; fonctionne aussi sans JavaScript (envoi classique). Hors
+ * connexion, l'aperçu est masqué (`canPreview`) : l'API calculera l'écriture à la
+ * synchronisation.
  */
 export function GuidedForm({
   action,
@@ -105,6 +122,9 @@ export function GuidedForm({
   currency,
   locale,
   companyId,
+  canPreview = true,
+  initial,
+  clientId: givenClientId,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   labels: GuidedFormLabels;
@@ -118,10 +138,15 @@ export function GuidedForm({
   currency: string;
   locale: Locale;
   companyId: string;
+  canPreview?: boolean;
+  initial?: GuidedInitial;
+  clientId?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, IDLE);
-  const [clientId] = useState(uuidV4);
-  const [natureId, setNatureId] = useState(natures?.length === 1 ? natures[0]?.id ?? "" : "");
+  const [clientId] = useState(() => givenClientId ?? uuidV4());
+  const [natureId, setNatureId] = useState(
+    initial?.natureId ?? (natures?.length === 1 ? natures[0]?.id ?? "" : ""),
+  );
   const selectedNature = natures?.find((n) => n.id === natureId);
   // Sans JavaScript, la case reste proposée dès qu'une nature l'autorise ; l'API tranche.
   const showVat = vat !== null && natures !== null && (selectedNature ? selectedNature.vatPossible : natures.some((n) => n.vatPossible));
@@ -145,11 +170,18 @@ export function GuidedForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="guided-date">{labels.date}</Label>
-          <Input id="guided-date" name="entry_date" type="date" defaultValue={defaultDate} required />
+          <Input id="guided-date" name="entry_date" type="date" defaultValue={initial?.entryDate ?? defaultDate} required />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="guided-amount">{labels.amount}</Label>
-          <Input id="guided-amount" name="amount" inputMode="decimal" autoComplete="off" required />
+          <Input
+            id="guided-amount"
+            name="amount"
+            inputMode="decimal"
+            autoComplete="off"
+            defaultValue={initial?.amount}
+            required
+          />
           <p className="text-muted-foreground text-xs">{labels.amountHint}</p>
         </div>
       </div>
@@ -177,17 +209,17 @@ export function GuidedForm({
         </div>
       ) : null}
       {treasury ? (
-        <AccountSelect id="guided-treasury" name="treasury_account_id" label={labels.treasury} accounts={treasury} placeholder={labels.choose} />
+        <AccountSelect id="guided-treasury" name="treasury_account_id" label={labels.treasury} accounts={treasury} placeholder={labels.choose} initial={initial?.treasuryId} />
       ) : null}
       {target && labels.target ? (
-        <AccountSelect id="guided-target" name="target_treasury_account_id" label={labels.target} accounts={target} placeholder={labels.choose} />
+        <AccountSelect id="guided-target" name="target_treasury_account_id" label={labels.target} accounts={target} placeholder={labels.choose} initial={initial?.targetId} />
       ) : null}
       {parties && labels.party ? (
-        <AccountSelect id="guided-party" name="party_account_id" label={labels.party} accounts={parties} placeholder={labels.choose} />
+        <AccountSelect id="guided-party" name="party_account_id" label={labels.party} accounts={parties} placeholder={labels.choose} initial={initial?.partyId} />
       ) : null}
       {showVat && vat ? (
         <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" name="vat_included" className="mt-1" />
+          <input type="checkbox" name="vat_included" className="mt-1" defaultChecked={initial?.vatIncluded} />
           <span>
             {labels.vatIncluded.replace("{rate}", vat.ratePercent)}
             {vat.verified ? null : <span className="text-muted-foreground"> ({labels.vatUnverified})</span>}
@@ -198,11 +230,11 @@ export function GuidedForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="guided-reference">{labels.reference}</Label>
-          <Input id="guided-reference" name="reference" maxLength={60} />
+          <Input id="guided-reference" name="reference" maxLength={60} defaultValue={initial?.reference ?? undefined} />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="guided-label">{labels.label}</Label>
-          <Input id="guided-label" name="label" maxLength={200} />
+          <Input id="guided-label" name="label" maxLength={200} defaultValue={initial?.label ?? undefined} />
           <p className="text-muted-foreground text-xs">{labels.labelHint}</p>
         </div>
       </div>
@@ -265,9 +297,11 @@ export function GuidedForm({
       ) : null}
 
       <div className="flex flex-wrap gap-3">
-        <Button type="submit" name="intent" value="preview" variant="outline" disabled={pending}>
-          {labels.preview}
-        </Button>
+        {canPreview ? (
+          <Button type="submit" name="intent" value="preview" variant="outline" disabled={pending}>
+            {labels.preview}
+          </Button>
+        ) : null}
         <Button type="submit" name="intent" value="draft" variant={canPost ? "secondary" : "default"} disabled={pending}>
           {pending ? labels.pending : labels.saveDraft}
         </Button>

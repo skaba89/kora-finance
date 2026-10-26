@@ -2,23 +2,11 @@
 
 import { redirect } from "next/navigation";
 
-import { parseAmount } from "@/lib/amounts";
 import { api } from "@/lib/api/server";
-import type { components } from "@/lib/api/schema";
+import { guidedBody, type Operation, UUID } from "@/lib/payloads";
 
 import type { ActionState } from "./state";
-import { actionDictionary, failure, field, optionalField } from "./support";
-
-type GuidedIn = components["schemas"]["GuidedIn"];
-type Operation = components["schemas"]["Operation"];
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-function optionalUuid(formData: FormData, name: string): string | null {
-  const value = field(formData, name);
-  return UUID.test(value) ? value : null;
-}
+import { actionDictionary, failure, field } from "./support";
 
 /**
  * Saisie guidée : « Voir l'écriture » (aperçu), « Enregistrer le brouillon » ou
@@ -32,24 +20,12 @@ export async function guidedEntryAction(
   _: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const t = await actionDictionary();
-  const amount = parseAmount(field(formData, "amount"), decimals);
-  if (amount === null || amount === "0") return { status: "error", message: t.guided.invalidAmount };
-  const entryDate = field(formData, "entry_date");
-  if (!DATE.test(entryDate)) return { status: "error", message: t.guided.invalidDate };
-
-  const body: GuidedIn = {
-    operation,
-    entry_date: entryDate,
-    amount,
-    label: optionalField(formData, "label"),
-    reference: optionalField(formData, "reference"),
-    nature_account_id: optionalUuid(formData, "nature_account_id"),
-    treasury_account_id: optionalUuid(formData, "treasury_account_id"),
-    target_treasury_account_id: optionalUuid(formData, "target_treasury_account_id"),
-    party_account_id: optionalUuid(formData, "party_account_id"),
-    vat_included: formData.get("vat_included") === "on",
-  };
+  const parsed = guidedBody(formData, operation, decimals);
+  if ("error" in parsed) {
+    const t = await actionDictionary();
+    return { status: "error", message: parsed.error === "amount" ? t.guided.invalidAmount : t.guided.invalidDate };
+  }
+  const { body } = parsed;
   const client = await api();
   const intent = field(formData, "intent");
 
