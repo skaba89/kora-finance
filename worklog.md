@@ -408,3 +408,35 @@ ni les buckets), première sauvegarde chiffrée vérifiée, minuterie quotidienn
 **Livré** : `compose.proxy-externe.yml` rejoint le réseau externe `edge` (au lieu de
 `kora-edge`, propre à l'ancien montage) ; `deploy.sh` le crée s'il manque ; section 3 bis
 de docs/DEPLOIEMENT.md réécrite.
+
+## 2026-10-26 — Phase 2g3a : saisie hors connexion (KF-17)
+
+**Contexte** : travail externe fusionné entre-temps (audit de production PR #12 et
+correctifs KF-01, KF-02, KF-04, KF-06, KF-10 : PR #13, #15 à #18), déployé en production
+après sauvegarde (migration 0009, API et worker sans identifiant propriétaire).
+L'utilisateur a choisi de faire 2g3 avant les P1 restants de l'audit.
+
+**Livré**
+- Page de dossier « Hors connexion » : préparer l'appareil (comptes d'imputation,
+  journaux, options de saisie guidée, exercices ouverts ; valable 7 jours), suivre la file,
+  synchroniser, corriger ou supprimer une saisie refusée.
+- Page publique `/hors-connexion/saisie` (statique, mise en cache par le service worker) :
+  saisie libre (éditeur existant) et guidée (formulaire existant, sans aperçu), rangées
+  dans une file IndexedDB chiffrée (AES-256-GCM, clé non exportable, par utilisateur).
+- Synchronisation automatique sur toute page connectée (chargement et retour du réseau),
+  bandeau de suivi, verrou entre onglets ; brouillons créés une seule fois (identifiant de
+  la saisie = clé d'idempotence déjà prévue par l'API). Aucune validation hors connexion.
+- Déconnexion : avertissement s'il reste des saisies non synchronisées, puis effacement
+  de tout ce que l'appareil conserve.
+- Code commun extrait : `lib/payloads.ts` (corps d'écriture libre/guidée, revérifiés côté
+  serveur), `components/guided/options.ts` (choix et libellés de la saisie guidée).
+
+**Vérifié** : 16 nouveaux tests Vitest (corps, modèle de file, chiffrement) ; 4 scénarios
+Playwright (ordinateur + mobile) avec coupure réelle du réseau : saisie libre et guidée
+hors ligne, refus serveur (date hors exercice) puis correction, trois brouillons sans
+doublon, validation en ligne (TVA calculée par le serveur) ; avertissement et effacement à
+la déconnexion. Suite E2E complète : 60/60. API inchangée (idempotence et périodes déjà
+couvertes par pytest).
+
+**Reste** : 2g3b (photos de pièces hors connexion) ; P1 de l'audit (KF-03, 05, 07, 08,
+09, 11, 12, 13).

@@ -41,7 +41,8 @@ Découpage (2026-10-24) :
 - ✅ **2f** Exports PDF et Excel.
 - **2g1** Pièces justificatives (stockage S3 chiffré). ✅
 - **2g2** Saisie guidée pour non-comptables (« j'ai payé une facture », « j'ai reçu un paiement »). ✅
-- **2g3** Brouillons hors connexion avec synchronisation.
+- **2g3a** ✅ Saisie hors connexion (libre et guidée) avec synchronisation en brouillons.
+- **2g3b** Photos de pièces justificatives prises hors connexion.
 
 ## Phase 3 — Trésorerie, Mobile Money et rapprochement
 Comptes bancaires, caisses, portefeuilles (adaptateur par opérateur), import CSV/Excel

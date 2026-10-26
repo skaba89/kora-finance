@@ -3,7 +3,8 @@ import { Suspense } from "react";
 
 import { InlineAction } from "@/components/forms/inline-action";
 import { LocaleSwitcher } from "@/components/locale-switcher";
-import { Button } from "@/components/ui/button";
+import { LogoutButton } from "@/components/offline/logout-button";
+import { OfflineSync } from "@/components/offline/offline-sync";
 import { logoutAction, resendVerificationAction } from "@/lib/actions/auth";
 import { getCurrentUser } from "@/lib/dal";
 import { emailsEnabled } from "@/lib/emails";
@@ -17,13 +18,15 @@ async function UserMenu() {
       <Link href="/compte/securite" className="hidden text-sm sm:inline" title={t.nav.security}>
         {user.full_name}
       </Link>
-      <form action={logoutAction}>
-        <Button type="submit" variant="outline" size="sm">
-          {t.nav.logout}
-        </Button>
-      </form>
+      <LogoutButton action={logoutAction} userId={user.id} label={t.nav.logout} confirmTemplate={t.offline.logoutConfirm} />
     </div>
   );
+}
+
+/** Envoi des saisies faites hors connexion et bandeau de suivi. */
+async function OfflineSyncSlot() {
+  const [{ t }, user] = await Promise.all([getDictionary(), getCurrentUser()]);
+  return <OfflineSync userId={user.id} labels={t.offline} />;
 }
 
 /** Rappel tant que l'adresse n'est pas confirmée (condition pour inviter quelqu'un). */
@@ -73,6 +76,9 @@ export default async function AppLayout({ children }: LayoutProps<"/[lang]">) {
       </header>
       <Suspense>
         <UnverifiedEmailBanner />
+      </Suspense>
+      <Suspense>
+        <OfflineSyncSlot />
       </Suspense>
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-6">{children}</div>
     </div>
