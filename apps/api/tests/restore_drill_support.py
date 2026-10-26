@@ -224,6 +224,8 @@ def recover() -> None:
 
 
 def _verify_database_security() -> None:
+    from alembic.config import Config  # noqa: PLC0415
+    from alembic.script import ScriptDirectory  # noqa: PLC0415
     from sqlalchemy import select, text  # noqa: PLC0415
 
     from kora.audit.service import verify_chain  # noqa: PLC0415
@@ -231,6 +233,11 @@ def _verify_database_security() -> None:
     from kora.models.ledger import JournalEntry  # noqa: PLC0415
 
     with get_sessionmaker()() as session:
+        expected_revision = ScriptDirectory.from_config(Config("alembic.ini")).get_current_head()
+        assert (
+            session.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+            == expected_revision
+        )
         privileges = session.execute(
             text("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname=current_user")
         ).one()
@@ -316,6 +323,7 @@ def verify() -> None:
     report = {
         "synthetic_only": True,
         "database_restored": True,
+        "migration_revision_verified": True,
         "snapshots_equal": True,
         "tenants_verified": 2,
         "attachments_decrypted": 2,
