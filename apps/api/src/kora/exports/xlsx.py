@@ -16,6 +16,14 @@ _MUTED = Font(italic=True, color="555555")
 _TOTAL_FILL = PatternFill("solid", fgColor="EEEEEE")
 
 
+def _append_literal(sheet: Worksheet, values: list[object]) -> None:
+    """Aucune formule n'est produite : tout texte métier reste une chaîne Excel."""
+    sheet.append(values)
+    for cell in sheet[sheet.max_row]:
+        if isinstance(cell.value, str):
+            cell.data_type = "s"
+
+
 def _sheet_title(title: str | None, index: int) -> str:
     # Excel : 31 caractères au plus, sans : \ / ? * [ ].
     cleaned = "".join(c for c in (title or f"Feuille {index}") if c not in ":\\/?*[]")
@@ -34,7 +42,7 @@ def _header(sheet: Worksheet, document: Document) -> None:
         *((note, _MUTED) for note in document.notes),
     ]
     for text, font in lines:
-        sheet.append([text])
+        _append_literal(sheet, [text])
         if font:
             sheet.cell(sheet.max_row, 1).font = font
     sheet.append([])
@@ -67,16 +75,16 @@ def _style_row(sheet: Worksheet, section: Section, row: Row, number_format: str)
 def _section(sheet: Worksheet, section: Section, decimals: int) -> None:
     number_format = "#,##0" if decimals == 0 else "#,##0." + "0" * decimals
     if section.title:
-        sheet.append([section.title])
+        _append_literal(sheet, [section.title])
         sheet.cell(sheet.max_row, 1).font = _BOLD
-    sheet.append([column.label for column in section.columns])
+    _append_literal(sheet, [column.label for column in section.columns])
     header_row = sheet.max_row
     for col_index, column in enumerate(section.columns, start=1):
         sheet.cell(header_row, col_index).font = _BOLD
         sheet.column_dimensions[get_column_letter(col_index)].width = column.width + 2
     for row in section.rows:
-        sheet.append(
-            [_value(c, v, decimals) for c, v in zip(section.columns, row.cells, strict=True)]
+        _append_literal(
+            sheet, [_value(c, v, decimals) for c, v in zip(section.columns, row.cells, strict=True)]
         )
         _style_row(sheet, section, row, number_format)
     sheet.freeze_panes = f"A{header_row + 1}"
