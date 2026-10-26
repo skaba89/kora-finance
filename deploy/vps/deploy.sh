@@ -22,10 +22,10 @@ if [[ "${1:-}" != "--sans-git" ]]; then
 fi
 echo "Version : $(git -C ../.. log -1 --format='%h %s')"
 
-# Mode proxy existant : réseau partagé avec le proxy du serveur.
-if grep -qE '^COMPOSE_FILE=.*proxy-externe' .env && ! docker network inspect kora-edge > /dev/null 2>&1; then
-  docker network create kora-edge > /dev/null
-  echo "Réseau kora-edge créé : y raccorder le proxy du serveur (docs/DEPLOIEMENT.md)."
+# Mode proxy commun : réseau « edge » partagé avec le proxy du serveur.
+if grep -qE '^COMPOSE_FILE=.*proxy-externe' .env && ! docker network inspect edge > /dev/null 2>&1; then
+  docker network create edge > /dev/null
+  echo "Réseau edge créé : y raccorder le proxy du serveur (docs/DEPLOIEMENT.md)."
 fi
 
 docker compose build --pull
