@@ -6,12 +6,15 @@
 """
 
 import threading
+import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
+from queue import Queue
 
 import pytest
+from alembic import command
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 from sqlalchemy import Engine, func, select, text
@@ -21,11 +24,11 @@ from sqlalchemy.orm import Session
 from kora.accounting import entries
 from kora.accounting.entries import Actor, EntryData, LineData
 from kora.core.errors import BusinessRuleError, ConflictError
-from kora.db.session import get_sessionmaker
+from kora.db.session import get_engine, get_sessionmaker
 from kora.db.tenant import bind_tenant
 from kora.models.accounting import Account
 from kora.models.ledger import EntryStatus, Journal, JournalEntry, JournalLine
-from tests.conftest import CompanyFixture
+from tests.conftest import CompanyFixture, alembic_config
 
 MakeCompany = Callable[..., CompanyFixture]
 ACCOUNTS = ("571", "521", "701", "601", "401", "411", "4431", "4452")
@@ -332,3 +335,142 @@ def test_la_base_refuse_un_compte_d_un_autre_dossier(book: Book, make_company: M
             ),
             {"t": book.company_id, "e": entry.id, "a": foreign_account},
         )
+
+
+# --- Régression KF-01 : rattachement et validation concurrente
+
+
+def _draft(book: Book) -> uuid.UUID:
+    with book.session() as session:
+        entry, _ = entries.create_draft(
+            session, book.actor(), book.data([("571", 1000, 0), ("701", 0, 1000)])
+        )
+        return entry.id
+
+
+def _line(book: Book, entry_id: uuid.UUID) -> uuid.UUID:
+    with book.session() as session:
+        return session.execute(
+            select(JournalLine.id).where(JournalLine.entry_id == entry_id, JournalLine.debit > 0)
+        ).scalar_one()
+
+
+@pytest.mark.parametrize("role", ["application", "proprietaire"])
+@pytest.mark.parametrize("posted", [False, True])
+def test_changement_de_parent_interdit(
+    book: Book, owner_engine: Engine, role: str, posted: bool
+) -> None:
+    source, target = _draft(book), _draft(book)
+    line_id = _line(book, source)
+    if posted:
+        with book.session() as session:
+            entries.post_entry(session, book.actor(), target)
+    engine = owner_engine if role == "proprietaire" else get_engine()
+    with engine.connect() as connection:
+        connection.execute(
+            text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(book.company_id)}
+        )
+        with pytest.raises(DBAPIError, match="rattachement"):
+            connection.execute(
+                text("UPDATE journal_lines SET entry_id=:target, line_no=3 WHERE id=:line"),
+                {"target": target, "line": line_id},
+            )
+        connection.rollback()
+    with book.session() as session:
+        line = session.get_one(JournalLine, line_id)
+        assert line.entry_id == source
+
+
+def test_migration_ferme_un_contournement_reproduit_sur_0008(book: Book) -> None:
+    """La transaction d'attaque est annulée ; seule la base dédiée aux tests est utilisée."""
+    source, target = _draft(book), _draft(book)
+    line_id = _line(book, source)
+    with book.session() as session:
+        entries.post_entry(session, book.actor(), target)
+    cfg = alembic_config()
+    command.downgrade(cfg, "0008")
+    try:
+        with get_engine().connect() as connection:
+            connection.execute(
+                text("SELECT set_config('app.tenant_id', :t, true)"),
+                {"t": str(book.company_id)},
+            )
+            result = connection.execute(
+                text("UPDATE journal_lines SET entry_id=:target, line_no=3 WHERE id=:line"),
+                {"target": target, "line": line_id},
+            )
+            assert result.rowcount == 1  # contournement effectif de l'ancien trigger
+            debit, credit = connection.execute(
+                text("SELECT sum(debit), sum(credit) FROM journal_lines WHERE entry_id=:target"),
+                {"target": target},
+            ).one()
+            assert debit != credit
+            connection.rollback()
+    finally:
+        command.upgrade(cfg, "head")
+    with book.session() as session, pytest.raises(DBAPIError, match="rattachement"):
+        session.execute(
+            text("UPDATE journal_lines SET entry_id=:target, line_no=3 WHERE id=:line"),
+            {"target": target, "line": line_id},
+        )
+
+
+def test_mutation_sql_attend_la_validation_concurrente(book: Book) -> None:
+    entry_id = _draft(book)
+    line_id = _line(book, entry_id)
+    engine = get_engine()
+    pids: Queue[int] = Queue()
+    errors: list[BaseException] = []
+
+    def mutate() -> None:
+        try:
+            with engine.begin() as connection:
+                connection.execute(
+                    text("SELECT set_config('app.tenant_id', :t, true)"),
+                    {"t": str(book.company_id)},
+                )
+                connection.execute(text("SET LOCAL lock_timeout = '10s'"))
+                pids.put(connection.execute(text("SELECT pg_backend_pid()")).scalar_one())
+                connection.execute(
+                    text("UPDATE journal_lines SET debit=999 WHERE id=:line"), {"line": line_id}
+                )
+        except BaseException as exc:
+            errors.append(exc)
+
+    with engine.connect() as posting:
+        posting.execute(
+            text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(book.company_id)}
+        )
+        posting.execute(
+            text(
+                "UPDATE journal_entries SET status='POSTED', number=1, posted_at=now(), "
+                "posted_by_user_id=:user WHERE id=:entry"
+            ),
+            {"entry": entry_id, "user": book.user_id},
+        )
+        worker = threading.Thread(target=mutate)
+        worker.start()
+        blocked = False
+        try:
+            pid = pids.get(timeout=5)
+            deadline = time.monotonic() + 5
+            with engine.connect() as observer:
+                while time.monotonic() < deadline:
+                    blocked = bool(
+                        observer.execute(
+                            text("SELECT cardinality(pg_blocking_pids(:pid)) > 0"), {"pid": pid}
+                        ).scalar_one()
+                    )
+                    if blocked:
+                        break
+                    time.sleep(0.01)
+        finally:
+            posting.commit()
+            worker.join(timeout=12)
+        assert not worker.is_alive()
+        assert blocked, "La mutation doit attendre le verrou de validation sur le parent."
+    assert len(errors) == 1
+    assert isinstance(errors[0], DBAPIError)
+    assert "validée" in str(errors[0])
+    with book.session() as session:
+        assert session.get_one(JournalLine, line_id).debit == 1000
