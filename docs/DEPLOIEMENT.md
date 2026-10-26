@@ -132,3 +132,19 @@ docker compose ps                          # état des services
 docker compose logs --tail=100 api caddy   # journaux
 docker compose run --rm --no-deps api python -m kora.scripts.check_storage
 ```
+
+## Séparation des identifiants PostgreSQL (KF-02)
+
+L'API et le worker reçoivent uniquement `KORA_DATABASE_URL` (rôle `kora_app`).
+Ils ne reçoivent ni URL de migration, ni mot de passe propriétaire/administrateur.
+Le service ponctuel `migrate` reçoit uniquement `KORA_DATABASE_MIGRATION_URL`
+(rôle `kora_owner`) ; Alembic utilise une configuration indépendante.
+Les outils de test gardent les deux connexions pour contrôler migrations et RLS.
+La CI vérifie les environnements Compose résolus, y compris le mode proxy commun,
+avec des valeurs synthétiques et sans afficher les secrets.
+
+Après validation et déploiement autorisé, recréer les conteneurs API et worker
+pour retirer l'ancienne variable de leurs environnements. Une simple modification
+du fichier Compose ne retire pas les secrets des conteneurs déjà démarrés.
+Si l'ancienne exposition a pu être exploitée, prévoir une rotation séparée des
+identifiants privilégiés ; ce correctif ne modifie aucun mot de passe existant.

@@ -16,7 +16,7 @@ from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session
 
 from kora.auth import service as auth_service
-from kora.core.config import Environment, get_settings
+from kora.core.config import Environment, get_migration_settings, get_settings
 from kora.core.redis import get_redis
 from kora.db.session import get_sessionmaker
 from kora.email.sender import OUTBOX, OutgoingEmail
@@ -57,7 +57,7 @@ def db() -> Iterator[Session]:
 @pytest.fixture(scope="session")
 def owner_engine() -> Iterator[Engine]:
     """Connexion propriétaire du schéma : réservée aux tests d'attaque (falsification…)."""
-    engine = create_engine(str(get_settings().database_migration_url))
+    engine = create_engine(str(get_migration_settings().database_migration_url))
     yield engine
     engine.dispose()
 
