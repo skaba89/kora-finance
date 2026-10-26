@@ -59,6 +59,25 @@ def mfa_user(client: TestClient, make_user: MakeUser) -> MfaUser:
     return MfaUser(user, setup["secret"], enabled.json()["recovery_codes"])
 
 
+def test_nouveaux_defis_ne_remettent_pas_les_echecs_mfa_a_zero(
+    client: TestClient, mfa_user: MfaUser, db: Session
+) -> None:
+    # Une valeur non numérique est toujours invalide, indépendamment du TOTP courant.
+    for _ in range(get_settings().login_max_failures):
+        token = mfa_user.start_login(client)
+        assert _verify(client, token, "99999999") == 401
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": mfa_user.user.email, "password": mfa_user.user.password},
+    )
+    assert response.status_code == 423
+    db.expire_all()
+    stored = db.get_one(User, mfa_user.user.id)
+    assert stored.failed_login_count == 0
+    assert stored.locked_until is not None
+    assert stored.locked_until > utcnow()
+
+
 def test_enrolement_fournit_secret_uri_et_qr(
     client: TestClient, make_user: MakeUser, db: Session
 ) -> None:
