@@ -393,3 +393,18 @@ journalisés sans adresse ; Caddyfile validé par Caddy.
 **Reste (côté utilisateur)** : commander le VPS, créer la clé B2 limitée au bucket,
 suivre docs/DEPLOIEMENT.md. Ensuite : vrai domaine, fournisseur SMTP, bucket de
 sauvegardes séparé avec Object Lock, supervision (alertes si la sauvegarde échoue).
+
+## 2026-10-26 — Mise en production sur le VPS partagé, proxy commun
+
+**Décisions de l'utilisateur** : finalement le même VPS que gestion-scolaire-pro
+(51.75.248.4), à l'adresse `kora.51-75-248-4.sslip.io` ; puis séparation complète des deux
+projets : les ports 80/443 passent à un proxy commun indépendant (`~/vps-proxy`, hors de
+ce dépôt) au lieu du Caddy de gestion-scolaire-pro.
+
+**En service** : pile `kora` (version 4ecdcb9) en mode proxy commun, stockage B2
+`kora-bucket` avec une clé limitée au bucket (`kora-production`, sans droit sur les clés
+ni les buckets), première sauvegarde chiffrée vérifiée, minuterie quotidienne installée.
+
+**Livré** : `compose.proxy-externe.yml` rejoint le réseau externe `edge` (au lieu de
+`kora-edge`, propre à l'ancien montage) ; `deploy.sh` le crée s'il manque ; section 3 bis
+de docs/DEPLOIEMENT.md réécrite.

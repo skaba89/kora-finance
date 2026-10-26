@@ -2,7 +2,7 @@
 # Seul le proxy HTTPS est joignable depuis internet ; PostgreSQL, Redis, l'API et le
 # worker restent sur le réseau interne Docker. Deux modes (choisis dans .env) :
 #  - serveur dédié : le Caddy de cette pile (profil « caddy ») tient les ports 80/443 ;
-#  - proxy existant : compose.proxy-externe.yml, le web rejoint le réseau « kora-edge »
+#  - proxy existant : compose.proxy-externe.yml, le web rejoint le réseau « edge »
 #    et le proxy déjà en place sur le serveur le publie.
 # Mode d'emploi : docs/DEPLOIEMENT.md. Variables : deploy/vps/.env (jamais committé).
 

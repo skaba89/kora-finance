@@ -60,30 +60,24 @@ justificatives et les sauvegardes sont définitivement illisibles, même par vou
 qui voit d'autres buckets, point d'accès non https). Ensuite, ouvrez `https://KORA_DOMAIN`
 et créez votre compte.
 
-## 3 bis. Serveur partagé : derrière un proxy déjà en place
+## 3 bis. Serveur partagé : derrière le proxy commun
 
-Si un autre projet du serveur tient déjà les ports 80/443 (installation actuelle : le
-Caddy de gestion-scolaire-pro sur 51.75.248.4), Kora ne lance pas son propre Caddy.
-Le proxy distingue les sites par leur nom : Kora garde le port 443 avec un nom à lui
-(`kora.51-75-248-4.sslip.io` ; `51-75-248-4.sslip.io` est déjà une redirection de l'autre
-projet). Aucun port supplémentaire n'est ouvert.
+Sur un serveur qui héberge plusieurs applications (installation actuelle : 51.75.248.4),
+les ports 80/443 appartiennent à un **proxy commun** indépendant des applications : le
+projet `~/vps-proxy` (Caddy, hors de ce dépôt). Kora ne lance pas son propre Caddy et ne
+dépend d'aucune autre application : son web rejoint le réseau Docker externe `edge` sous
+l'alias `kora-web`, et le proxy le publie sous un nom à lui
+(`kora.51-75-248-4.sslip.io`). Aucun port supplémentaire n'est ouvert.
 
 1. Production dans un clone dédié, toujours sur `main` (jamais le répertoire de dev) :
    `git clone https://github.com/skaba89/kora-finance.git ~/kora-production`.
 2. Dans `deploy/vps/.env` : commenter `COMPOSE_PROFILES=caddy`, décommenter
    `COMPOSE_FILE=compose.yml:compose.proxy-externe.yml`, `KORA_ACME_EMAIL=-`.
-3. `./deploy.sh` crée le réseau Docker `kora-edge` ; le web y est joignable sous le nom
-   `kora-web`, sans port publié.
-4. Côté proxy existant (seules modifications autorisées dans l'autre projet) :
-   - ajouter au Caddyfile le bloc indiqué en tête de `compose.proxy-externe.yml` ;
-   - ajouter `kora-edge` aux réseaux de son service caddy (et `kora-edge: {external: true}`
-     dans ses `networks`) pour qu'il le garde s'il est recréé, puis le raccorder à chaud :
-     `docker network connect kora-edge <conteneur caddy>` ;
-   - valider puis recharger sans coupure :
-     `docker exec <conteneur caddy> caddy validate --config /etc/caddy/Caddyfile` puis
-     `docker exec <conteneur caddy> caddy reload --config /etc/caddy/Caddyfile`.
-   - committer ces deux fichiers dans l'autre projet, sinon son prochain déploiement
-     pourrait les écraser.
+3. `./deploy.sh` (crée le réseau `edge` s'il n'existe pas encore) ; le web y est joignable
+   sous le nom `kora-web`, sans port publié.
+4. Côté proxy commun : le site est décrit dans `~/vps-proxy/sites/kora.caddy` (bloc
+   indiqué en tête de `compose.proxy-externe.yml`) ; après modification,
+   `~/vps-proxy/reload.sh` (validation puis rechargement sans coupure).
 
 Le projet Compose de production s'appelle `kora` ; celui de développement
 `kora-finance` : ne jamais lancer de tests ni `docker compose down -v` sur `kora`.
