@@ -5,7 +5,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import create_engine, pool
 
-from kora.core.config import get_settings
+from kora.core.config import get_migration_settings
 from kora.db import models  # noqa: F401  (enregistre tous les modèles dans la metadata)
 from kora.db.base import Base
 
@@ -19,7 +19,7 @@ target_metadata = Base.metadata
 def _url() -> str:
     # Une URL passée explicitement (tests) prime sur l'environnement.
     explicit = config.attributes.get("database_url")
-    return str(explicit) if explicit else str(get_settings().database_migration_url)
+    return str(explicit) if explicit else str(get_migration_settings().database_migration_url)
 
 
 def run_migrations_offline() -> None:

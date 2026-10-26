@@ -26,8 +26,6 @@ class Settings(BaseSettings):
 
     # Rôle applicatif (NOBYPASSRLS, DML uniquement) : utilisé par l'API et le worker.
     database_url: PostgresDsn
-    # Rôle propriétaire du schéma : utilisé uniquement par Alembic.
-    database_migration_url: PostgresDsn
     redis_url: RedisDsn
 
     cors_origins: list[str] = Field(default_factory=list)
@@ -116,3 +114,16 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()  # valeurs fournies par l'environnement
+
+
+class MigrationSettings(BaseSettings):
+    """Configuration réservée au processus Alembic, sans secrets du runtime."""
+
+    model_config = SettingsConfigDict(env_prefix="KORA_", extra="ignore")
+
+    database_migration_url: PostgresDsn
+
+
+@lru_cache
+def get_migration_settings() -> MigrationSettings:
+    return MigrationSettings()
