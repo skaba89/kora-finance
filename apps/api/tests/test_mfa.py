@@ -59,6 +59,39 @@ def mfa_user(client: TestClient, make_user: MakeUser) -> MfaUser:
     return MfaUser(user, setup["secret"], enabled.json()["recovery_codes"])
 
 
+def test_nouveaux_defis_ne_remettent_pas_les_echecs_mfa_a_zero(
+    client: TestClient, mfa_user: MfaUser, db: Session
+) -> None:
+    # Huit chiffres ne peuvent correspondre au TOTP à six chiffres ni à un secours.
+    for _ in range(get_settings().login_max_failures):
+        token = mfa_user.start_login(client)
+        assert _verify(client, token, "99999999") == 401
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": mfa_user.user.email, "password": mfa_user.user.password},
+    )
+    assert response.status_code == 423
+    db.expire_all()
+    stored = db.get_one(User, mfa_user.user.id)
+    assert stored.failed_login_count == 0
+    assert stored.locked_until is not None
+    assert stored.locked_until > utcnow()
+
+
+@pytest.mark.parametrize("method", ["totp", "secours"])
+def test_second_facteur_reussi_remet_le_compteur_a_zero(
+    client: TestClient, mfa_user: MfaUser, db: Session, method: str
+) -> None:
+    with time_machine.travel(utcnow() + timedelta(seconds=30)):
+        token = mfa_user.start_login(client)
+        for _ in range(get_settings().login_max_failures - 1):
+            assert _verify(client, token, "99999999") == 401
+        code = mfa_user.code() if method == "totp" else mfa_user.recovery_codes[0]
+        assert _verify(client, token, code) == 200
+        db.expire_all()
+        assert db.get_one(User, mfa_user.user.id).failed_login_count == 0
+
+
 def test_enrolement_fournit_secret_uri_et_qr(
     client: TestClient, make_user: MakeUser, db: Session
 ) -> None:

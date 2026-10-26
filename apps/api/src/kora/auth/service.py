@@ -130,7 +130,14 @@ def login(
     session: Session, *, email: str, password: str, ctx: RequestContext
 ) -> TokenPair | MfaChallenge:
     settings = get_settings()
-    user = get_user_by_email(session, email)
+    # Sérialise mot de passe, MFA et récupération sur la même ligne utilisateur.
+    # Recharge aussi une éventuelle instance déjà présente dans la session.
+    user = session.execute(
+        select(User)
+        .where(User.email == normalize_email(email))
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).scalar_one_or_none()
     now = utcnow()
 
     if user is not None and user.locked_until is not None and user.locked_until > now:
@@ -171,8 +178,6 @@ def login(
             )
         raise InvalidCredentialsError("Adresse email ou mot de passe incorrect.")
 
-    user.failed_login_count = 0
-    user.locked_until = None
     if needs_rehash(user.password_hash):
         user.password_hash = hash_password(password)
 
@@ -184,6 +189,9 @@ def login(
             expires_in=settings.mfa_challenge_ttl_seconds,
         )
 
+    # Pour un compte MFA, seul le second facteur réussi remet le compteur à zéro.
+    user.failed_login_count = 0
+    user.locked_until = None
     pair = open_session(session, user, ctx)
     audit_auth_event(session, "auth.login_succeeded", user.id, ctx)
     session.commit()
