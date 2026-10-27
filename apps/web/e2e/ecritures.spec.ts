@@ -6,7 +6,7 @@ test("saisie d'une écriture équilibrée, validation numérotée puis contre-pa
   await registerAndLogin(page);
   const companyId = await createCompany(page, "Pharmacie de Matam SARL");
 
-  await page.getByRole("link", { name: "Écritures" }).click();
+  await page.getByRole("link", { name: "Écritures", exact: true }).click();
   await expect(page.getByText("Aucune écriture pour ces critères.")).toBeVisible();
   await page.getByRole("link", { name: "Nouvelle écriture" }).click();
   // Next 16 garde la liste (masquée) dans le DOM : sélecteurs par rôle, qui ignorent

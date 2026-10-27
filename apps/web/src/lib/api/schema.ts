@@ -426,6 +426,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Dashboard
+         * @description Indicateurs à la date `on` (aujourd'hui par défaut) dans l'exercice qui la couvre :
+         *     trésorerie par compte, chiffre d'affaires, charges et résultat provisoire du mois et
+         *     de l'exercice, clients et fournisseurs, évolution mensuelle, brouillons à valider.
+         */
+        get: operations["get_dashboard_api_v1_companies__company_id__dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/entries": {
         parameters: {
             query?: never;
@@ -1578,6 +1600,58 @@ export interface components {
             /** Trade Name */
             trade_name?: string | null;
         };
+        /** DashboardFiscalYear */
+        DashboardFiscalYear: {
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Status */
+            status: string;
+        };
+        /** DashboardOut */
+        DashboardOut: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Drafts */
+            drafts: number;
+            fiscal_year: components["schemas"]["DashboardFiscalYear"] | null;
+            month: components["schemas"]["FiguresOut"];
+            /** Monthly */
+            monthly: components["schemas"]["MonthOut"][];
+            /**
+             * Payables
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            payables: string;
+            /**
+             * Receivables
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            receivables: string;
+            /** Treasury */
+            treasury: components["schemas"]["TreasuryAccountOut"][];
+            /**
+             * Treasury Total
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            treasury_total: string;
+            year_to_date: components["schemas"]["FiguresOut"];
+        };
         /** EntryCreate */
         EntryCreate: {
             /**
@@ -1743,6 +1817,29 @@ export interface components {
              * @default []
              */
             errors: string[];
+        };
+        /** FiguresOut */
+        FiguresOut: {
+            /**
+             * Expenses
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            expenses: string;
+            /**
+             * Income
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            income: string;
+            /**
+             * Result
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            result: string;
+            /**
+             * Revenue
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            revenue: string;
         };
         /** FinancialStatementsOut */
         FinancialStatementsOut: {
@@ -2415,6 +2512,24 @@ export interface components {
             /** Mfa Token */
             mfa_token: string;
         };
+        /** MonthOut */
+        MonthOut: {
+            /**
+             * Expenses
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            expenses: string;
+            /**
+             * Month
+             * Format: date
+             */
+            month: string;
+            /**
+             * Revenue
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            revenue: string;
+        };
         /** NatureChoiceOut */
         NatureChoiceOut: {
             account: components["schemas"]["AccountChoice"];
@@ -2713,6 +2828,23 @@ export interface components {
              * @constant
              */
             token_type: "bearer";
+        };
+        /** TreasuryAccountOut */
+        TreasuryAccountOut: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /**
+             * Balance
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            balance: string;
+            /** Label */
+            label: string;
+            /** Number */
+            number: string;
         };
         /** TrialBalanceOut */
         TrialBalanceOut: {
@@ -4323,6 +4455,67 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditVerificationOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_dashboard_api_v1_companies__company_id__dashboard_get: {
+        parameters: {
+            query?: {
+                on?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardOut"];
                 };
             };
             /** @description Unauthorized */

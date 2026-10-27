@@ -43,6 +43,9 @@ Découpage (2026-10-24) :
 - **2g2** Saisie guidée pour non-comptables (« j'ai payé une facture », « j'ai reçu un paiement »). ✅
 - **2g3a** ✅ Saisie hors connexion (libre et guidée) avec synchronisation en brouillons.
 - **2g3b** Photos de pièces justificatives prises hors connexion.
+- **2h** ✅ Tableau de bord (indicateurs, trésorerie par compte, évolution mensuelle, raccourcis) et accueil direct (2026-10-27).
+
+Ordre validé le 2026-10-27 : tableau de bord, puis phases 3 → 8 dans l'ordre.
 
 ## Phase 3 — Trésorerie, Mobile Money et rapprochement
 Comptes bancaires, caisses, portefeuilles (adaptateur par opérateur), import CSV/Excel

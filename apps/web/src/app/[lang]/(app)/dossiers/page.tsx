@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { PageHeader, PageSkeleton } from "@/components/page-header";
@@ -14,8 +15,14 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.companies.listTitle };
 }
 
-async function CompanyList() {
-  const [{ t }, companies] = await Promise.all([getDictionary(), getCompanies()]);
+/**
+ * Une personne qui n'a qu'un dossier arrive directement sur son tableau de bord ;
+ * `?liste=1` (« Changer de dossier ») affiche quand même la liste.
+ */
+async function CompanyList({ searchParams }: { searchParams: PageProps<"/[lang]/dossiers">["searchParams"] }) {
+  const [{ t }, companies, { liste }] = await Promise.all([getDictionary(), getCompanies(), searchParams]);
+  const only = companies.length === 1 ? companies[0] : undefined;
+  if (only && liste !== "1") redirect(`/dossiers/${only.company.id}`);
   if (companies.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center">
@@ -48,7 +55,7 @@ async function CompanyList() {
   );
 }
 
-export default async function CompaniesPage() {
+export default async function CompaniesPage({ searchParams }: PageProps<"/[lang]/dossiers">) {
   const { t } = await getDictionary();
   return (
     <>
@@ -61,7 +68,7 @@ export default async function CompaniesPage() {
         }
       />
       <Suspense fallback={<PageSkeleton />}>
-        <CompanyList />
+        <CompanyList searchParams={searchParams} />
       </Suspense>
     </>
   );

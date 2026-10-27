@@ -440,3 +440,25 @@ couvertes par pytest).
 
 **Reste** : 2g3b (photos de pièces hors connexion) ; P1 de l'audit (KF-03, 05, 07, 08,
 09, 11, 12, 13).
+
+## 2026-10-27 — 2h : tableau de bord et accueil
+
+**Demande** : « je ne vois rien sur le frontend quand je me connecte ». Constat : aucune
+erreur, mais un tableau de bord réduit à une liste de mise en route et une phrase
+périmée (KF-18). Ordre validé par l'utilisateur : tableau de bord, puis phases 3 → 8.
+
+**Livré**
+- API `GET /companies/{id}/dashboard?on=` (`accounting/dashboard.py`, une requête
+  agrégée) : trésorerie par compte (52, 53, 55, 57), chiffre d'affaires, produits,
+  charges et résultat provisoire du mois et de l'exercice, clients et fournisseurs,
+  évolution mensuelle, nombre de brouillons. Écritures validées uniquement.
+- Page du dossier : raccourcis de saisie guidée, indicateurs, graphique mensuel
+  (palette catégorielle validée, info-bulle souris et clavier, tableau des chiffres),
+  trésorerie par compte, dernières écritures, mise en route seulement si incomplète.
+  Phrase « … arrivent avec les prochaines étapes » supprimée (KF-18).
+- Accueil : un seul dossier ⇒ arrivée directe sur son tableau de bord ; « Changer de
+  dossier » ouvre la liste (`?liste=1`).
+
+**Vérifié** : 4 tests pytest (dossier vide, indicateurs avec à-nouveaux, brouillon et
+écriture postérieure exclus, date sans exercice, isolation) ; E2E tableau de bord
+(ordinateur + mobile) ; rendu vérifié sur captures (ordinateur et téléphone).

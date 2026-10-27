@@ -13,7 +13,7 @@ Journal daté des sessions : `worklog.md`. Le lire en début de session.
 |---|---|---|
 | 0 | Fondations du dépôt : monorepo, Docker, CI, harnais de tests | ✅ livrée (2026-10-23) |
 | 1 | Socle : auth, multi-tenant + RLS, RBAC, organisation, plan comptable, taxes, audit chaîné, PWA | ✅ livrée (2026-10-23) ; 1g emails ✅ (2026-10-24) — reste listé dans `worklog.md` |
-| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅, 2c lettrage ✅, 2d clôture ✅, 2e bilan et CR ✅, 2f exports ✅ (2026-10-24), 2g1 pièces justificatives ✅, 2g2 saisie guidée ✅ (2026-10-25), 2g3a saisie hors connexion ✅ (2026-10-26) ; 2g3b photos de pièces hors connexion, 2e-bis TFT à venir (`docs/PLAN.md`) |
+| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅, 2c lettrage ✅, 2d clôture ✅, 2e bilan et CR ✅, 2f exports ✅ (2026-10-24), 2g1 pièces justificatives ✅, 2g2 saisie guidée ✅ (2026-10-25), 2g3a saisie hors connexion ✅ (2026-10-26), 2h tableau de bord ✅ (2026-10-27) ; 2g3b photos de pièces hors connexion, 2e-bis TFT à venir (`docs/PLAN.md`) |
 | 3 | Trésorerie, Mobile Money, rapprochement | — |
 | 4 | Ventes et achats | — |
 | 5 | Import et migration | — |
@@ -65,6 +65,7 @@ accounting/  plan SYSCOHADA (data/*.csv), taux de taxes versionnés, paramétrag
              closing.py (verrouillage de période, clôture, à-nouveaux, réouverture),
              statements.py + data/etats_*.csv (bilan et compte de résultat SYSCOHADA),
              guided.py + data/saisie_guidee_v1.csv (saisie guidée : opération → écriture)
+             dashboard.py (indicateurs du tableau de bord : une requête agrégée, écritures validées)
 audit/       journal chaîné SHA-256 (écriture, vérification)
 storage/     objets chiffrés (AES-256-GCM, clé par objet enveloppée par KORA_ENCRYPTION_KEYS)
              dans un service S3 compatible (boto3, adressage par chemin)
@@ -239,6 +240,7 @@ d'écrire du code Next.** Points déjà rencontrés :
 | 2026-10-25 | Sauvegardes : `pg_dump` (même version que le serveur) chiffré par l'application, vérifié par relecture, dans le bucket S3 sous `backups/`, 30 jours (7 toujours gardées) ; restauration testée (données, déclencheurs, RLS identiques) | Une sauvegarde non vérifiée ou non restaurable ne compte pas |
 | 2026-10-26 | Saisie hors connexion : on **saisit** sans réseau, on ne **valide** rien ; chaque saisie devient un brouillon à la synchronisation (identifiant créé sur l'appareil = clé d'idempotence de l'API) ; données du dossier téléchargées à la demande, valables 7 jours ; saisie guidée sans aperçu (l'API calcule la TVA à la synchronisation) | La comptabilité reste décidée par le serveur (équilibre, périodes, audit) ; pas de seconde implémentation des règles de TVA dans le navigateur |
 | 2026-10-26 | Données hors connexion chiffrées dans IndexedDB (AES-256-GCM, clé WebCrypto **non exportable**, identifiant lié au chiffré), séparées par utilisateur, effacées à la déconnexion (avertissement si des saisies ne sont pas synchronisées) ; synchronisation par Server Action, verrou Web Locks entre onglets, sans Background Sync (absent sur iPhone et Firefox) | Protège contre la copie des fichiers du navigateur ; limite assumée et affichée : lisible par qui utilise le navigateur ouvert |
+| 2026-10-27 | Tableau de bord sur écritures **validées** uniquement : trésorerie = comptes 52, 53, 55, 57 ; chiffre d'affaires = 70 ; charges = classe 6 ; résultat provisoire = classes 6 à 8 (avant inventaire) ; clients = 41, fournisseurs = 40 ; brouillons seulement comptés ; un seul dossier ⇒ accueil direct sur son tableau de bord (`/dossiers?liste=1` pour la liste) | Indicateurs cohérents avec la balance et les états ; regroupements à valider par un expert-comptable |
 
 ## À valider par un expert-comptable guinéen
 
@@ -248,5 +250,5 @@ report du résultat sans affectation · réouverture d'un exercice clôturé · 
 aux postes du bilan et du compte de résultat** (`accounting/data/etats_affectations_2017.csv`,
 colonne `note`) · présentation des états · comptes 13 non affectés présentés en CJ · méthode du tableau des flux de
 trésorerie · taux de TVA et autres taxes en vigueur, format de déclaration · mentions
-légales obligatoires des factures · durée de conservation des pièces · ajout d'une pièce à une écriture d'un exercice clôturé (autorisé aujourd'hui) · **correspondances de la saisie guidée** (`accounting/data/saisie_guidee_v1.csv`, comptes 4431/4452 pour la TVA, journaux par opération, virement interne sans compte 585) · pertinence de
+légales obligatoires des factures · durée de conservation des pièces · ajout d'une pièce à une écriture d'un exercice clôturé (autorisé aujourd'hui) · **regroupements du tableau de bord** (`accounting/dashboard.py` : trésorerie 52/53/55/57, chiffre d'affaires 70, résultat provisoire classes 6 à 8) · **correspondances de la saisie guidée** (`accounting/data/saisie_guidee_v1.csv`, comptes 4431/4452 pour la TVA, journaux par opération, virement interne sans compte 585) · pertinence de
 l'import FEC (format français) pour les cabinets guinéens.

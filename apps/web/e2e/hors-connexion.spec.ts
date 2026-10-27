@@ -39,7 +39,7 @@ test("saisie sans réseau, synchronisation en brouillons, correction d'un refus 
 }) => {
   await registerAndLogin(page);
   const companyId = await createCompany(page, "Épicerie de Kaloum SARL");
-  await page.getByRole("link", { name: "Hors connexion" }).click();
+  await page.getByRole("link", { name: "Hors connexion", exact: true }).click();
   await prepareDevice(page, companyId);
 
   await goOffline(context, page);
