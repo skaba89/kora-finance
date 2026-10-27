@@ -63,7 +63,7 @@ async function CompanyNav({ params }: { params: Params }) {
       {can(company, "audit:read") ? (
         <NavLink href={`${base}/journal-audit`}>{t.nav.audit}</NavLink>
       ) : null}
-      <NavLink href="/dossiers" exact>
+      <NavLink href="/dossiers?liste=1" exact>
         {t.nav.switchCompany}
       </NavLink>
       </div>

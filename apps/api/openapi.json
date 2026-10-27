@@ -1043,6 +1043,112 @@
         "title": "CompanyPatch",
         "type": "object"
       },
+      "DashboardFiscalYear": {
+        "properties": {
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "start_date",
+          "end_date",
+          "status"
+        ],
+        "title": "DashboardFiscalYear",
+        "type": "object"
+      },
+      "DashboardOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "drafts": {
+            "title": "Drafts",
+            "type": "integer"
+          },
+          "fiscal_year": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardFiscalYear"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "month": {
+            "$ref": "#/components/schemas/FiguresOut"
+          },
+          "monthly": {
+            "items": {
+              "$ref": "#/components/schemas/MonthOut"
+            },
+            "title": "Monthly",
+            "type": "array"
+          },
+          "payables": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Payables",
+            "type": "string"
+          },
+          "receivables": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Receivables",
+            "type": "string"
+          },
+          "treasury": {
+            "items": {
+              "$ref": "#/components/schemas/TreasuryAccountOut"
+            },
+            "title": "Treasury",
+            "type": "array"
+          },
+          "treasury_total": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Treasury Total",
+            "type": "string"
+          },
+          "year_to_date": {
+            "$ref": "#/components/schemas/FiguresOut"
+          }
+        },
+        "required": [
+          "as_of",
+          "fiscal_year",
+          "treasury",
+          "treasury_total",
+          "receivables",
+          "payables",
+          "month",
+          "year_to_date",
+          "monthly",
+          "drafts"
+        ],
+        "title": "DashboardOut",
+        "type": "object"
+      },
       "EntryCreate": {
         "additionalProperties": false,
         "properties": {
@@ -1441,6 +1547,42 @@
           "code"
         ],
         "title": "ErrorResponse",
+        "type": "object"
+      },
+      "FiguresOut": {
+        "properties": {
+          "expenses": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Expenses",
+            "type": "string"
+          },
+          "income": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Income",
+            "type": "string"
+          },
+          "result": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Result",
+            "type": "string"
+          },
+          "revenue": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Revenue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "revenue",
+          "income",
+          "expenses",
+          "result"
+        ],
+        "title": "FiguresOut",
         "type": "object"
       },
       "FinancialStatementsOut": {
@@ -3044,6 +3186,34 @@
         "title": "MfaVerifyRequest",
         "type": "object"
       },
+      "MonthOut": {
+        "properties": {
+          "expenses": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Expenses",
+            "type": "string"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "revenue": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Revenue",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "revenue",
+          "expenses"
+        ],
+        "title": "MonthOut",
+        "type": "object"
+      },
       "NatureChoiceOut": {
         "properties": {
           "account": {
@@ -3777,6 +3947,37 @@
           "expires_in"
         ],
         "title": "TokenResponse",
+        "type": "object"
+      },
+      "TreasuryAccountOut": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "balance": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Balance",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "number",
+          "label",
+          "balance"
+        ],
+        "title": "TreasuryAccountOut",
         "type": "object"
       },
       "TrialBalanceOut": {
@@ -6077,6 +6278,104 @@
         "summary": "Verify Audit Chain",
         "tags": [
           "dossiers"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/dashboard": {
+      "get": {
+        "description": "Indicateurs à la date `on` (aujourd'hui par défaut) dans l'exercice qui la couvre :\ntrésorerie par compte, chiffre d'affaires, charges et résultat provisoire du mois et\nde l'exercice, clients et fournisseurs, évolution mensuelle, brouillons à valider.",
+        "operationId": "get_dashboard_api_v1_companies__company_id__dashboard_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "on",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "On"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Dashboard",
+        "tags": [
+          "tableau de bord"
         ]
       }
     },
