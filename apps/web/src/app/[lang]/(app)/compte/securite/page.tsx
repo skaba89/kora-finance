@@ -70,6 +70,7 @@ async function SecurityContent() {
               confirm: t.security.mfaConfirm,
               code: t.auth.code,
               password: t.auth.password,
+              passwordHint: t.security.mfaPasswordHint,
               recoveryTitle: t.security.recoveryTitle,
               recoveryNotice: t.security.recoveryNotice,
               disable: t.security.mfaDisable,

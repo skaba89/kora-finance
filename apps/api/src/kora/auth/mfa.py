@@ -98,7 +98,26 @@ def _consume_recovery_code(session: Session, user: User, code: str) -> bool:
     return True
 
 
-def start_setup(session: Session, user: User, ctx: RequestContext) -> MfaSetup:
+def _locked_user(session: Session, user: User) -> User:
+    """Recharge l'utilisateur sous verrou de ligne : les transitions du second facteur
+    (enrôlement, activation, désactivation, régénération) sont sérialisées, à l'image
+    de la connexion (KF-08)."""
+    return session.execute(
+        select(User)
+        .where(User.id == user.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).scalar_one()
+
+
+def _verify_current_password(user: User, password: str) -> None:
+    if not verify_password(user.password_hash, password):
+        raise InvalidCredentialsError("Mot de passe incorrect.")
+
+
+def start_setup(session: Session, user: User, *, password: str, ctx: RequestContext) -> MfaSetup:
+    user = _locked_user(session, user)
+    _verify_current_password(user, password)
     if user.totp_enabled_at is not None:
         raise ConflictError("La double authentification est déjà activée.")
     secret = pyotp.random_base32()
@@ -114,7 +133,11 @@ def start_setup(session: Session, user: User, ctx: RequestContext) -> MfaSetup:
     )
 
 
-def enable(session: Session, user: User, code: str, ctx: RequestContext) -> list[str]:
+def enable(
+    session: Session, user: User, *, password: str, code: str, ctx: RequestContext
+) -> list[str]:
+    user = _locked_user(session, user)
+    _verify_current_password(user, password)
     if user.totp_enabled_at is not None:
         raise ConflictError("La double authentification est déjà activée.")
     if user.totp_secret_encrypted is None:
@@ -197,18 +220,14 @@ def complete_login(
     return pair
 
 
-def _reauthenticate(session: Session, user: User, password: str, code: str) -> None:
-    if not verify_password(user.password_hash, password):
-        raise InvalidCredentialsError("Mot de passe incorrect.")
+def disable(session: Session, user: User, *, password: str, code: str, ctx: RequestContext) -> None:
+    user = _locked_user(session, user)
+    if user.totp_enabled_at is None:
+        raise ConflictError("La double authentification n'est pas activée.")
+    _verify_current_password(user, password)
     if _check_second_factor(session, user, code) is None:
         session.rollback()
         raise InvalidMfaCodeError("Code de vérification incorrect.")
-
-
-def disable(session: Session, user: User, *, password: str, code: str, ctx: RequestContext) -> None:
-    if user.totp_enabled_at is None:
-        raise ConflictError("La double authentification n'est pas activée.")
-    _reauthenticate(session, user, password, code)
     user.totp_secret_encrypted = None
     user.totp_enabled_at = None
     user.totp_last_used_step = None
@@ -223,9 +242,13 @@ def disable(session: Session, user: User, *, password: str, code: str, ctx: Requ
 def regenerate_recovery_codes(
     session: Session, user: User, *, password: str, code: str, ctx: RequestContext
 ) -> list[str]:
+    user = _locked_user(session, user)
     if user.totp_enabled_at is None:
         raise ConflictError("La double authentification n'est pas activée.")
-    _reauthenticate(session, user, password, code)
+    _verify_current_password(user, password)
+    if _check_second_factor(session, user, code) is None:
+        session.rollback()
+        raise InvalidMfaCodeError("Code de vérification incorrect.")
     codes = _new_recovery_codes(session, user)
     audit_auth_event(session, "auth.mfa_recovery_codes_regenerated", user.id, ctx)
     session.commit()

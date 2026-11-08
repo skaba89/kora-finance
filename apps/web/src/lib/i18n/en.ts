@@ -578,6 +578,8 @@ export const en: typeof fr = {
       "Scan this QR code with an authenticator app (Google Authenticator, Microsoft Authenticator…), then enter the code shown.",
     mfaSecret: "Or enter this key manually:",
     mfaConfirm: "Confirm",
+    mfaPasswordHint:
+      "Your password is required: a hijacked session must not be able to add a second factor.",
     recoveryTitle: "Recovery codes",
     recoveryNotice:
       "Keep these codes somewhere safe: each one lets you sign in if you lose your phone. They will not be shown again.",

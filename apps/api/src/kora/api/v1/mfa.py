@@ -33,7 +33,12 @@ class MfaSetupResponse(BaseModel):
     qr_svg_data_uri: str
 
 
-class CodeRequest(RequestBody):
+class PasswordRequest(RequestBody):
+    password: Annotated[str, Field(min_length=1, max_length=256)]
+
+
+class PasswordCodeRequest(RequestBody):
+    password: Annotated[str, Field(min_length=1, max_length=256)]
     code: Code
 
 
@@ -51,17 +56,23 @@ class RecoveryCodesResponse(BaseModel):
     recovery_codes: list[str]
 
 
-@router.post("/setup", responses=_ERRORS)
-def setup(user: CurrentUser, db: DbSession, ctx: Ctx) -> MfaSetupResponse:
-    result = mfa.start_setup(db, user, ctx)
+@router.post("/setup", dependencies=RateLimited, responses=_ERRORS)
+def setup(body: PasswordRequest, user: CurrentUser, db: DbSession, ctx: Ctx) -> MfaSetupResponse:
+    # Enrôler un facteur exige une réauthentification : un seul jeton d'accès compromis
+    # ne doit pas suffire à installer un second facteur contrôlé par un attaquant (KF-08).
+    result = mfa.start_setup(db, user, password=body.password, ctx=ctx)
     return MfaSetupResponse(
         secret=result.secret, otpauth_uri=result.otpauth_uri, qr_svg_data_uri=result.qr_svg_data_uri
     )
 
 
 @router.post("/enable", dependencies=RateLimited, responses=_ERRORS)
-def enable(body: CodeRequest, user: CurrentUser, db: DbSession, ctx: Ctx) -> RecoveryCodesResponse:
-    return RecoveryCodesResponse(recovery_codes=mfa.enable(db, user, body.code, ctx))
+def enable(
+    body: PasswordCodeRequest, user: CurrentUser, db: DbSession, ctx: Ctx
+) -> RecoveryCodesResponse:
+    return RecoveryCodesResponse(
+        recovery_codes=mfa.enable(db, user, password=body.password, code=body.code, ctx=ctx)
+    )
 
 
 @router.post(
