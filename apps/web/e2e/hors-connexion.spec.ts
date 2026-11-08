@@ -105,8 +105,11 @@ test("saisie sans réseau, synchronisation en brouillons, correction d'un refus 
   // Les brouillons se valident en ligne, comme les autres.
   await page.goto(`/dossiers/${companyId}/hors-connexion`);
   await queued(page, "Ventes du samedi").getByRole("link", { name: "Ouvrir le brouillon" }).click();
-  page.once("dialog", (dialog) => void dialog.accept());
+  // Le dialogue est attendu explicitement : window.confirm s'ouvre après une requête
+  // serveur, il peut donc apparaître après la résolution du clic.
+  const validation = page.waitForEvent("dialog");
   await page.getByRole("button", { name: "Valider", exact: true }).click();
+  await (await validation).accept();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^CA n° 1 — Ventes du samedi/);
   await expect(page.getByRole("row").filter({ hasText: "4431" })).toContainText(/180\s000 GNF/);
 });
@@ -130,17 +133,24 @@ test("la déconnexion prévient des saisies non synchronisées puis efface l'app
   await expect(queued(page, "Farine de janvier")).toContainText("Refusée");
   await expect(page.getByRole("status").filter({ hasText: "saisie(s) hors connexion refusée(s)" })).toBeVisible();
 
-  // Renoncer : la personne reste connectée, la saisie est conservée.
-  page.once("dialog", (dialog) => {
-    expect(dialog.message()).toContain("1 saisie(s) faite(s) hors connexion ne sont pas encore devenues des brouillons");
-    void dialog.dismiss();
-  });
+  // Renoncer : la personne reste connectée, la saisie est conservée. Chaque dialogue
+  // est attendu explicitement (window.confirm s'ouvre après une lecture IndexedDB, qui
+  // peut dépasser la résolution du clic) : deux page.once consécutifs peuvent sinon
+  // recevoir le même dialogue — le premier le ferme, le second échoue « already
+  // handled » et la déconnexion est annulée (run CI #44 sur main).
+  const renoncer = page.waitForEvent("dialog");
   await page.getByRole("button", { name: "Se déconnecter" }).click();
+  const dialogueRenoncer = await renoncer;
+  expect(dialogueRenoncer.message()).toContain(
+    "1 saisie(s) faite(s) hors connexion ne sont pas encore devenues des brouillons",
+  );
+  await dialogueRenoncer.dismiss();
   await expect(queued(page, "Farine de janvier")).toBeVisible();
 
   // Confirmer : déconnexion et effacement de tout ce que l'appareil conservait.
-  page.once("dialog", (dialog) => void dialog.accept());
+  const confirmer = page.waitForEvent("dialog");
   await page.getByRole("button", { name: "Se déconnecter" }).click();
+  await (await confirmer).accept();
   await expect(page).toHaveURL(/\/connexion\?deconnecte=1/);
   await page.goto("/hors-connexion/saisie");
   await expect(page.getByRole("alert").filter({ hasText: "Aucun dossier n'est prêt sur cet appareil" })).toBeVisible();
