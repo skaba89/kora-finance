@@ -4,6 +4,11 @@ Date : 26 octobre 2026 — dépôt privé `skaba89/kora-finance`
 
 Référence figée : `7a51c45258301e8cfc50a0305ce023e08d286202` (`main` au début de l'audit). Les constats visent ce commit, pas l'état réel d'un VPS. Aucun accès aux données de production, aucune migration ni aucun déploiement effectués.
 
+> **Suivi du 2026-11-09** : `AUDIT_SUIVI_20261109.md` vérifie les correctifs fusionnés
+> depuis (KF-01, 02, 04, 06, 10, 17, 18 : corrigés), confirme les KF restants, ajoute
+> 14 constats nouveaux (N-B1…N-I4) et met à jour le séquencement (§8 de ce document
+> référentiel) après une exécution locale complète de la suite API (540/540).
+
 ## Conventions
 
 P0 : bloque la validation production. P1 : à résoudre avant ouverture commerciale générale ou à borner formellement pour un pilote. P2 : amélioration/durcissement planifié. P3 : extension produit. La gravité décrit l'impact, la priorité le séquencement. Un risque non reproduit reste libellé ainsi ; une absence d'implémentation n'est pas présentée comme une vulnérabilité.

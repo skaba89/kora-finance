@@ -462,3 +462,35 @@ périmée (KF-18). Ordre validé par l'utilisateur : tableau de bord, puis phase
 **Vérifié** : 4 tests pytest (dossier vide, indicateurs avec à-nouveaux, brouillon et
 écriture postérieure exclus, date sans exercice, isolation) ; E2E tableau de bord
 (ordinateur + mobile) ; rendu vérifié sur captures (ordinateur et téléphone).
+
+## 2026-11-09 — Audit de suivi, déroutage de `main` (E2E) et revalidation locale
+
+**Contexte** : audit de prolongement de l'audit initial (réf. `7a51c45`) demandé après
+les phases 2g2, 2g3 et 2h. Premier constat : le run CI #44 (2026-10-27) est rouge sur
+`main` depuis le merge de la PR #20 — `main` bloqué pour toute fusion.
+
+**Constat et cause (E2E)** : échec déterministe de `hors-connexion.spec.ts` (profil
+mobile, run #44 ; puis échec déterministe du premier itéral de correctif, run #45, les
+deux profils). `LogoutButton` appelle `window.confirm` après une lecture IndexedDB : le
+dialogue peut s'ouvrir après la résolution du clic. Deux `page.once("dialog")`
+consécutifs recevaient alors le même dialogue — le second échouait « Cannot accept
+dialog which is already handled! » et la déconnexion était annulée. Le motif retenu,
+valable pour un confirm synchrone comme asynchrone :
+`page.waitForEvent("dialog").then(dialog => dialog.accept()|dismiss())`, créé avant le
+clic, achevé après — plus aucun `page.once` dans le fichier. Comportement produit
+inchangé. → PR #21 (`fix/kora-e2e-dialog-deconnexion`).
+
+**Revalidation locale (inédite : la suite API n'avait jamais tourné hors CI)** :
+PostgreSQL 16 réel (rôles `kora_owner`/`kora_app`, extensions contrib), Redis réel,
+Garage v2.4.1, Mailpit — migrations 0001→0009 puis **pytest 540/540 verts** (336 s),
+Vitest 60/60, `tsc` strict et ESLint verts.
+
+**Audit** : `AUDIT_SUIVI_20261109.md` — correctifs KF-01/02/04/06/10/17/18 vérifiés
+fusionnés ; KF-03/05/07/08/09/11/12/13/15/16 toujours ouverts ; 14 constats nouveaux
+(N-B1…N-I4) dont le réjeu idempotent sans comparaison de payload (P2) et les en-têtes
+Caddy (P2) ; score de maturité pondéré **65/100** (plafonné par le périmètre produit :
+phases 3-8 non commencées) et backlog mis à jour (§8).
+
+**Reste** : fusionner la PR #21 ; ensuite, ordre recommandé : KF-08 (réauthentification
+MFA), KF-03 (verrou d'exercice dans le trigger 0007), KF-05 (snapshot REPEATABLE READ
+des rapports), KF-07 (verrou société), puis phase 3 (trésorerie/Mobile Money).

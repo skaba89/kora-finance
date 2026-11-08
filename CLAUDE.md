@@ -187,6 +187,13 @@ d'écrire du code Next.** Points déjà rencontrés :
   `hidden sm:table`. En E2E, `getByRole` ignore la variante masquée (rôle `row` sur
   ordinateur, `listitem` sur mobile, voir `e2e/etats.spec.ts`).
 - Montants affichés avec des espaces fines insécables (fr-FR) : dans une regex, `\s`.
+- Dialogues `window.confirm` en E2E : brancher le traitement sur l'attente,
+  `page.waitForEvent("dialog").then(dialog => dialog.accept()|dismiss())`, créé avant le
+  clic et achevé après lui. Deux `page.once` consécutifs peuvent recevoir le même
+  dialogue si le confirm s'ouvre après la résolution du clic (logout hors connexion :
+  lecture IndexedDB avant confirm) — « already handled » et déconnexion annulée ; à
+  l'inverse, un confirm **synchrone** bloque le clic tant que le dialogue n'est pas
+  traité, donc attendre puis cliquer ne marche pas non plus (échecs CI #44/#45).
 - Montants : chaînes de chiffres (unités mineures) de bout en bout ; saisie par
   `parseAmount`, sommes en BigInt (`lib/amounts.ts`), affichage par `formatMoney`.
 
