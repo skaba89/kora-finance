@@ -145,12 +145,15 @@ def seed() -> None:
                 201,
             )
             _json(client.post(f"{base}/entries/{entry['id']}/post", headers=headers))
-            setup = _json(client.post("/api/v1/auth/mfa/setup", headers=headers))
+            # L'enrôlement du second facteur exige la réauthentification (KF-08).
+            setup = _json(
+                client.post("/api/v1/auth/mfa/setup", headers=headers, json={"password": password})
+            )
             _json(
                 client.post(
                     "/api/v1/auth/mfa/enable",
                     headers=headers,
-                    json={"code": pyotp.TOTP(setup["secret"]).now()},
+                    json={"password": password, "code": pyotp.TOTP(setup["secret"]).now()},
                 )
             )
             tenants.append(
