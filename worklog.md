@@ -507,3 +507,34 @@ E2E 2FA complété — PR #23. Deux correctifs de tests ont suivi, poussés par 
   le compteur repartait à zéro entre deux requêtes) et purge Redis au départ — PR #24.
 Suite API locale : 540/540 puis 542/542 avec les nouveaux cas. CI verte sur les deux
 PRs avant fusion ; `main` vert après (#48 puis, à la clôture, run du merge #24).
+
+## 2026-11-09 — KF-03 : verrou d'exercice contre la course clôture/validation
+
+**Anomalie (audit de suivi, §4)** : le déclencheur `journal_entries_protect` (0005,
+redéfini par 0007) relisait `fiscal_years` **sans verrou**, alors que `close()` verrouille
+l'exercice (`closing._lock_year`) avant d'agréger les écritures validées pour générer les
+à-nouveaux. Une validation engagée dans la fenêtre pouvait donc être commitée après le
+calcul des à-nouveaux : l'exercice se fermait sans que ses lignes y figurent. Même course
+pour `lock_period()` (période verrouillée).
+
+**Preuve de la course** : `tests/test_closing_concurrency.py` — deux connexions réelles
+(`kora_app`, RLS), barrières déterministes (`pg_blocking_pids`). Les deux tests « clôture
+d'abord » et « verrouillage d'abord » étaient **rouges avant correctif** (la validation
+concurrente ne bloquait pas), puis verts après.
+
+**Correctif** (branche `feature/kora-kf03-verrou-exercice`) :
+- migration `20261109_0010_verrou_exercice_cloture.py` : `CREATE OR REPLACE FUNCTION
+  kora_ledger_protect_entry` recompile le déclencheur avec `SELECT … FOR UPDATE` sur
+  `fiscal_years` (0007 inchangé ; downgrade vers la version 0007). La validation
+  concurrente attend le commit de la clôture puis relit la version validée (READ
+  COMMITTED) : CLOSED ou période verrouillée ⇒ refus, brouillon conservé ;
+- `entries._fiscal_year_for(…, lock=True)` dans `_post` : même verrou côté application
+  **avant** la numérotation — ordre de verrous uniforme « exercice puis séquence de
+  journal » dans toutes les transactions (clôture, à-nouveaux, réouverture, validation),
+  excluant tout interblocage avec `_next_number` ;
+- un troisième test garantit l'interleaving inverse : une validation qui gagne la course
+  figure dans les à-nouveaux (`ouv:521 = 5 050 000` vérifié via la balance).
+
+**Vérifié** : suite API complète 545/545 (dont 3 nouveaux) sur l'environnement réel
+(PostgreSQL 16, Redis, Garage, Mailpit) ; ruff, ruff format, mypy strict ; aucun changement
+de contrat d'API (aucune route ni schéma modifié).

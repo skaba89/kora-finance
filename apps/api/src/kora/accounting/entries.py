@@ -79,14 +79,22 @@ class EntryView:
 # --- Contrôles
 
 
-def _fiscal_year_for(session: Session, company_id: uuid.UUID, day: date) -> FiscalYear:
-    fiscal_year = session.execute(
-        select(FiscalYear).where(
-            FiscalYear.tenant_id == company_id,
-            FiscalYear.start_date <= day,
-            FiscalYear.end_date >= day,
-        )
-    ).scalar_one_or_none()
+def _fiscal_year_for(
+    session: Session, company_id: uuid.UUID, day: date, *, lock: bool = False
+) -> FiscalYear:
+    """Exercice couvrant `day`. `lock` (validation) : verrou de ligne `FOR UPDATE`, même
+    protocole que le déclencheur (migration 0010) et que `closing._lock_year` — la
+    validation attend la fin d'une clôture ou d'un verrouillage concurrent, et l'ordre
+    « exercice puis numérotation » est uniforme dans toutes les transactions (pas
+    d'interblocage avec `_next_number`)."""
+    query = select(FiscalYear).where(
+        FiscalYear.tenant_id == company_id,
+        FiscalYear.start_date <= day,
+        FiscalYear.end_date >= day,
+    )
+    if lock:
+        query = query.with_for_update()
+    fiscal_year = session.execute(query).scalar_one_or_none()
     if fiscal_year is None:
         raise BusinessRuleError(
             f"Aucun exercice ne couvre le {day:%d/%m/%Y}. Créez d'abord l'exercice."
@@ -340,7 +348,7 @@ def _post(session: Session, actor: Actor, entry: JournalEntry, *, system: bool =
         raise BusinessRuleError("Validation impossible.", errors=errors)
 
     journal = _get_journal(session, actor.company_id, entry.journal_id)
-    fiscal_year = _fiscal_year_for(session, actor.company_id, entry.entry_date)
+    fiscal_year = _fiscal_year_for(session, actor.company_id, entry.entry_date, lock=True)
     if fiscal_year.id != entry.fiscal_year_id:
         raise BusinessRuleError("La date de l'écriture n'appartient plus à son exercice.")
     if journal.kind == JournalKind.A_NOUVEAUX and entry.entry_date != fiscal_year.start_date:
