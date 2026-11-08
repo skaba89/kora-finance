@@ -494,3 +494,16 @@ phases 3-8 non commencées) et backlog mis à jour (§8).
 **Reste** : fusionner la PR #21 ; ensuite, ordre recommandé : KF-08 (réauthentification
 MFA), KF-03 (verrou d'exercice dans le trigger 0007), KF-05 (snapshot REPEATABLE READ
 des rapports), KF-07 (verrou société), puis phase 3 (trésorerie/Mobile Money).
+
+**KF-08 livré dans la foulée (même journée)** : réauthentification obligatoire pour
+l'enrôlement de la 2FA (`/auth/mfa/setup` et `/enable` exigent le mot de passe ; les
+quatre transitions du second facteur sont désormais sérialisées par verrou utilisateur,
+comme la connexion). Web mis à jour (mot de passe demandé à l'activation et à la
+confirmation, libellé fr/en explicite), contrat régénéré, 3 tests pytest nouveaux et
+E2E 2FA complété — PR #23. Deux correctifs de tests ont suivi, poussés par la CI :
+- le scénario de restauration synthétique envoie désormais le mot de passe aux deux
+  appels d'enrôlement (422 depuis KF-08) — PR #24 ;
+- le test de limitation de débit fige la fenêtre de comptage (frontière de minute :
+  le compteur repartait à zéro entre deux requêtes) et purge Redis au départ — PR #24.
+Suite API locale : 540/540 puis 542/542 avec les nouveaux cas. CI verte sur les deux
+PRs avant fusion ; `main` vert après (#48 puis, à la clôture, run du merge #24).
