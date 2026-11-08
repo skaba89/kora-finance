@@ -48,11 +48,13 @@ def _verify(client: TestClient, mfa_token: str, code: str) -> int:
 def mfa_user(client: TestClient, make_user: MakeUser) -> MfaUser:
     user = make_user()
     headers = user.headers(client)
-    setup = client.post("/api/v1/auth/mfa/setup", headers=headers).json()
+    setup = client.post(
+        "/api/v1/auth/mfa/setup", headers=headers, json={"password": user.password}
+    ).json()
     enabled = client.post(
         "/api/v1/auth/mfa/enable",
         headers=headers,
-        json={"code": pyotp.TOTP(setup["secret"]).now()},
+        json={"password": user.password, "code": pyotp.TOTP(setup["secret"]).now()},
     )
     assert enabled.status_code == 200
     # Le code d'activation consomme le pas de temps courant : les tests avancent d'un pas.
@@ -96,7 +98,9 @@ def test_enrolement_fournit_secret_uri_et_qr(
     client: TestClient, make_user: MakeUser, db: Session
 ) -> None:
     user = make_user()
-    response = client.post("/api/v1/auth/mfa/setup", headers=user.headers(client))
+    response = client.post(
+        "/api/v1/auth/mfa/setup", headers=user.headers(client), json={"password": user.password}
+    )
     assert response.status_code == 200
     body = response.json()
     assert body["otpauth_uri"].startswith("otpauth://totp/Kora%20Finance:")
@@ -109,11 +113,43 @@ def test_enrolement_fournit_secret_uri_et_qr(
     assert stored.totp_enabled_at is None  # pas actif avant confirmation
 
 
+def test_enrolement_exige_le_mot_de_passe(client: TestClient, make_user: MakeUser) -> None:
+    user = make_user()
+    headers = user.headers(client)
+    # Corps incomplet : refus de validation (mot de passe obligatoire).
+    assert client.post("/api/v1/auth/mfa/setup", headers=headers).status_code == 422
+    # Mot de passe erroné : réauthentification refusée, aucun secret installé.
+    refused = client.post(
+        "/api/v1/auth/mfa/setup", headers=headers, json={"password": "Pas-le-bon-mdp-123"}
+    )
+    assert refused.status_code == 401
+    assert refused.json()["code"] == "identifiants_invalides"
+
+
+def test_activation_exige_le_mot_de_passe(client: TestClient, make_user: MakeUser) -> None:
+    user = make_user()
+    headers = user.headers(client)
+    setup = client.post(
+        "/api/v1/auth/mfa/setup", headers=headers, json={"password": user.password}
+    ).json()
+    refused = client.post(
+        "/api/v1/auth/mfa/enable",
+        headers=headers,
+        json={"password": "Pas-le-bon-mdp-123", "code": pyotp.TOTP(setup["secret"]).now()},
+    )
+    assert refused.status_code == 401
+    assert refused.json()["code"] == "identifiants_invalides"
+
+
 def test_activation_refuse_un_code_errone(client: TestClient, make_user: MakeUser) -> None:
     user = make_user()
     headers = user.headers(client)
-    client.post("/api/v1/auth/mfa/setup", headers=headers)
-    response = client.post("/api/v1/auth/mfa/enable", headers=headers, json={"code": "000000"})
+    client.post("/api/v1/auth/mfa/setup", headers=headers, json={"password": user.password})
+    response = client.post(
+        "/api/v1/auth/mfa/enable",
+        headers=headers,
+        json={"password": user.password, "code": "000000"},
+    )
     assert response.status_code == 401
     assert response.json()["code"] == "code_mfa_invalide"
 
@@ -222,4 +258,9 @@ def test_regeneration_invalide_les_anciens_codes(mfa_user: MfaUser, client: Test
 
 def test_enrolement_impossible_si_deja_active(mfa_user: MfaUser, client: TestClient) -> None:
     headers = _session_after_mfa(mfa_user, client)
-    assert client.post("/api/v1/auth/mfa/setup", headers=headers).status_code == 409
+    response = client.post(
+        "/api/v1/auth/mfa/setup",
+        headers=headers,
+        json={"password": mfa_user.user.password},
+    )
+    assert response.status_code == 409

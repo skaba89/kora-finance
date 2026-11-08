@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import { ActionForm } from "@/components/forms/action-form";
 import { Field } from "@/components/forms/field";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import type { ActionState } from "@/lib/actions/state";
 import {
@@ -20,6 +21,7 @@ type Labels = {
   confirm: string;
   code: string;
   password: string;
+  passwordHint: string;
   recoveryTitle: string;
   recoveryNotice: string;
   disable: string;
@@ -83,11 +85,22 @@ export function MfaManager({ enabled, labels }: { enabled: boolean; labels: Labe
   const data = setup.status === "success" ? setup.data : undefined;
   if (!data) {
     return (
-      <form action={startSetup} className="flex flex-col gap-2">
-        {setup.status === "error" ? (
-          <p role="alert" className="text-destructive text-sm">
-            {setup.message}
-          </p>
+      <form action={startSetup} className="flex flex-col gap-4">
+        <p className="text-muted-foreground text-sm">{labels.reauth}</p>
+        <Field
+          label={labels.password}
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          hint={labels.passwordHint}
+          required
+        />
+        {setup.status === "error" && setup.message ? (
+          <Alert variant="destructive" role="alert">
+            <AlertDescription>
+              <p>{setup.message}</p>
+            </AlertDescription>
+          </Alert>
         ) : null}
         <div>
           <Button type="submit" disabled={starting}>
@@ -113,6 +126,14 @@ export function MfaManager({ enabled, labels }: { enabled: boolean; labels: Labe
         pendingLabel={labels.pending}
         renderResult={(state) => <RecoveryCodes state={state} labels={labels} />}
       >
+        <Field
+          label={labels.password}
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          hint={labels.passwordHint}
+          required
+        />
         <Field label={labels.code} name="code" autoComplete="one-time-code" inputMode="numeric" required />
       </ActionForm>
     </div>

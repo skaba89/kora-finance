@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import {
   createCompany,
   login,
+  PASSWORD,
   register,
   registerAndLogin,
   totp,
@@ -109,9 +110,13 @@ test("double authentification : activation puis connexion en deux étapes", asyn
   test.setTimeout(120_000);
   const email = await registerAndLogin(page);
   await page.goto("/compte/securite");
+  // L'enrôlement exige la réauthentification (KF-08) : mot de passe au début...
+  await page.getByLabel("Mot de passe", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Activer" }).click();
   const secret = (await page.locator("code").first().textContent())?.trim() ?? "";
   expect(secret).toMatch(/^[A-Z2-7]{16,}$/);
+  // ...et à la confirmation.
+  await page.getByLabel("Mot de passe", { exact: true }).fill(PASSWORD);
   await page.getByLabel("Code de vérification").fill(totp(secret));
   await page.getByRole("button", { name: "Confirmer l'activation" }).click();
   await expect(page.getByText("Codes de secours")).toBeVisible();

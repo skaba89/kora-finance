@@ -25,15 +25,22 @@ export async function changePasswordAction(_: ActionState, formData: FormData): 
   return { status: "success", message: t.security.passwordChanged };
 }
 
-export async function startMfaSetupAction(_: ActionState): Promise<ActionState> {
-  const { data, error } = await (await api()).POST("/api/v1/auth/mfa/setup");
+export async function startMfaSetupAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  // L'enrôlement exige la réauthentification : le mot de passe est vérifié par l'API
+  // (un seul jeton d'accès ne suffit plus à installer un second facteur, KF-08).
+  const { data, error } = await (await api()).POST("/api/v1/auth/mfa/setup", {
+    body: { password: String(formData.get("password") ?? "") },
+  });
   if (!data) return failure(error);
   return { status: "success", data };
 }
 
 export async function enableMfaAction(_: ActionState, formData: FormData): Promise<ActionState> {
   const { data, error } = await (await api()).POST("/api/v1/auth/mfa/enable", {
-    body: { code: field(formData, "code") },
+    body: {
+      password: String(formData.get("password") ?? ""),
+      code: field(formData, "code"),
+    },
   });
   if (!data) return failure(error);
   // Pas de refresh() : la page passerait en mode « activé » et masquerait les codes de

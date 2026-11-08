@@ -578,6 +578,8 @@ export const fr = {
       "Scannez ce QR code avec une application d'authentification (Google Authenticator, Microsoft Authenticator…), puis saisissez le code affiché.",
     mfaSecret: "Ou saisissez cette clé manuellement :",
     mfaConfirm: "Confirmer l'activation",
+    mfaPasswordHint:
+      "Votre mot de passe est demandé : une session compromise ne doit pas pouvoir ajouter un second facteur.",
     recoveryTitle: "Codes de secours",
     recoveryNotice:
       "Conservez ces codes en lieu sûr : chacun permet une connexion si vous perdez votre téléphone. Ils ne seront plus affichés.",

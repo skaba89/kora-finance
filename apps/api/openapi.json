@@ -660,22 +660,6 @@
         "title": "ClosingOut",
         "type": "object"
       },
-      "CodeRequest": {
-        "additionalProperties": false,
-        "properties": {
-          "code": {
-            "maxLength": 20,
-            "minLength": 6,
-            "title": "Code",
-            "type": "string"
-          }
-        },
-        "required": [
-          "code"
-        ],
-        "title": "CodeRequest",
-        "type": "object"
-      },
       "CompanyAccess": {
         "properties": {
           "company": {
@@ -3409,6 +3393,45 @@
         "title": "Party",
         "type": "string"
       },
+      "PasswordCodeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 20,
+            "minLength": 6,
+            "title": "Code",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "code"
+        ],
+        "title": "PasswordCodeRequest",
+        "type": "object"
+      },
+      "PasswordRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "title": "PasswordRequest",
+        "type": "object"
+      },
       "PeriodOut": {
         "properties": {
           "date_from": {
@@ -4549,7 +4572,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CodeRequest"
+                "$ref": "#/components/schemas/PasswordCodeRequest"
               }
             }
           },
@@ -4697,6 +4720,16 @@
     "/api/v1/auth/mfa/setup": {
       "post": {
         "operationId": "setup_api_v1_auth_mfa_setup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {

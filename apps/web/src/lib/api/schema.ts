@@ -1508,11 +1508,6 @@ export interface components {
             /** Opening Entry Id */
             opening_entry_id: string | null;
         };
-        /** CodeRequest */
-        CodeRequest: {
-            /** Code */
-            code: string;
-        };
         /** CompanyAccess */
         CompanyAccess: {
             company: components["schemas"]["CompanyOut"];
@@ -2597,6 +2592,18 @@ export interface components {
          * @enum {string}
          */
         Party: "CLIENT" | "FOURNISSEUR";
+        /** PasswordCodeRequest */
+        PasswordCodeRequest: {
+            /** Code */
+            code: string;
+            /** Password */
+            password: string;
+        };
+        /** PasswordRequest */
+        PasswordRequest: {
+            /** Password */
+            password: string;
+        };
         /** PeriodOut */
         PeriodOut: {
             /**
@@ -3246,7 +3253,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CodeRequest"];
+                "application/json": components["schemas"]["PasswordCodeRequest"];
             };
         };
         responses: {
@@ -3364,7 +3371,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
