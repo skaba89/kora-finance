@@ -2,7 +2,7 @@
 
 import uuid
 from collections.abc import Callable
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 import jwt
 import pytest
@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from kora.audit.service import verify_chain
 from kora.auth.tokens import create_mfa_token
 from kora.core.config import get_settings
+from kora.core.redis import get_redis
 from kora.db.session import get_sessionmaker
 from kora.db.tenant import bind_tenant
 from kora.models.audit import AuditEvent
@@ -357,10 +358,17 @@ def test_limitation_de_debit_sur_la_connexion(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(get_settings(), "auth_rate_limit_per_minute", 3)
-    statuses = [_login(client, "x@exemple.gn", "Mauvais-mdp-123")["status"] for _ in range(4)]
-    assert statuses == [401, 401, 401, 429]
-    blocked = _login(client, "x@exemple.gn", "Mauvais-mdp-123")
-    assert int(blocked["headers"]["retry-after"]) > 0  # type: ignore[index]
+    # Fenêtre figée loin d'une frontière de minute : la clé du compteur porte un numéro
+    # de fenêtre (time.time() // 60) — si l'horloge franchit une frontière entre deux
+    # requêtes, le compteur repart à zéro et la 4e requête n'est pas bloquée (échec du
+    # run CI #52 sur la PR #24). Redis est purgé : un compteur résiduel d'une session
+    # précédente fausserait sinon la première requête.
+    get_redis().flushdb()
+    with time_machine.travel(datetime.now(UTC).replace(second=30, microsecond=0)):
+        statuses = [_login(client, "x@exemple.gn", "Mauvais-mdp-123")["status"] for _ in range(4)]
+        assert statuses == [401, 401, 401, 429]
+        blocked = _login(client, "x@exemple.gn", "Mauvais-mdp-123")
+        assert int(blocked["headers"]["retry-after"]) > 0  # type: ignore[index]
 
 
 def test_evenements_d_authentification_audites_et_chaine_intacte(
