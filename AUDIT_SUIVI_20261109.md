@@ -197,3 +197,23 @@ exactement ces reproductions. Le verdict de l'audit initial est inchangé sur le
 **le socle comptable et sécurité est réel, fortement testé et s'améliore ; l'ouverture
 commerciale générale reste conditionnée aux P1, aux arbitrages expert-comptable et aux
 phases produit restantes.**
+
+## 10. Mise à jour du jour même (clôture de session)
+
+Traité juste après la rédaction de ce rapport, avec CI verte avant chaque fusion :
+
+- **Incident `main` résolu** : PR #21 (motif E2E des dialogues confirm) fusionnée,
+  run #48 de `main` vert. Les PR #22 (présent rapport) et #23 (KF-08) ont été
+  fusionnées par le mainteneur ; la #23 étant passée avant la CI verte, le job
+  « Restauration synthétique » a flanché sur `main` (run #51) — corrigé et
+  revalidé par la PR #24 (mot de passe transmis au semis du drill), fusionnée
+  **après** CI 7/7 verte.
+- **KF-08 : CORRIGÉ** (PR #23 + #24). `/auth/mfa/setup` et `/auth/mfa/enable` exigent
+  le mot de passe ; les quatre transitions du second facteur sont sérialisées par
+  verrou de ligne utilisateur ; tests nouveaux (422/401) et E2E complétés ; contrat
+  régénéré. La déduction KF-08 (−2) du §7 est levée : score porté à **67/100**.
+- **Flake de rate-limit réparé au passage** (PR #24) : le test fige désormais la
+  fenêtre de comptage (frontière de minute) et purge Redis — même famille que
+  l'incident E2E du §3, à noter dans N-W4 pour les suites (tests du §6 frontend).
+- Reste prioritaire (§8) : KF-03, KF-05, KF-07, KF-09, KF-11, KF-12, KF-13, puis
+  l'arbitrage expert-comptable (KF-15/16) et la phase 3 (trésorerie/Mobile Money).
