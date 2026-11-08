@@ -217,3 +217,32 @@ Traité juste après la rédaction de ce rapport, avec CI verte avant chaque fus
   l'incident E2E du §3, à noter dans N-W4 pour les suites (tests du §6 frontend).
 - Reste prioritaire (§8) : KF-03, KF-05, KF-07, KF-09, KF-11, KF-12, KF-13, puis
   l'arbitrage expert-comptable (KF-15/16) et la phase 3 (trésorerie/Mobile Money).
+
+## 11. KF-03 : corrigé le jour même (suite de la session)
+
+**Correctif** (branche `feature/kora-kf03-verrou-exercice`, commit `1994ec1`) :
+
+- **Migration 0010** (`20261109_0010_verrou_exercice_cloture.py`) : le déclencheur
+  `journal_entries_protect` relit désormais l'exercice en `SELECT … FOR UPDATE`
+  (`fiscal_years`) — 0007 inchangé, le downgrade restitue sa version. Une validation
+  engagée pendant une clôture ou un verrouillage de période attend le commit concurrent,
+  relit la version validée (READ COMMITTED) et est refusée si l'exercice est CLOSED ou la
+  période verrouillée — le brouillon est conservé.
+- **Verrou applicatif assorti** : `entries._fiscal_year_for(…, lock=True)` dans `_post`,
+  pris **avant** la numérotation (`_next_number`). Ordre de verrous uniforme « exercice
+  puis séquence de journal » dans toutes les transactions (clôture, à-nouveaux,
+  réouverture, validation), ce qui exclut tout interblocage — y compris le cas d'un
+  à-nouveaux manuel dans l'exercice suivant pendant une clôture.
+
+**Preuve** : `tests/test_closing_concurrency.py`, deux connexions réelles et barrières
+`pg_blocking_pids`. Les deux tests « clôture d'abord » et « verrouillage d'abord » étaient
+rouges avant correctif (la validation concurrente ne bloquait pas) ; le troisième
+(l'interleaving inverse) garantit qu'une validation qui gagne la course figure bien dans
+les à-nouveaux. Suite API exécutée intégralement sur l'environnement réel (PostgreSQL 16,
+Redis, Garage, Mailpit) : **545/545** (dont 3 nouveaux), ruff, mypy strict ; contrat
+d'API inchangé.
+
+**Déductions levées (§7)** : intégrité comptable KF-03 (−2) → 20 ; sécurité socle, moitié
+de la course KF-03/KF-07 (−0,75, KF-07 reste ouvert) → 21,75. **Score : 69,75/100.**
+Reste prioritaire (§8) : KF-05 (snapshot REPEATABLE READ des rapports), KF-07, KF-09,
+KF-11, KF-12, KF-13, l'arbitrage expert-comptable (KF-15/16) et la phase 3.
