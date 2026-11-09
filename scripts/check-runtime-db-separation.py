@@ -31,6 +31,7 @@ def check(files: list[str]) -> None:
                 "KORA_GARAGE_RPC_SECRET",
                 "KORA_GARAGE_ADMIN_TOKEN",
                 "KORA_S3_SECRET_ACCESS_KEY",
+                "KORA_BACKUP_S3_SECRET_ACCESS_KEY",
             )
         },
         "KORA_ENCRYPTION_KEYS": "eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=",
@@ -38,6 +39,11 @@ def check(files: list[str]) -> None:
         "KORA_S3_ENDPOINT_URL": "https://storage.invalid",
         "KORA_S3_REGION": "test",
         "KORA_S3_BUCKET": "test-only",
+        # Sauvegardes : bucket et clé dédiés (KF-09), distincts du stockage des pièces.
+        "KORA_BACKUP_S3_ACCESS_KEY_ID": "synthetic-test-only",
+        "KORA_BACKUP_S3_ENDPOINT_URL": "https://storage.invalid",
+        "KORA_BACKUP_S3_REGION": "test",
+        "KORA_BACKUP_S3_BUCKET": "test-backups-only",
         "KORA_DOMAIN": "kora.invalid",
         "KORA_ACME_EMAIL": "audit@example.invalid",
         "COMPOSE_PROFILES": "",

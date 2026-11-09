@@ -13,7 +13,8 @@ Les clés de cet exercice et les sauvegardes ne sont jamais publiées en artefac
    chacune ; activer le MFA pour vérifier aussi la récupération des secrets chiffrés.
 3. Capturer les empreintes des lignes visibles sous chaque contexte tenant et plateforme.
 4. Produire un vrai `pg_dump -Fc`, l'envoyer avec le mécanisme de sauvegarde chiffrée
-   existant et conserver la sauvegarde ainsi que les objets chiffrés hors des volumes.
+   existant (bucket de sauvegarde dédié du banc, KF-09) et conserver la sauvegarde ainsi
+   que les objets chiffrés hors des volumes.
 5. Supprimer le dump en clair puis les volumes PostgreSQL et Garage source.
 6. Initialiser PostgreSQL et Garage cibles neufs ; réimporter les objets chiffrés.
 7. Vérifier le rejet d'une mauvaise clé, puis déchiffrer le dump avec la clé conservée
