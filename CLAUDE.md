@@ -68,7 +68,10 @@ accounting/  plan SYSCOHADA (data/*.csv), taux de taxes versionnés, paramétrag
              dashboard.py (indicateurs du tableau de bord : une requête agrégée, écritures validées)
 audit/       journal chaîné SHA-256 (écriture, vérification)
 storage/     objets chiffrés (AES-256-GCM, clé par objet enveloppée par KORA_ENCRYPTION_KEYS)
-             dans un service S3 compatible (boto3, adressage par chemin)
+             dans un service S3 compatible (boto3, adressage par chemin) ;
+             backups_store.py : sauvegardes dans un bucket/clé S3 DÉDIÉS (KF-09), client
+             distinct, aucune suppression — rétention côté fournisseur, purge manuelle
+             avec la clé d'administration hors VPS
 attachments/ pièces justificatives des écritures (type lu dans le contenu, dédoublonnage
              par SHA-256, conservation après validation, purge différée par le worker)
 exports/     document neutre → Excel (openpyxl) ou PDF (reportlab, police DejaVu de l'image)
@@ -252,6 +255,7 @@ d'écrire du code Next.** Points déjà rencontrés :
 | 2026-11-09 | Le déclencheur des écritures verrouille l'exercice (`FOR UPDATE` sur `fiscal_years`, migration 0010) et la validation applicative prend le même verrou avant la numérotation (`entries._fiscal_year_for(lock=True)`) | KF-03 : une validation engagée pendant une clôture ne peut plus échapper aux à-nouveaux (elle attend le commit de la clôture puis est refusée) ; ordre de verrous uniforme « exercice puis numérotation », pas d'interblocage |
 | 2026-11-09 | Les rapports multi-requêtes (grand livre d'un compte, grand livre complet, états financiers N/N-1, les quatre exports) lisent leurs données sous un **instantané REPEATABLE READ dédié** (`db/snapshot.py` : `lecture_instantanee`), jamais en READ COMMITTED requête par requête | KF-05 : une validation concurrente entre deux requêtes mélangeait deux instants (totaux ≠ lignes, KeyError → 500 sur l'export) ; l'option d'isolation est posée sur une connexion neuve avant le `set_config` tenant, et la transaction (lecture seule) n'est jamais commitée |
 | 2026-11-09 | Toute vérification « le dossier garde au moins un dirigeant » relit la société en `SELECT … FOR UPDATE` **avant** le comptage (`organization/service.py`) | KF-07 : deux rétrogradations simultanées de deux dirigeants comptaient chacune deux membres et pouvaient vider le dossier ; la seconde transaction attend le commit de la première puis relit un comptage frais. Ordre de verrous « membership puis société », sans interblocage |
+| 2026-11-09 | Les sauvegardes vivent dans un **bucket et une clé S3 dédiés** (`storage/backups_store.py`), transmis au seul service `backup` du Compose — jamais à l'API/worker ; la clé de sauvegarde ne porte aucun droit de suppression, la purge (`prune`) exige la clé d'administration distincte `KORA_BACKUP_ADMIN_S3_*` hors VPS | KF-09 : une application compromise pouvait détruire les pièces ET leurs sauvegardes (même bucket, même clé, `prune` automatique) ; désormais la destruction des pièces n'atteint pas les sauvegardes, et la rétention est administrée côté fournisseur |
 
 ## À valider par un expert-comptable guinéen
 

@@ -611,3 +611,54 @@ modifié).
 sauvegarde séparé), KF-11 (tags d'image + sauvegarde avant déploiement), KF-12
 (supervision des sauvegardes), KF-13 (budgets et quotas), l'arbitrage
 expert-comptable (KF-15/16) et la phase 3 (trésorerie/Mobile Money).
+
+## 2026-11-09 — KF-09 : bucket et clé de sauvegarde séparés, purge sous clé d'administration
+
+**Anomalie (audit de suivi, §4)** : les sauvegardes utilisaient `objects._client()` —
+le même client S3, le même bucket et la même clé que les pièces justificatives
+(`scripts/backup.py`, `storage/objects.py`, `deploy/vps/compose.yml` transmettant ces
+identifiants à API et worker) ; `prune --keep-days 30` était même appelé
+automatiquement chaque nuit par backup.sh. Le chiffrement protégeait la
+confidentialité, pas la suppression : une application compromise (API ou worker)
+pouvait détruire les pièces ET toutes leurs sauvegardes.
+
+**Correctif** (branche `feature/kora-kf09-bucket-sauvegarde`) :
+
+- `storage/backups_store.py` : client boto3 dédié, construit sur `BackupSettings`
+  (`KORA_BACKUP_S3_*`, préfixe disjoint de la configuration runtime) — autre bucket,
+  autre clé, et volontairement **aucune fonction de suppression**.
+- `core/config.py` : classes séparées `BackupSettings` et `BackupAdminSettings`,
+  lues uniquement par les outils de sauvegarde ; l'API et le worker ne reçoivent
+  jamais ces variables.
+- `scripts/backup.py` : upload/list/download passent par le stockage dédié (relecture
+  SHA-256 inchangée) ; la purge `prune` exige désormais la clé d'administration
+  **distincte** `KORA_BACKUP_ADMIN_S3_*` (jamais déployée sur le VPS) et garde le
+  plancher des sept plus récentes ; sans cette clé elle est refusée, rien n'est
+  supprimé.
+- Compose (local et VPS) : service one-shot `backup` sous profil, seul destinataire
+  de `KORA_BACKUP_S3_*` ; `backup.sh` et `restore.sh` passent par ce service.
+- `backup.sh` : purge automatique supprimée — la rétention est administrée côté
+  fournisseur (cycle de vie du bucket, Object Lock B2/S3 à dimensionner).
+- `infra/garage/bootstrap.py` : bucket `kora-backups` et clé de sauvegarde dédiés, la
+  clé de l'API n'y a jamais accès (étape sautée sans `S3_BACKUP_*`) ; `.env.example`
+  et `deploy/vps/env.example` complétés ; `docs/DEPLOIEMENT.md` §5 réécrit (prérequis
+  fournisseur : second bucket, clé sans droit de suppression, clé admin séquestrée
+  hors serveur).
+
+**Preuve** : `tests/test_backup.py` (7 tests contre le Garage réel, bucket de
+sauvegarde distinct du bucket des pièces) et `tests/test_backup_isolation.py`
+(6 tests de contrat : aucune composition ne transmet `KORA_BACKUP_*` aux services
+applicatifs — api, worker, migrate, web, ni l'ancrage `x-api-env` ; le service
+`backup` ne reçoit pas les identifiants des pièces ; `backup.sh` ne purge plus ;
+modèles d'env complets ; préfixes de configuration disjoints). Le test d'acceptation
+de l'audit est codé : avec les identifiants de l'application, la suppression d'une
+sauvegarde (même clé d'objet) la laisse intacte ; sans clé d'administration, la purge
+est refusée. Suite API exécutée intégralement sur l'environnement réel hors Docker
+(PostgreSQL 16.15, Redis via fakeredis 2.34.1, Garage v2.4.1, Mailpit) :
+**558/558** (dont 9 nouveaux), ruff, ruff format, mypy strict. Aucun changement de
+contrat d'API (aucune route ni schéma modifié).
+
+**Déductions levées (§7)** : sécurité socle, KF-09 (−1,5) → socle 24,5. **Score :
+74,5/100.** Reste prioritaire (§8) : KF-11 (tags d'image + sauvegarde vérifiée avant
+déploiement), KF-12 (supervision des sauvegardes), KF-13 (budgets et quotas),
+l'arbitrage expert-comptable (KF-15/16) et la phase 3 (trésorerie/Mobile Money).
