@@ -285,3 +285,37 @@ ruff format, mypy strict. Aucun changement de contrat d'API.
 KF-05 pour l'export (−0,5) → 22,25. **Score : 72,25/100.** Reste prioritaire (§8) :
 KF-07 (verrou société), KF-09, KF-11, KF-12, KF-13, l'arbitrage expert-comptable
 (KF-15/16) et la phase 3 (trésorerie/Mobile Money).
+
+## 13. KF-07 : corrigé le jour même (suite de la session)
+
+**Correctif** (branche `feature/kora-kf07-verrou-societe`) :
+
+- **Verrou de société** : `_ensure_a_director_remains`
+  (`organization/service.py:268-292`) relit la société en `SELECT … FOR UPDATE` avant
+  le comptage des `PME_DIRIGEANT` (elle faisait un `session.get(Company, …)` sans
+  verrou, cf. §4 KF-07). Deux rétrogradations — ou deux retraits — simultanés de deux
+  dirigeants distincts sont sérialisées : la seconde attend le commit de la première,
+  relit le comptage dans un instantané frais (READ COMMITTED) et est refusée
+  (`BusinessRuleError`) s'il ne reste que le membre qui part. Avant correctif, les deux
+  comptages se croisaient (l'autre transaction pas encore commitée, donc invisible) et
+  le dossier pouvait se retrouver **sans aucun dirigeant**.
+- **Ordre de verrous** « membership (`_get_membership`) puis société » : uniforme dans
+  `change_member_role` et `remove_member` (qui partagent la vérification) ; le verrou
+  de société est acquis en dernier, ce qui exclut tout interblocage avec les autres
+  verrous métier.
+
+**Preuve** : `tests/test_director_concurrency.py`, deux connexions réelles et barrière
+déterministe (`pg_blocking_pids`), même motif que KF-03 (§11) et KF-06. **Rouge avant
+correctif** (reproduit puis corrigé) : la seconde démotion ne bloquait pas et le
+dossier finissait avec 0 dirigeant. Après correctif : la seconde démotion attend le
+verrou de société, est refusée, le second dirigeant est conservé (1 dirigeant) ; un
+second test garantit le comportement séquentiel inchangé. Suite API exécutée
+intégralement sur l'environnement réel hors Docker (PostgreSQL 16.2, Redis 7.4.2,
+Garage v2.4.1, Mailpit v1.31.3) : **549/549** (dont 2 nouveaux), ruff, ruff format,
+mypy strict. Aucun changement de contrat d'API.
+
+**Déductions levées (§7)** : sécurité socle, seconde moitié de la course KF-03/KF-07
+(−0,75) → 23. **Score : 73/100.** Reste prioritaire (§8) : KF-09 (bucket de sauvegarde
+séparé), KF-11 (tags d'image + sauvegarde avant déploiement), KF-12 (supervision des
+sauvegardes), KF-13 (budgets et quotas), l'arbitrage expert-comptable (KF-15/16) et la
+phase 3 (trésorerie/Mobile Money).
