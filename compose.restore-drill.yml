@@ -43,6 +43,15 @@ x-api-env: &api-env
   KORA_S3_ACCESS_KEY_ID: ${KORA_DRILL_S3_KEY_ID:?}
   KORA_S3_SECRET_ACCESS_KEY: ${KORA_DRILL_S3_SECRET:?}
 
+x-backup-env: &backup-env
+  # Sauvegardes (KF-09) : bucket DÉDIÉ du banc synthétique, distinct du bucket des
+  # pièces. En test, la même clé synthétique couvre les deux buckets : l'isolation des
+  # identifiants est vérifiée par les tests de contrat (test_backup_isolation.py).
+  KORA_BACKUP_S3_REGION: garage
+  KORA_BACKUP_S3_BUCKET: kora-drill-backups
+  KORA_BACKUP_S3_ACCESS_KEY_ID: ${KORA_DRILL_S3_KEY_ID:?}
+  KORA_BACKUP_S3_SECRET_ACCESS_KEY: ${KORA_DRILL_S3_SECRET:?}
+
 x-tools: &tools
   image: kora-drill-tools:${KORA_DRILL_ID:?}
   user: "${KORA_DRILL_UID:?}:${KORA_DRILL_GID:?}"
@@ -54,6 +63,9 @@ x-init-env: &init-env
   S3_ACCESS_KEY_ID: ${KORA_DRILL_S3_KEY_ID:?}
   S3_SECRET_ACCESS_KEY: ${KORA_DRILL_S3_SECRET:?}
   S3_BUCKETS: kora-drill
+  S3_BACKUP_KEY_ID: ${KORA_DRILL_S3_KEY_ID:?}
+  S3_BACKUP_SECRET: ${KORA_DRILL_S3_SECRET:?}
+  S3_BACKUP_BUCKET: kora-drill-backups
 
 x-init: &init
   image: python:3.13-slim
@@ -103,17 +115,19 @@ services:
     <<: *tools
     build: { context: ./apps/api, target: dev }
     environment:
-      <<: *api-env
+      <<: [*api-env, *backup-env]
       KORA_DATABASE_URL: postgresql+psycopg://kora_app:${KORA_DRILL_APP_PASSWORD:?}@postgres-source:5432/kora_drill
       KORA_DATABASE_MIGRATION_URL: postgresql+psycopg://kora_owner:${KORA_DRILL_OWNER_PASSWORD:?}@postgres-source:5432/kora_drill
       KORA_S3_ENDPOINT_URL: http://storage-source:3900
+      KORA_BACKUP_S3_ENDPOINT_URL: http://storage-source:3900
   target-tools:
     <<: *tools
     environment:
-      <<: *api-env
+      <<: [*api-env, *backup-env]
       KORA_DATABASE_URL: postgresql+psycopg://kora_app:${KORA_DRILL_APP_PASSWORD:?}@postgres-target:5432/kora_drill
       KORA_DATABASE_MIGRATION_URL: postgresql+psycopg://kora_owner:${KORA_DRILL_OWNER_PASSWORD:?}@postgres-target:5432/kora_drill
       KORA_S3_ENDPOINT_URL: http://storage-target:3900
+      KORA_BACKUP_S3_ENDPOINT_URL: http://storage-target:3900
 
 volumes:
   postgres_source:

@@ -21,6 +21,13 @@ TOKEN = os.environ["GARAGE_ADMIN_TOKEN"]
 KEY_ID = os.environ["S3_ACCESS_KEY_ID"]
 SECRET = os.environ["S3_SECRET_ACCESS_KEY"]
 BUCKETS = [b.strip() for b in os.environ["S3_BUCKETS"].split(",") if b.strip()]
+# Sauvegardes (KF-09) : bucket et clé DÉDIÉS, distincts du stockage des pièces. La clé
+# de sauvegarde n'a accès qu'au bucket de sauvegarde — jamais aux pièces ; la clé de
+# l'API n'a jamais accès aux sauvegardes. Optionnel : sans ces variables, l'étape est
+# sautée (les piles qui n'utilisent pas le module de sauvegarde n'ont rien à créer).
+BACKUP_KEY_ID = os.environ.get("S3_BACKUP_KEY_ID", "")
+BACKUP_SECRET = os.environ.get("S3_BACKUP_SECRET", "")
+BACKUP_BUCKET = os.environ.get("S3_BACKUP_BUCKET", "")
 # Capacité déclarée du nœud unique (indicative : elle sert au placement des données).
 CAPACITY_BYTES = 10 * 1024**3
 
@@ -81,6 +88,43 @@ def ensure_key() -> None:
         print("Garage : clé d'accès de l'API importée.")
 
 
+def ensure_backup_key() -> None:
+    """Importe la clé de sauvegarde et la borne au bucket de sauvegarde (KF-09).
+    La clé de l'API ne reçoit JAMAIS d'autorisation sur ce bucket : elle ne peut
+    ni lire, ni écrire, ni supprimer une sauvegarde."""
+    if not (BACKUP_KEY_ID and BACKUP_SECRET and BACKUP_BUCKET):
+        return
+    try:
+        call("GetKeyInfo", id=BACKUP_KEY_ID)
+    except AdminError as exc:
+        if exc.status not in (400, 404):
+            raise
+        call(
+            "ImportKey",
+            {
+                "accessKeyId": BACKUP_KEY_ID,
+                "secretAccessKey": BACKUP_SECRET,
+                "name": "kora-backup",
+            },
+        )
+        print("Garage : clé d'accès des sauvegardes importée.")
+    try:
+        bucket = call("GetBucketInfo", globalAlias=BACKUP_BUCKET)
+    except AdminError as exc:
+        if exc.status not in (400, 404):
+            raise
+        bucket = call("CreateBucket", {"globalAlias": BACKUP_BUCKET})
+        print(f"Garage : bucket {BACKUP_BUCKET} créé (sauvegardes).")
+    call(
+        "AllowBucketKey",
+        {
+            "bucketId": bucket["id"],
+            "accessKeyId": BACKUP_KEY_ID,
+            "permissions": {"read": True, "write": True, "owner": False},
+        },
+    )
+
+
 def ensure_bucket(alias: str) -> None:
     try:
         bucket = call("GetBucketInfo", globalAlias=alias)
@@ -116,8 +160,10 @@ def main() -> None:
     ensure_key()
     for alias in BUCKETS:
         ensure_bucket(alias)
+    ensure_backup_key()
     wait_for_health()
-    print(f"Garage prêt : buckets {', '.join(BUCKETS)}.")
+    buckets = ", ".join([*BUCKETS, BACKUP_BUCKET] if BACKUP_BUCKET else BUCKETS)
+    print(f"Garage prêt : buckets {buckets}.")
 
 
 if __name__ == "__main__":

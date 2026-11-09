@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Sauvegarde quotidienne : dump PostgreSQL (format personnalisé), envoi chiffré et vérifié
-# dans le bucket S3 (backups/), purge des sauvegardes de plus de 30 jours (les sept plus
-# récentes sont toujours gardées). Copie locale conservée 7 jours dans deploy/vps/backups.
+# dans le bucket S3 DÉDIÉ aux sauvegardes (KF-09 : bucket et clé distincts du stockage des
+# pièces ; la clé de sauvegarde ne porte aucun droit de suppression — la rétention est
+# administrée côté fournisseur, la purge manuelle `prune` exige la clé d'administration
+# hors VPS). Copie locale conservée 7 jours dans deploy/vps/backups.
 set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p backups
@@ -14,8 +16,8 @@ file="backups/kora-${stamp}.dump"
 docker compose exec -T postgres pg_dump -U kora_admin -d kora -Fc > "${file}"
 [[ -s "${file}" ]] || { echo "Dump vide : sauvegarde annulée." >&2; exit 1; }
 
-docker compose run --rm --no-deps --user "$(id -u):$(id -g)" -v "$PWD/backups:/backups" \
-  api python -m kora.scripts.backup upload "/backups/$(basename "${file}")"
-docker compose run --rm --no-deps api python -m kora.scripts.backup prune --keep-days 30
+docker compose --profile backup run --rm --no-deps --user "$(id -u):$(id -g)" \
+  -v "$PWD/backups:/backups" \
+  backup python -m kora.scripts.backup upload "/backups/$(basename "${file}")"
 find backups -name 'kora-*.dump' -mtime +7 -delete
 echo "Sauvegarde terminée : ${file}"

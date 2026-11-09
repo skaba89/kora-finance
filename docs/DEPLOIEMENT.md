@@ -5,7 +5,8 @@ Un serveur dédié à Kora, une pile Docker Compose (`deploy/vps/compose.yml`) :
 ```
 internet ──443──▶ Caddy (HTTPS automatique) ──▶ web (Next.js) ──▶ api (FastAPI) ──▶ PostgreSQL
                                                                    │                  Redis ◀── worker
-                                                                   └──▶ Backblaze B2 (pièces, sauvegardes)
+                                                                   │        (pièces) ──▶ Backblaze B2 — bucket A
+            api/worker : sans accès aux sauvegardes (KF-09)        └─(backup)──▶ Backblaze B2 — bucket B dédié
 ```
 
 Seul Caddy est joignable depuis internet (ports 80/443). PostgreSQL, Redis, l'API et le
@@ -46,7 +47,7 @@ SSH par clé uniquement si une clé est installée.
 ```bash
 cd ~/kora-finance/deploy/vps
 ./init-env.sh          # crée .env avec des secrets aléatoires, liste ce qui manque
-nano .env              # KORA_DOMAIN, KORA_ACME_EMAIL, KORA_S3_*
+nano .env              # KORA_DOMAIN, KORA_ACME_EMAIL, KORA_S3_*, KORA_BACKUP_S3_*
 ./init-env.sh          # « .env est complet »
 ./deploy.sh            # construit, vérifie le stockage, migre, démarre
 ./install-backup-timer.sh
@@ -97,19 +98,27 @@ manuelle avant une mise à jour importante : `./backup.sh`.
 ## 5. Sauvegardes et restauration
 
 - Chaque nuit (02:30 UTC) : `pg_dump`, chiffrement (AES-256-GCM, clés `KORA_ENCRYPTION_KEYS`),
-  envoi dans le bucket sous `backups/`, relecture et vérification, purge au-delà de
-  30 jours (les 7 plus récentes sont toujours gardées). Copie locale 7 jours dans
-  `deploy/vps/backups/`.
+  envoi dans le bucket **dédié** aux sauvegardes, relecture et vérification. Copie locale
+  7 jours dans `deploy/vps/backups/`.
+- **Isolation (KF-09)** : les identifiants de sauvegarde (`KORA_BACKUP_S3_*`) ne sont
+  transmis qu'au service `backup` — jamais à l'API, au worker ni au web. La clé de
+  sauvegarde ne porte **aucun droit de suppression** (B2 : capabilities sans deleteFiles ;
+  S3 : politique refusant DeleteObject) : une application compromise peut détruire les
+  pièces, pas les sauvegardes.
+- **Rétention** : administrée côté fournisseur (cycle de vie du bucket, ~30 jours). La
+  purge manuelle `python -m kora.scripts.backup prune --keep-days 30` exige la clé
+  d'administration **distincte** `KORA_BACKUP_ADMIN_S3_*`, conservée hors du serveur
+  (elle garde toujours les 7 plus récentes ; sans elle, la purge est refusée).
 - Suivi : `journalctl -u kora-backup.service`, liste : `./restore.sh`.
 - Restaurer (remplace toutes les données, confirmation demandée) :
   `./restore.sh backups/kora-AAAAMMJJTHHMMSSZ.dump.enc`.
 - **Tester une restauration** au moins une fois par trimestre (procédure vérifiée en
   développement : données, déclencheurs et RLS identiques après restauration).
 
-Limites connues : les sauvegardes sont dans le même bucket que les pièces, avec la même
-clé (une clé B2 ne couvre qu'un bucket) ; un bucket séparé avec Object Lock protégerait
-contre une suppression malveillante. Les pièces justificatives elles-mêmes reposent sur
-la durabilité de B2 (pas de seconde copie).
+Prérequis fournisseur : créer un second bucket privé dédié aux sauvegardes et une clé
+limitée à ce bucket, en lecture/écriture **sans suppression** ; régler son cycle de vie
+(rétention) côté fournisseur ; séquestrer la clé d'administration hors du serveur. Les
+pièces justificatives elles-mêmes reposent sur la durabilité de B2 (pas de seconde copie).
 
 ## 6. Activer les emails (plus tard)
 

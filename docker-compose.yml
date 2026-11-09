@@ -21,10 +21,21 @@ x-api-env: &api-env
   KORA_WEB_PUBLIC_URL: ${KORA_PUBLIC_URL:-http://localhost:3100}
   # Pièces justificatives : Garage en local. En production : point d'accès https:// du
   # fournisseur S3, bucket privé, clé limitée à ce bucket.
+  # Les SAUVEGARDES n'utilisent pas ces identifiants : bucket et clé dédiés (KF-09),
+  # transmis au seul service « backup » — l'API et le worker ne peuvent pas y toucher.
   KORA_S3_ENDPOINT_URL: http://storage:3900
   KORA_S3_BUCKET: kora
   KORA_S3_ACCESS_KEY_ID: ${KORA_S3_ACCESS_KEY_ID:?lancer make env}
   KORA_S3_SECRET_ACCESS_KEY: ${KORA_S3_SECRET_ACCESS_KEY:?lancer make env}
+
+x-backup-env: &backup-env
+  # Sauvegardes (KF-09) : bucket et clé DÉDIÉS, distincts du stockage des pièces.
+  # La clé de sauvegarde ne porte aucun droit de suppression (rétention administrée
+  # côté fournisseur) ; la clé d'administration de la purge n'est jamais committée ici.
+  KORA_BACKUP_S3_ENDPOINT_URL: http://storage:3900
+  KORA_BACKUP_S3_BUCKET: kora-backups
+  KORA_BACKUP_S3_ACCESS_KEY_ID: ${KORA_BACKUP_S3_ACCESS_KEY_ID:?lancer make env}
+  KORA_BACKUP_S3_SECRET_ACCESS_KEY: ${KORA_BACKUP_S3_SECRET_ACCESS_KEY:?lancer make env}
 
 x-garage-env: &garage-env
   GARAGE_RPC_SECRET: ${KORA_GARAGE_RPC_SECRET:?lancer make env}
@@ -94,7 +105,9 @@ services:
       timeout: 5s
       retries: 20
 
-  # Nœud, clé d'accès et buckets (« kora » pour la pile, « kora-test » pour pytest).
+  # Nœud, clé d'accès et buckets (« kora » pour la pile, « kora-test » pour pytest),
+  # plus le bucket et la clé dédiés des sauvegardes (KF-09 : la clé de l'API n'y a
+  # jamais accès).
   storage-init:
     image: python:3.13-slim
     user: "65534:65534"
@@ -107,6 +120,9 @@ services:
       S3_ACCESS_KEY_ID: ${KORA_S3_ACCESS_KEY_ID:?lancer make env}
       S3_SECRET_ACCESS_KEY: ${KORA_S3_SECRET_ACCESS_KEY:?lancer make env}
       S3_BUCKETS: kora,kora-test
+      S3_BACKUP_KEY_ID: ${KORA_BACKUP_S3_ACCESS_KEY_ID:?lancer make env}
+      S3_BACKUP_SECRET: ${KORA_BACKUP_S3_SECRET_ACCESS_KEY:?lancer make env}
+      S3_BACKUP_BUCKET: kora-backups
     depends_on:
       storage: { condition: service_healthy }
 
@@ -144,6 +160,15 @@ services:
       redis: { condition: service_healthy }
       mailpit: { condition: service_healthy }
       storage-init: { condition: service_completed_successfully }
+
+  # Sauvegardes (KF-09) : conteneur one-shot sous profil, exécuté à la demande —
+  # docker compose --profile backup run --rm --no-deps backup python -m kora.scripts.backup …
+  # Il ne reçoit que les identifiants de sauvegarde, jamais ceux des pièces ; les
+  # services api/worker/migrate/web ne reçoivent jamais ceux des sauvegardes.
+  backup:
+    profiles: ["backup"]
+    image: kora-api:local
+    environment: *backup-env
 
   web:
     build: { context: ./apps/web, target: runtime }

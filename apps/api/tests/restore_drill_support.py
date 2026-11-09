@@ -170,22 +170,30 @@ def seed() -> None:
 
 def archive() -> None:
     from kora.scripts import backup  # noqa: PLC0415
-    from kora.storage import objects  # noqa: PLC0415
+    from kora.storage import backups_store, objects  # noqa: PLC0415
 
     manifest = _load()
     dump = ARCHIVE / "source.dump"
     manifest["dump_sha256"] = _digest(dump.read_bytes())
     manifest["backup_key"] = backup.upload(dump)
     saved = []
-    client = objects._client()
-    paginator = client.get_paginator("list_objects_v2")
-    for page in paginator.paginate(Bucket=get_settings().s3_bucket):
-        for item in page.get("Contents", []):
-            key = item["Key"]
-            raw = objects.get(key)
-            filename = _digest(key.encode()) + ".blob"
-            (ARCHIVE / filename).write_bytes(raw)
-            saved.append({"key": key, "filename": filename, "sha256": _digest(raw)})
+
+    def _archiver(bucket: str, stockage: str, client: Any) -> None:
+        paginator = client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=bucket):
+            for item in page.get("Contents", []):
+                key = item["Key"]
+                raw = (objects if stockage == "pieces" else backups_store).get(key)
+                filename = _digest(key.encode()) + ".blob"
+                (ARCHIVE / filename).write_bytes(raw)
+                saved.append(
+                    {"key": key, "stockage": stockage, "filename": filename, "sha256": _digest(raw)}
+                )
+
+    _archiver(get_settings().s3_bucket, "pieces", objects._client())
+    # Les sauvegardes vivent dans un bucket dédié (KF-09) : l'archive doit couvrir
+    # les deux buckets, sinon la seule copie de la sauvegarde chiffrée disparaît.
+    _archiver(backups_store.bucket(), "sauvegardes", backups_store._client())
     assert len(saved) == 3  # deux pièces chiffrées et une sauvegarde chiffrée
     manifest["objects"] = saved
     _save(manifest)
@@ -198,14 +206,19 @@ def recover() -> None:
 
     from kora.core import crypto  # noqa: PLC0415
     from kora.scripts import backup  # noqa: PLC0415
-    from kora.storage import objects  # noqa: PLC0415
+    from kora.storage import backups_store, objects  # noqa: PLC0415
 
     manifest = _load()
     assert not (ARCHIVE / "source.dump").exists()
     for item in manifest["objects"]:
         raw = (ARCHIVE / item["filename"]).read_bytes()
         assert _digest(raw) == item["sha256"]
-        objects._client().put_object(Bucket=get_settings().s3_bucket, Key=item["key"], Body=raw)
+        if item.get("stockage") == "sauvegardes":
+            backups_store._client().put_object(
+                Bucket=backups_store.bucket(), Key=item["key"], Body=raw
+            )
+        else:
+            objects._client().put_object(Bucket=get_settings().s3_bucket, Key=item["key"], Body=raw)
     settings = get_settings()
     escrowed_key = settings.encryption_keys
     try:

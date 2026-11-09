@@ -319,3 +319,42 @@ mypy strict. Aucun changement de contrat d'API.
 séparé), KF-11 (tags d'image + sauvegarde avant déploiement), KF-12 (supervision des
 sauvegardes), KF-13 (budgets et quotas), l'arbitrage expert-comptable (KF-15/16) et la
 phase 3 (trésorerie/Mobile Money).
+
+## 14. KF-09 : corrigé le jour même (suite de la session)
+
+**Correctif** (branche `feature/kora-kf09-bucket-sauvegarde`) :
+
+- Bucket et clé S3 **dédiés** aux sauvegardes (`KORA_BACKUP_S3_*`) : nouveau module
+  `storage/backups_store.py` (client boto3 distinct, **aucune fonction de
+  suppression**), classes de configuration séparées (`BackupSettings`,
+  `BackupAdminSettings`) lues uniquement par les outils de sauvegarde. Le Compose
+  (local et VPS) ne transmet ces variables qu'au service one-shot `backup` (profil
+  dédié) — jamais à api/worker/migrate/web ni à l'ancrage partagé `x-api-env`.
+- **Purge débranchée du chemin automatique** : backup.sh n'appelle plus `prune` ; la
+  rétention est administrée côté fournisseur (cycle de vie du bucket ; Object Lock
+  B2/S3 sans verrou de conformité, à dimensionner). La purge manuelle exige la clé
+  d'administration distincte `KORA_BACKUP_ADMIN_S3_*`, conservée hors VPS, et garde
+  toujours les sept plus récentes ; sans elle elle est refusée.
+- `infra/garage/bootstrap.py` : bucket `kora-backups` + clé de sauvegarde limitée à
+  ce bucket (la clé de l'API n'y a jamais accès) ; `.env.example` et
+  `deploy/vps/env.example` complétés ; docs/DEPLOIEMENT.md §5 réécrit (prérequis
+  fournisseur explicites : second bucket, clé en lecture/écriture sans suppression,
+  séquestration de la clé d'administration hors du serveur).
+
+**Preuve** : `tests/test_backup.py` — 7 tests contre le Garage réel avec bucket de
+sauvegarde distinct : upload relu et vérifié, objet altéré refusé, **suppression par
+le chemin applicatif (identifiants des pièces) sans effet sur la sauvegarde**, purge
+refusée sans clé d'administration (rien n'est supprimé), purge admin conforme au
+plancher des sept, clients boto3 distincts. `tests/test_backup_isolation.py` — 6
+tests de contrat mécanique : aucune composition ne transmet `KORA_BACKUP_*` aux
+services applicatifs (y compris via l'ancrage `x-api-env`), le service `backup` ne
+reçoit pas les identifiants des pièces, backup.sh ne purge plus, modèles d'env
+complets, préfixes de configuration disjoints. Suite API exécutée intégralement sur
+l'environnement réel hors Docker (PostgreSQL 16.15, Redis via fakeredis 2.34.1,
+Garage v2.4.1, Mailpit) : **558/558** (dont 9 nouveaux), ruff, ruff format, mypy
+strict. Aucun changement de contrat d'API.
+
+**Déductions levées (§7)** : sécurité socle, KF-09 (−1,5) → 24,5. **Score :
+74,5/100.** Reste prioritaire (§8) : KF-11 (tags d'image + sauvegarde vérifiée avant
+déploiement), KF-12 (supervision des sauvegardes), KF-13 (budgets et quotas),
+l'arbitrage expert-comptable (KF-15/16) et la phase 3 (trésorerie/Mobile Money).
