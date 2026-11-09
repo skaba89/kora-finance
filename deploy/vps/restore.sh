@@ -6,6 +6,9 @@
 #         ./restore.sh backups/kora-….dump.enc
 set -euo pipefail
 cd "$(dirname "$0")"
+# Image épinglée à la release en cours (KF-11) : .release est écrit par deploy.sh ;
+# fallback : l'alias :prod (pile construite par make/compose hors deploy.sh).
+export KORA_IMAGE_TAG="${KORA_IMAGE_TAG:-$(cat .release 2>/dev/null || echo prod)}"
 if [[ $# -eq 0 ]]; then
   docker compose --profile backup run --rm --no-deps backup python -m kora.scripts.backup list
   exit 0

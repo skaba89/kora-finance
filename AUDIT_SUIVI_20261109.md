@@ -358,3 +358,59 @@ strict. Aucun changement de contrat d'API.
 74,5/100.** Reste prioritaire (§8) : KF-11 (tags d'image + sauvegarde vérifiée avant
 déploiement), KF-12 (supervision des sauvegardes), KF-13 (budgets et quotas),
 l'arbitrage expert-comptable (KF-15/16) et la phase 3 (trésorerie/Mobile Money).
+
+## 15. KF-11 : corrigé le jour même (suite de la session)
+
+**Correctif** (branche `feature/kora-kf11-deploiement-versionne`) :
+
+- `deploy/vps/compose.yml` : les images applicatives sont étiquetées par la variable
+  de release `KORA_IMAGE_TAG` (`kora-api:${KORA_IMAGE_TAG:-prod}`,
+  `kora-web:${KORA_IMAGE_TAG:-prod}`) — l'alias `:prod` n'est plus écrasé avant la
+  bascule, la pile en place continue de tourner sur ses images pendant le build.
+- `deploy.sh` réécrit, en cinq étapes : **pré-vols** (`.env` complet, branche `main`,
+  **copie git propre** — `status --porcelain --untracked-files=no` —, avance
+  `--ff-only` sur `origin/main` : le commit déployé est exactement un commit validé
+  par la CI, la protection de branche n'acceptant qu'une PR verte) ; **release**
+  (SHA court 12 comme tag d'image immuable, `check_storage` sur la nouvelle version) ;
+  **sauvegarde pré-migration vérifiée imposée** (`backup.sh` exécuté avec l'image en
+  cours, `pg_dump` relu et déchiffré ; sauf première installation, postgres absent,
+  avec avertissement explicite) ; **bascule** (`up -d --wait`, migrations par le
+  service `migrate`) avec **retour automatique** à la version précédente en cas
+  d'échec (migration refusée, healthcheck) ; **consignation** (`releases.log` :
+  date, SHA, IDs des images ; `.release` / `.previous-release` ; rétention locale des
+  cinq dernières releases).
+- `rollback.sh` (nouveau) : retour à `.previous-release` — refuse sans version connue,
+  vérifie la présence locale des images, réépingle `KORA_IMAGE_TAG` et repasse
+  `up -d --wait` ; les volumes ne sont jamais touchés.
+- `backup.sh` / `restore.sh` : image épinglée sur `.release` (fallback `:prod`) — les
+  outils de sauvegarde/restauration n'exécutent jamais une image non consignée.
+- `.gitignore` : état de release local au serveur (`releases.log`, `.release`,
+  `.previous-release`).
+- `scripts/check-deploy-versioning.py` (nouveau, job API de la CI) : contrats
+  mécaniques sur les sources — tags paramétrés et interdiction de `kora-api:prod` /
+  `kora-web:prod` en dur dans le Compose VPS, étapes obligatoires de `deploy.sh` (SHA,
+  ff-only, copie propre, backup imposé avant `up -d --wait`, rollback automatique,
+  releases.log), contrats de `rollback.sh` (refus sans version, inspection des images),
+  épinglage de `backup.sh` / `restore.sh`, et `bash -n` des quatre scripts.
+- `docs/DEPLOIEMENT.md` §4 réécrit (release en cinq étapes, retour arrière manuel,
+  **convention expand/contract** : le schéma n'est jamais migré en arrière, tout
+  changement destructif est reporté à une migration ultérieure) ; Dépannage complété
+  (rollback, liste des versions).
+
+**Preuve** : `python3 scripts/check-deploy-versioning.py` ajouté à la CI (job API) ;
+syntaxe bash des quatre scripts vérifiée. Suite API exécutée intégralement sur
+l'environnement réel hors Docker (PostgreSQL 16.4, Redis 7.4.5, Garage v2.4.1 avec le
+bucket `kora-backups`, Mailpit v1.33.1 avec les mêmes variables `MP_SMTP_AUTH_*` que
+le Compose) : **558/558**. Aucun changement de contrat d'API.
+
+**Reste** : l'exercice complet sur staging réel — simuler migration refusée, build
+indisponible et healthcheck échoué puis rejouer le retour à la version connue —
+nécessite l'accès hébergeur (même limite que KF-09 pour l'Object Lock) ; le chemin de
+retour est implémenté et vérifié mécaniquement (contrats statiques + syntaxe), pas
+encore rejoué sur le VPS. Déduction résiduelle maintenue : −0,5.
+
+**Déductions levées (§7)** : exploitation/production, KF-11 (−2 → −0,5) → +1,5.
+**Score : 76/100.** Reste prioritaire (§8) : KF-12 (supervision des sauvegardes :
+`OnFailure=`, sonde externe, contrôle de fraîcheur), KF-13 (budgets et quotas :
+quota Redis des exports, `mem_limit`/`cpus`), l'arbitrage expert-comptable (KF-15/16)
+et la phase 3 (trésorerie/Mobile Money).

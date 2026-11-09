@@ -662,3 +662,52 @@ contrat d'API (aucune route ni schéma modifié).
 74,5/100.** Reste prioritaire (§8) : KF-11 (tags d'image + sauvegarde vérifiée avant
 déploiement), KF-12 (supervision des sauvegardes), KF-13 (budgets et quotas),
 l'arbitrage expert-comptable (KF-15/16) et la phase 3 (trésorerie/Mobile Money).
+
+## 2026-11-09 — KF-11 : déploiement versionné, sauvegarde pré-migration imposée, rollback
+
+**Anomalie (audit de suivi, §4 et §6)** : `deploy.sh` avançait `main`, reconstruisait
+les images **sous le même tag mobile** `kora-api:prod` / `kora-web:prod` puis lançait
+`compose up` et les migrations — sans copie git propre exigée, sans sauvegarde
+pré-migration imposée, sans consignation de version, sans procédure de retour
+arrière. Une migration refusée ou un healthcheck échoué laissait les conteneurs
+précédents en place mais les tags locaux déjà écrasés : redémarrer (crash, reboot)
+relançait la nouvelle image sans avoir validé la bascule, et revenir en arrière
+dépendait des registres du moment.
+
+**Correctif** (branche `feature/kora-kf11-deploiement-versionne`) :
+
+- `deploy/vps/compose.yml` : images applicatives étiquetées par
+  `${KORA_IMAGE_TAG:-prod}` (migrate, api, worker, backup, web).
+- `deploy.sh` réécrit : pré-vols (`.env`, `main`, **copie git propre**, ff-only
+  origin/main — commit déployé = commit CI-vert par protection de branche) ; release
+  = SHA court 12 (`kora-api:<sha>`, `kora-web:<sha>`) ; `check_storage` sur la
+  nouvelle version ; **sauvegarde pré-migration vérifiée imposée** (`backup.sh` sur
+  l'image en cours ; première installation passée avec avertissement) ;
+  `up -d --wait` ; **retour automatique** à la version précédente en cas d'échec ;
+  consignation `releases.log` + `.release` / `.previous-release` ; rétention des cinq
+  dernières releases.
+- `rollback.sh` (nouveau) : retour à `.previous-release`, refus sans version connue,
+  inspection des images avant relance.
+- `backup.sh` / `restore.sh` : image épinglée sur `.release` (fallback `:prod`).
+- `scripts/check-deploy-versioning.py` (nouveau, CI job API) : contrats mécaniques
+  (tags paramétrés, `:prod` en dur interdit, étapes obligatoires, `bash -n`).
+- `.gitignore` : `releases.log`, `.release`, `.previous-release`.
+- `docs/DEPLOIEMENT.md` : §4 réécrit (release en cinq étapes, rollback, convention
+  **expand/contract**), Dépannage complété.
+
+**Vérifié**
+- `python3 scripts/check-deploy-versioning.py` → code 0 (contrats + `bash -n` des
+  quatre scripts).
+- Suite API complète sur l'environnement réel hors Docker (PostgreSQL 16.4, Redis
+  7.4.5, Garage v2.4.1 — bucket `kora-backups` créé —, Mailpit v1.33.1 aligné sur le
+  Compose : variables `MP_SMTP_AUTH_*`) : **558/558**. Au passage, l'environnement de
+  test local a été reconstruit après recyclage du sandbox (binaires PostgreSQL/Redis/
+  Garage/Mailpit réinstallés, `scripts/api-test-env.sh` ajouté) ; l'échec initial de
+  `test_envoi_smtp_reel` était un défaut d'environnement (Mailpit sans AUTH
+  accepté), pas du code.
+- Aucun changement de contrat d'API (aucun endpoint touché).
+
+**Reste** : exercice complet sur staging réel (migration refusée, build indisponible,
+healthcheck échoué → retour à la version connue) en attente d'accès hébergeur ;
+déduction résiduelle −0,5 maintenue dans le suivi (§15). Prochaines priorités :
+**KF-12** (supervision des sauvegardes), **KF-13** (budgets et quotas).
