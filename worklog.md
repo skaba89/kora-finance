@@ -571,3 +571,43 @@ mypy strict. Aucun changement de contrat d'API. Score porté à 72,25/100.
 
 **Reste** : KF-07 (verrou société), KF-09, KF-11, KF-12, KF-13, arbitrage
 expert-comptable (KF-15/16), puis phase 3 (trésorerie/Mobile Money).
+
+## 2026-11-09 — KF-07 : verrou de société contre les départs concurrents de dirigeants
+
+**Anomalie (audit de suivi, §4)** : `_ensure_a_director_remains`
+(`organization/service.py:268-283` au moment du constat) comptait les dirigeants
+**sans verrou** sur la société (`session.get(Company, …)` simple, puis comptage des
+`PME_DIRIGEANT`). Deux rétrogradations — ou deux retraits — simultanés de deux
+dirigeants distincts comptaient chacun deux dirigeants : l'autre transaction n'était
+pas encore commitée, donc invisible dans l'instantané READ COMMITTED de la première.
+Les deux passes pouvaient aboutir : **dossier sans aucun dirigeant**, plus personne
+autorisé à réinviter ou gérer les membres.
+
+**Correctif** (branche `feature/kora-kf07-verrou-societe`) :
+- `_ensure_a_director_remains` relit la société en `SELECT … FOR UPDATE` avant le
+  comptage. La transaction concurrente attend le commit de la première, relit le
+  comptage dans un instantané frais (READ COMMITTED : une requête = un instantané) et
+  est refusée (`BusinessRuleError`) s'il ne reste que le membre qui part.
+- Ordre de verrous « membership (via `_get_membership`) puis société » : uniforme dans
+  les deux cas d'usage (`change_member_role`, `remove_member`), sans interblocage — le
+  verrou de société est le dernier acquis, jamais détenu avant un autre verrou métier.
+- Couvre aussi le retrait (`remove_member`) qui emprunte la même vérification.
+
+**Preuve** : `tests/test_director_concurrency.py`, deux connexions réelles et barrière
+déterministe (`pg_blocking_pids`), même motif que les tests KF-03 et KF-06.
+**Rouge avant correctif** : la seconde rétrogradation ne bloquait pas et le dossier se
+retrouvait avec 0 dirigeant. Vert après : la seconde démotion attend le verrou, est
+refusée (`Le dossier doit conserver au moins un dirigeant.`) et le second dirigeant
+est conservé. Un second test garantit le comportement séquentiel inchangé (retrait du
+dernier dirigeant restant refusé après commit de la première démotion).
+
+**Vérifié** : suite API complète **549/549** (dont 2 nouveaux) sur l'environnement réel
+hors Docker (PostgreSQL 16.2, Redis 7.4.2, Garage v2.4.1, Mailpit v1.31.3) ; ruff,
+ruff format, mypy strict. Aucun changement de contrat d'API (aucune route ni schéma
+modifié).
+
+**Déductions levées (§7)** : sécurité socle, seconde moitié de la course KF-03/KF-07
+(−0,75) → socle 23. **Score : 73/100.** Reste prioritaire (§8) : KF-09 (bucket de
+sauvegarde séparé), KF-11 (tags d'image + sauvegarde avant déploiement), KF-12
+(supervision des sauvegardes), KF-13 (budgets et quotas), l'arbitrage
+expert-comptable (KF-15/16) et la phase 3 (trésorerie/Mobile Money).

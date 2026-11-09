@@ -268,7 +268,16 @@ def _get_membership(
 def _ensure_a_director_remains(
     session: Session, tenant: TenantLike, leaving: CompanyMembership
 ) -> None:
-    company = session.get(Company, tenant.company_id)
+    # Verrou de ligne sur la société : deux changements simultanés (rétrogradation ou
+    # retrait de deux dirigeants) sont sérialisés. Sans ce verrou, chaque transaction
+    # comptait les dirigeants dans son propre instantané (l'autre pas encore commitée)
+    # et les deux passes pouvaient se croiser : dossier sans aucun dirigeant. La
+    # transaction concurrente attend le commit de la première, puis relit le comptage
+    # dans un instantané frais (READ COMMITTED, une requête = un instantané) et est
+    # refusée s'il ne reste plus que le membre qui part.
+    company = session.execute(
+        select(Company).where(Company.id == tenant.company_id).with_for_update()
+    ).scalar_one_or_none()
     if company is None or company.firm_id is not None or leaving.role != Role.PME_DIRIGEANT:
         return
     directors = session.execute(
