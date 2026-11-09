@@ -538,3 +538,36 @@ concurrente ne bloquait pas), puis verts après.
 **Vérifié** : suite API complète 545/545 (dont 3 nouveaux) sur l'environnement réel
 (PostgreSQL 16, Redis, Garage, Mailpit) ; ruff, ruff format, mypy strict ; aucun changement
 de contrat d'API (aucune route ni schéma modifié).
+
+## 2026-11-09 — KF-05 : instantané REPEATABLE READ pour les rapports
+
+**Anomalie (audit de suivi, §4)** : `account_ledger` (totaux puis lignes, `reports.py:192-199`
+puis `:243-255`) et `full_ledger` (balance puis lignes, `:307` puis `:310-350`) lisaient
+en READ COMMITTED : chaque requête voit son propre état de la base. Une écriture
+validée entre deux requêtes produisait un rapport qui mélangeait deux instants —
+soldes incohérents avec les lignes, voire `KeyError` quand un compte n'apparaissait que
+dans les lignes (500 sur l'export de grand livre). Même risque pour les états
+financiers N/N-1 et les quatre exports.
+
+**Correctif** (branche `feature/kora-kf05-instantane-rapports`) :
+- `db/snapshot.py` : `lecture_instantanee(tenant_id)` — transaction REPEATABLE READ
+  dédiée sur une connexion neuve du pool ; l'option d'isolation est posée avant toute
+  instruction (portée par le `BEGIN`), donc sans conflit avec le `set_config` du
+  contexte tenant posé par le hook `after_begin`. Lecture seule, jamais commitée.
+- `GET /ledger` (totaux+lignes), `GET /financial-statements` (N et N-1) et les quatre
+  exports lisent leurs données sous un unique instantané ; le journal d'audit des
+  exports et le commit restent sur la session de requête. `GET /trial-balance` tient
+  en une requête : atomique, inchangé.
+
+**Preuve** : `tests/test_reports_concurrency.py` — deux connexions réelles, barrières
+déterministes (écoute `after_cursor_execute` sur la connexion du rapport ; validation
+SQL directe intercalée, comme le test de clôture KF-03). Rouge avant correctif :
+`KeyError(UUID('…'))` sur `full_ledger` ; totaux 5 000 000 vs lignes 7 000 000 sur
+`account_ledger`. Vert après : 522 absent, totaux = lignes, solde exact.
+
+**Vérifié** : suite API complète 547/547 (dont 2 nouveaux) sur l'environnement réel
+(PostgreSQL 16.2, Redis 7.4.2, Garage v2.4.1, Mailpit v1.31.3) ; ruff, ruff format,
+mypy strict. Aucun changement de contrat d'API. Score porté à 72,25/100.
+
+**Reste** : KF-07 (verrou société), KF-09, KF-11, KF-12, KF-13, arbitrage
+expert-comptable (KF-15/16), puis phase 3 (trésorerie/Mobile Money).
