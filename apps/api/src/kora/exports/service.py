@@ -12,6 +12,7 @@ from kora.accounting.reports import Period
 from kora.audit.service import record_event
 from kora.auth.service import RequestContext
 from kora.core.errors import BusinessRuleError, NotFoundError
+from kora.db.snapshot import lecture_instantanee
 from kora.exports import builders, pdf, xlsx
 from kora.exports.document import Document
 from kora.models.identity import Company
@@ -55,14 +56,18 @@ def generate(
     if company is None:
         raise NotFoundError("Dossier introuvable.")
     document: Document
-    if kind == "balance":
-        document = builders.trial_balance(session, company, period)
-    elif kind == "grand-livre":
-        document = builders.ledger(session, company, period, account_id)
-    elif kind == "ecritures":
-        document = builders.entries(session, company, period)
-    else:
-        document = builders.financial_statements(session, company, period)
+    # KF-05 : les données du document sont lues sous un unique instantané (REPEATABLE
+    # READ) — une validation concurrente ne peut pas mélanger deux instants dans un
+    # même export (soldes des à-nouveaux sans leurs lignes, N et N-1 divergents…).
+    with lecture_instantanee(company_id) as snap:
+        if kind == "balance":
+            document = builders.trial_balance(snap, company, period)
+        elif kind == "grand-livre":
+            document = builders.ledger(snap, company, period, account_id)
+        elif kind == "ecritures":
+            document = builders.entries(snap, company, period)
+        else:
+            document = builders.financial_statements(snap, company, period)
 
     rows = sum(len(section.rows) for section in document.sections)
     if file_format == "pdf" and rows > MAX_PDF_ROWS:
