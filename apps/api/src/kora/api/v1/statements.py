@@ -10,6 +10,7 @@ from kora.accounting import reports, statements
 from kora.accounting.statements import Statements
 from kora.api.v1.common import TENANT_ERRORS, SignedMoney
 from kora.auth.deps import DbSession
+from kora.db.snapshot import lecture_instantanee
 from kora.tenancy.deps import EntriesRead
 
 router = APIRouter(prefix="/companies/{company_id}", tags=["états financiers"])
@@ -64,11 +65,15 @@ def financial_statements(
     tenant: EntriesRead, db: DbSession, fiscal_year_id: uuid.UUID, date_to: date | None = None
 ) -> FinancialStatementsOut:
     """Bilan et compte de résultat SYSCOHADA révisé sur les écritures validées, avec
-    l'exercice précédent en comparaison (s'il existe dans Kora)."""
+    l'exercice précédent en comparaison (s'il existe dans Kora).
+
+    KF-05 : exercices N et N-1 calculés sous le même instantané (REPEATABLE READ).
+    """
     period = reports.resolve_period(db, tenant.company_id, fiscal_year_id, None, date_to)
-    current = statements.compute(db, tenant.company_id, period.fiscal_year, period.date_to)
-    before = statements.previous_year(db, tenant.company_id, period.fiscal_year)
-    previous = statements.compute(db, tenant.company_id, before) if before else None
+    with lecture_instantanee(tenant.company_id) as snap:
+        current = statements.compute(snap, tenant.company_id, period.fiscal_year, period.date_to)
+        before = statements.previous_year(snap, tenant.company_id, period.fiscal_year)
+        previous = statements.compute(snap, tenant.company_id, before) if before else None
 
     def prev(code: str) -> int | None:
         return previous.amount(code) if previous else None

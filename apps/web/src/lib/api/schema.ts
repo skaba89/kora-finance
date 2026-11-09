@@ -625,6 +625,8 @@ export interface paths {
          * Financial Statements
          * @description Bilan et compte de résultat SYSCOHADA révisé sur les écritures validées, avec
          *     l'exercice précédent en comparaison (s'il existe dans Kora).
+         *
+         *     KF-05 : exercices N et N-1 calculés sous le même instantané (REPEATABLE READ).
          */
         get: operations["financial_statements_api_v1_companies__company_id__financial_statements_get"];
         put?: never;
@@ -887,6 +889,10 @@ export interface paths {
          * Ledger
          * @description Grand livre d'un compte : solde d'ouverture, mouvements avec solde progressif
          *     (exact sur chaque page), solde de clôture.
+         *
+         *     KF-05 : totaux et lignes sont lus sous le même instantané (REPEATABLE READ) — une
+         *     validation concurrente entre les deux requêtes ne peut plus séparer les uns des
+         *     autres. (La balance générale tient en une seule requête : elle est atomique.)
          */
         get: operations["ledger_api_v1_companies__company_id__ledger_get"];
         put?: never;

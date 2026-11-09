@@ -8080,7 +8080,7 @@
     },
     "/api/v1/companies/{company_id}/financial-statements": {
       "get": {
-        "description": "Bilan et compte de résultat SYSCOHADA révisé sur les écritures validées, avec\nl'exercice précédent en comparaison (s'il existe dans Kora).",
+        "description": "Bilan et compte de résultat SYSCOHADA révisé sur les écritures validées, avec\nl'exercice précédent en comparaison (s'il existe dans Kora).\n\nKF-05 : exercices N et N-1 calculés sous le même instantané (REPEATABLE READ).",
         "operationId": "financial_statements_api_v1_companies__company_id__financial_statements_get",
         "parameters": [
           {
@@ -9672,7 +9672,7 @@
     },
     "/api/v1/companies/{company_id}/ledger": {
       "get": {
-        "description": "Grand livre d'un compte : solde d'ouverture, mouvements avec solde progressif\n(exact sur chaque page), solde de clôture.",
+        "description": "Grand livre d'un compte : solde d'ouverture, mouvements avec solde progressif\n(exact sur chaque page), solde de clôture.\n\nKF-05 : totaux et lignes sont lus sous le même instantané (REPEATABLE READ) — une\nvalidation concurrente entre les deux requêtes ne peut plus séparer les uns des\nautres. (La balance générale tient en une seule requête : elle est atomique.)",
         "operationId": "ledger_api_v1_companies__company_id__ledger_get",
         "parameters": [
           {

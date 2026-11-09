@@ -246,3 +246,42 @@ d'API inchangé.
 de la course KF-03/KF-07 (−0,75, KF-07 reste ouvert) → 21,75. **Score : 69,75/100.**
 Reste prioritaire (§8) : KF-05 (snapshot REPEATABLE READ des rapports), KF-07, KF-09,
 KF-11, KF-12, KF-13, l'arbitrage expert-comptable (KF-15/16) et la phase 3.
+
+## 12. KF-05 : corrigé le jour même (suite de la session)
+
+**Correctif** (branche `feature/kora-kf05-instantane-rapports`, PR #28) :
+
+- **`db/snapshot.py`** : `lecture_instantanee(tenant_id)` — le calcul d'un rapport
+  multi-requêtes s'effectue dans une transaction **REPEATABLE READ** dédiée, sur une
+  connexion neuve du pool. L'option d'isolation est posée **avant toute instruction**
+  (portée par le `BEGIN` de psycopg) : elle ne peut pas entrer en conflit avec le
+  `set_config('app.tenant_id', …)` du hook `after_begin`, qui reste la première
+  instruction de la transaction (RLS et contexte tenant inchangés). Lecture seule :
+  la transaction n'est jamais commitée, elle est annulée en fin de bloc.
+- **Points d'entrée couverts** : `GET /companies/{id}/ledger` (totaux puis lignes),
+  `GET /companies/{id}/financial-statements` (exercices N et N-1 sous le même
+  instantané) et les quatre exports (`balance`, `grand-livre`, `ecritures`,
+  `etats-financiers`) — le document entier vient d'un seul instantané ; l'écriture au
+  journal d'audit et le commit restent sur la session de requête. `GET /trial-balance`
+  tient en une seule requête : atomique, inchangé.
+
+**Preuve** : `tests/test_reports_concurrency.py`, deux connexions réelles et barrières
+déterministes (écoute `after_cursor_execute` sur la connexion du rapport ; la validation
+SQL directe se commit exactement entre les deux requêtes — même motif que le test de
+clôture KF-03). **Rouge avant correctif** (READ COMMITTED, reproduit puis corrigé) :
+
+- `full_ledger` avec un compte 522 validé entre les deux requêtes :
+  **`KeyError(UUID('…'))`** — l'export de grand livre aurait répondu 500 ;
+- `account_ledger` du compte 521 avec une validation intercalée : totaux
+  **5 000 000** vs lignes **7 000 000**, `total=1` vs 2 lignes affichées.
+
+Après correctif : 522 absent, totaux = lignes = 5 000 000, solde exact, et la
+validation concurrente est bien en base (c'est l'instantané qui l'écarte du rapport).
+Suite API exécutée intégralement sur l'environnement réel (PostgreSQL 16.2, Redis
+7.4.2, Garage v2.4.1, Mailpit v1.31.3) : **547/547** (dont 2 nouveaux), ruff,
+ruff format, mypy strict. Aucun changement de contrat d'API.
+
+**Déductions levées (§7)** : intégrité comptable KF-05 (−2) → 22 ; sécurité socle,
+KF-05 pour l'export (−0,5) → 22,25. **Score : 72,25/100.** Reste prioritaire (§8) :
+KF-07 (verrou société), KF-09, KF-11, KF-12, KF-13, l'arbitrage expert-comptable
+(KF-15/16) et la phase 3 (trésorerie/Mobile Money).

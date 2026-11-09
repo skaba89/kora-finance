@@ -11,6 +11,7 @@ from kora.accounting import reports
 from kora.accounting.reports import AccountFilter, BalanceRow
 from kora.api.v1.common import TENANT_ERRORS, Limit, Money, Offset, SignedMoney
 from kora.auth.deps import DbSession
+from kora.db.snapshot import lecture_instantanee
 from kora.tenancy.deps import EntriesRead
 
 router = APIRouter(prefix="/companies/{company_id}", tags=["états comptables"])
@@ -164,11 +165,17 @@ def ledger(
     offset: Offset = 0,
 ) -> LedgerOut:
     """Grand livre d'un compte : solde d'ouverture, mouvements avec solde progressif
-    (exact sur chaque page), solde de clôture."""
+    (exact sur chaque page), solde de clôture.
+
+    KF-05 : totaux et lignes sont lus sous le même instantané (REPEATABLE READ) — une
+    validation concurrente entre les deux requêtes ne peut plus séparer les uns des
+    autres. (La balance générale tient en une seule requête : elle est atomique.)
+    """
     period = reports.resolve_period(db, tenant.company_id, fiscal_year_id, date_from, date_to)
-    result = reports.account_ledger(
-        db, tenant.company_id, account_id, period, limit=limit, offset=offset
-    )
+    with lecture_instantanee(tenant.company_id) as snap:
+        result = reports.account_ledger(
+            snap, tenant.company_id, account_id, period, limit=limit, offset=offset
+        )
     return LedgerOut(
         account=LedgerAccountOut(
             id=result.account.id, number=result.account.number, label=result.account.label
