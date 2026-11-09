@@ -3,11 +3,12 @@
 Aucune valeur secrète n'a de défaut : si une variable manque, le démarrage échoue.
 """
 
+import os
 from enum import StrEnum
 from functools import lru_cache
 from typing import Literal, Self
 
-from pydantic import Field, PostgresDsn, RedisDsn, SecretStr, model_validator
+from pydantic import Field, PostgresDsn, RedisDsn, SecretStr, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -114,6 +115,58 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()  # valeurs fournies par l'environnement
+
+
+class BackupSettings(BaseSettings):
+    """Stockage des sauvegardes : endpoint, bucket et identifiants S3 **dédiés**
+    (KF-09), distincts de ceux des pièces justificatives. Lus uniquement par les
+    outils de sauvegarde (`kora.scripts.backup`) ; l'API et le worker n'y ont
+    jamais accès (le Compose ne leur transmet pas ces variables). La clé de
+    sauvegarde ne doit porter aucun droit de suppression : la rétention est
+    administrée côté fournisseur (cycle de vie / Object Lock)."""
+
+    model_config = SettingsConfigDict(env_prefix="KORA_BACKUP_S3_", extra="ignore")
+
+    endpoint_url: str
+    region: str = "garage"
+    bucket: str
+    access_key_id: str
+    secret_access_key: SecretStr
+    timeout_seconds: int = Field(default=60, ge=1, le=300)
+
+    @model_validator(mode="after")
+    def _check_backup_settings(self) -> Self:
+        if os.environ.get("KORA_ENV") in (
+            "staging",
+            "production",
+        ) and not self.endpoint_url.startswith("https://"):
+            raise ValueError("KORA_BACKUP_S3_ENDPOINT_URL doit être en https:// en production.")
+        return self
+
+
+@lru_cache
+def get_backup_settings() -> BackupSettings:
+    return BackupSettings()
+
+
+class BackupAdminSettings(BaseSettings):
+    """Clé d'administration de la rétention des sauvegardes : **distincte** de la clé
+    de sauvegarde et jamais déployée sur le VPS. Seule la purge manuelle
+    (`kora.scripts.backup prune`) l'utilise, depuis un poste d'administration."""
+
+    model_config = SettingsConfigDict(env_prefix="KORA_BACKUP_ADMIN_S3_", extra="ignore")
+
+    access_key_id: str
+    secret_access_key: SecretStr
+
+
+def get_backup_admin_settings() -> BackupAdminSettings | None:
+    """Renvoie None si la clé d'administration n'est pas fournie : l'absence de cette
+    clé sur un serveur est un état normal (et souhaité) — la purge est alors refusée."""
+    try:
+        return BackupAdminSettings()
+    except ValidationError:
+        return None
 
 
 class MigrationSettings(BaseSettings):

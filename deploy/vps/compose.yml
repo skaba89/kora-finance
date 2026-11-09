@@ -31,7 +31,9 @@ x-api-env: &api-env
   KORA_SMTP_SECURITY: ${KORA_SMTP_SECURITY:-starttls}
   KORA_SMTP_USERNAME: ${KORA_SMTP_USERNAME:-}
   KORA_SMTP_PASSWORD: ${KORA_SMTP_PASSWORD:-}
-  # Pièces justificatives et sauvegardes : bucket S3 privé (Backblaze B2…), en https.
+  # Pièces justificatives et sauvegardes : buckets S3 privés SÉPARÉS (KF-09), en https.
+  # Les identifiants ci-dessous ne touchent que les pièces ; ceux des sauvegardes ne
+  # sont transmis qu'au service « backup » (clé sans droit de suppression).
   KORA_S3_ENDPOINT_URL: ${KORA_S3_ENDPOINT_URL:?}
   KORA_S3_REGION: ${KORA_S3_REGION:?}
   KORA_S3_BUCKET: ${KORA_S3_BUCKET:?}
@@ -105,6 +107,23 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
+
+  # Sauvegardes (KF-09) : bucket et identifiants DÉDIÉS, jamais présents dans les
+  # conteneurs api/worker/web. One-shot sous profil, exécuté à la demande par
+  # backup.sh / restore.sh.
+  backup:
+    image: kora-api:prod
+    profiles: ["backup"]
+    logging: *logging
+    # La clé de sauvegarde ne porte aucun droit de suppression : la rétention est
+    # administrée côté fournisseur, la purge manuelle avec la clé distincte
+    # KORA_BACKUP_ADMIN_S3_* depuis un poste hors VPS.
+    environment:
+      KORA_BACKUP_S3_ENDPOINT_URL: ${KORA_BACKUP_S3_ENDPOINT_URL:?}
+      KORA_BACKUP_S3_REGION: ${KORA_BACKUP_S3_REGION:-garage}
+      KORA_BACKUP_S3_BUCKET: ${KORA_BACKUP_S3_BUCKET:?}
+      KORA_BACKUP_S3_ACCESS_KEY_ID: ${KORA_BACKUP_S3_ACCESS_KEY_ID:?}
+      KORA_BACKUP_S3_SECRET_ACCESS_KEY: ${KORA_BACKUP_S3_SECRET_ACCESS_KEY:?}
 
   web:
     build: { context: ../../apps/web, target: runtime }

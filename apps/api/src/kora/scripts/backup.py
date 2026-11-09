@@ -1,13 +1,24 @@
-"""Sauvegardes chiffrées de la base vers le stockage S3 (préfixe `backups/`).
+"""Sauvegardes chiffrées de la base vers un bucket S3 **dédié** (KF-09).
 
 Le fichier de sauvegarde (produit par `pg_dump -Fc`, voir deploy/vps/backup.sh) est
 chiffré comme les pièces justificatives (AES-256-GCM, clé propre au fichier enveloppée
 par KORA_ENCRYPTION_KEYS), relu et vérifié après l'envoi. Sans KORA_ENCRYPTION_KEYS, une
 sauvegarde est illisible : ces clés doivent être conservées hors du serveur.
 
+Les sauvegardes n'utilisent ni le bucket ni la clé du stockage des pièces : bucket et
+identifiants dédiés (KORA_BACKUP_S3_*), transmis par le Compose au seul service
+`backup` — jamais à l'API ni au worker. La clé de sauvegarde ne doit porter **aucun
+droit de suppression** (B2 : capabilities sans deleteFiles ; S3 : politique refusant
+DeleteObject) : la rétention est administrée côté fournisseur (cycle de vie, Object
+Lock), pas par l'application.
+
     python -m kora.scripts.backup upload /backups/kora-20261025T023000Z.dump
     python -m kora.scripts.backup list
     python -m kora.scripts.backup download backups/kora-….dump.enc /backups/restaure.dump
+
+Purge manuelle (opération d'administration, depuis un poste hors VPS, avec la clé
+distincte KORA_BACKUP_ADMIN_S3_* ; garde toujours les sept plus récentes) :
+
     python -m kora.scripts.backup prune --keep-days 30
 
 Limite : le fichier est traité en mémoire (adapté jusqu'à quelques centaines de Mo).
@@ -19,8 +30,7 @@ import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from kora.core.config import get_settings
-from kora.storage import objects
+from kora.storage import backups_store, objects
 
 PREFIX = "backups/"
 _MAGIC = b"KORA-BKP1"
@@ -55,12 +65,7 @@ def upload(path: Path) -> str:
         raise SystemExit("Sauvegarde trop volumineuse pour un traitement en mémoire.")
     key = object_key(path.name)
     sealed = objects.seal(content, key)
-    objects._client().put_object(
-        Bucket=get_settings().s3_bucket,
-        Key=key,
-        Body=pack(sealed),
-        ContentType="application/octet-stream",
-    )
+    backups_store.put(key, pack(sealed))
     # Relecture : une sauvegarde n'est comptée que si elle se déchiffre à l'identique.
     restored = download_bytes(key)
     if hashlib.sha256(restored).digest() != hashlib.sha256(content).digest():
@@ -69,37 +74,30 @@ def upload(path: Path) -> str:
 
 
 def download_bytes(key: str) -> bytes:
-    sealed = unpack(objects.get(key))
+    sealed = unpack(backups_store.get(key))
     return objects.unseal(sealed.blob, sealed.wrapped_key, key)
 
 
 def list_backups() -> list[tuple[str, datetime, int]]:
-    client = objects._client()
-    bucket = get_settings().s3_bucket
-    found: list[tuple[str, datetime, int]] = []
-    token: str | None = None
-    while True:
-        kwargs = {
-            "Bucket": bucket,
-            "Prefix": PREFIX,
-            **({"ContinuationToken": token} if token else {}),
-        }
-        page = client.list_objects_v2(**kwargs)  # type: ignore[arg-type]
-        found.extend((o["Key"], o["LastModified"], o["Size"]) for o in page.get("Contents", []))
-        if not page.get("IsTruncated"):
-            return sorted(found, key=lambda item: (item[1], item[0]))
-        token = page["NextContinuationToken"]
+    found: list[tuple[str, datetime, int]] = [
+        (key, modified, size) for key, modified, size in backups_store.list_prefix(PREFIX)
+    ]
+    return sorted(found, key=lambda item: (item[1], item[0]))
 
 
 def prune(keep_days: int, now: datetime | None = None) -> list[str]:
-    """Supprime les sauvegardes plus anciennes que `keep_days`, en gardant toujours les
-    sept plus récentes (une panne prolongée ne doit pas tout effacer)."""
+    """Supprime, avec la clé d'administration distincte, les sauvegardes plus anciennes
+    que `keep_days` en gardant toujours les sept plus récentes (une panne prolongée ne
+    doit pas tout effacer). Refusée sans KORA_BACKUP_ADMIN_S3_* : la clé de sauvegarde
+    quotidienne ne porte aucun droit de suppression (KF-09)."""
+    admin = backups_store.admin_client()
     backups = list_backups()
     limit = (now or datetime.now(UTC)) - timedelta(days=keep_days)
     candidates = backups[:-_KEEP_AT_LEAST] if len(backups) > _KEEP_AT_LEAST else []
     removed = [key for key, modified, _ in candidates if modified < limit]
     for key in removed:
-        objects.delete(key)
+        # Idempotent : un objet absent n'est pas une erreur, comme en S3.
+        admin.delete_object(Bucket=backups_store.bucket(), Key=key)
     return removed
 
 
