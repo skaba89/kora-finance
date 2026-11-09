@@ -91,9 +91,37 @@ Après la fusion d'une pull request sur `main` (CI verte) :
 ~/kora-finance/deploy/vps/deploy.sh   # ~/kora-production/... sur un serveur partagé
 ```
 
-Les migrations s'appliquent automatiquement (service `migrate`) avant le redémarrage de
-l'API ; les données (volumes Docker) ne sont jamais supprimées. Faire une sauvegarde
-manuelle avant une mise à jour importante : `./backup.sh`.
+Chaque déploiement est une **release identifiée** (KF-11) :
+
+1. **Pré-vols** — `.env` complet, branche `main`, **copie git propre** (aucune
+   modification suivie non commitée), avance `--ff-only` sur `origin/main`. La
+   protection de branche n'accepte qu'une PR verte : le commit déployé est exactement
+   un commit validé par la CI.
+2. **Release** — les images sont construites et étiquetées par le SHA court du commit
+   (`kora-api:<sha>`, `kora-web:<sha>`, variable `KORA_IMAGE_TAG`) : l'alias `:prod`
+   n'est plus écrasé avant la bascule, la pile en place continue de tourner sur ses
+   images. Le stockage S3 est vérifié avec la nouvelle version (check_storage).
+3. **Sauvegarde pré-migration vérifiée, imposée** — `backup.sh` est exécuté avec
+   l'image en cours : dump relu et déchiffré avant d'aller plus loin ; s'il échoue, le
+   déploiement s'arrête. (Première installation, postgres absent : passée avec
+   avertissement explicite, il n'existe encore aucune donnée.)
+4. **Bascule** — migrations (service `migrate`) puis `up -d --wait` (healthchecks).
+   En cas d'échec (migration refusée, healthcheck), **retour automatique** à la
+   version précédente connue.
+5. **Consignation** — `releases.log` (date, SHA, IDs des images) et `.release` /
+   `.previous-release` (état local au serveur, ignorés par git). Les cinq dernières
+   releases restent présentes localement pour le retour arrière.
+
+**Retour arrière manuel** : `./rollback.sh` redémarre la pile sur la version
+précédente (images immuables déjà présentes, volumes intacts). Refus s'il n'existe
+aucune version antérieure connue ou si ses images ont été retirées.
+
+**Convention expand/contract** : le schéma n'est jamais migré en arrière. Toute
+migration doit donc être écrite en deux temps (ajouter la nouvelle structure et la
+remplir sans casser l'ancienne version — *expand* ; supprimer l'ancienne après la
+mise en production de la version qui n'utilise plus que la nouvelle — *contract*).
+Un rollback vers la version immédiatement précédente est ainsi toujours sûr : les
+colonnes ajoutées restent présentes et sans effet sur l'ancien code.
 
 ## 5. Sauvegardes et restauration
 
@@ -140,6 +168,8 @@ cd ~/kora-finance/deploy/vps
 docker compose ps                          # état des services
 docker compose logs --tail=100 api caddy   # journaux
 docker compose run --rm --no-deps api python -m kora.scripts.check_storage
+./rollback.sh                              # revenir à la version précédente (KF-11)
+cut -f2 releases.log                       # versions déployées (la plus récente en bas)
 ```
 
 ## Séparation des identifiants PostgreSQL (KF-02)

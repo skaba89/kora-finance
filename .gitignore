@@ -16,5 +16,10 @@ htmlcov/
 deploy/vps/backups/
 *.dump
 
+# Production : état de release local au serveur (KF-11 : deploy.sh, rollback.sh)
+deploy/vps/releases.log
+deploy/vps/.release
+deploy/vps/.previous-release
+
 # Rapports synthétiques de CI (aucune archive ni clé)
 /artifacts/

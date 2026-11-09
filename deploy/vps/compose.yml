@@ -76,7 +76,7 @@ services:
 
   migrate:
     build: { context: ../../apps/api, target: runtime }
-    image: kora-api:prod
+    image: kora-api:${KORA_IMAGE_TAG:-prod}
     command: ["alembic", "upgrade", "head"]
     environment:
       KORA_DATABASE_MIGRATION_URL: postgresql+psycopg://kora_owner:${KORA_DB_OWNER_PASSWORD:?}@postgres:5432/kora
@@ -85,7 +85,7 @@ services:
       postgres: { condition: service_healthy }
 
   api:
-    image: kora-api:prod
+    image: kora-api:${KORA_IMAGE_TAG:-prod}
     restart: unless-stopped
     logging: *logging
     environment: *api-env
@@ -99,7 +99,7 @@ services:
       retries: 30
 
   worker:
-    image: kora-api:prod
+    image: kora-api:${KORA_IMAGE_TAG:-prod}
     restart: unless-stopped
     logging: *logging
     command: ["dramatiq", "kora.worker.tasks", "--processes", "1", "--threads", "4"]
@@ -112,7 +112,7 @@ services:
   # conteneurs api/worker/web. One-shot sous profil, exécuté à la demande par
   # backup.sh / restore.sh.
   backup:
-    image: kora-api:prod
+    image: kora-api:${KORA_IMAGE_TAG:-prod}
     profiles: ["backup"]
     logging: *logging
     # La clé de sauvegarde ne porte aucun droit de suppression : la rétention est
@@ -127,7 +127,7 @@ services:
 
   web:
     build: { context: ../../apps/web, target: runtime }
-    image: kora-web:prod
+    image: kora-web:${KORA_IMAGE_TAG:-prod}
     restart: unless-stopped
     logging: *logging
     environment:
