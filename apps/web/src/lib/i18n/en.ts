@@ -475,9 +475,17 @@ export const en: typeof fr = {
     expertWarning:
       "Presentation and account mapping to be validated by a Guinean chartered accountant before any official use (filing, credit application). Reference: {reference}.",
     noPrevious: "No previous fiscal year in Kora.",
-    tftPending: "The cash flow statement is coming in the next step.",
+    cashFlow: "Cash flow statement",
+    cashFlowSubtitle:
+      "Direct method: receipts and payments measured on treasury accounts (class 5), classified by their counterpart.",
+    opening: "Opening cash",
+    variation: "Net change in cash",
+    closing: "Closing cash",
+    coherent: "Cash flow statement reconciles with actual cash",
+    incoherent: "Cash flow statement does not reconcile with the cash balance: please report it to support.",
     showEmpty: "Show zero items",
   },
+
   journals: {
     title: "Journals",
     subtitle: "Every entry is recorded in a journal, numbered continuously per fiscal year.",

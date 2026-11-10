@@ -474,9 +474,17 @@ export const fr = {
     expertWarning:
       "Présentation et affectation des comptes à valider par un expert-comptable guinéen avant tout usage officiel (dépôt, dossier de crédit). Référentiel : {reference}.",
     noPrevious: "Pas d'exercice précédent dans Kora.",
-    tftPending: "Le tableau des flux de trésorerie (TFT) arrive dans la prochaine étape.",
+    cashFlow: "Tableau des flux de trésorerie",
+    cashFlowSubtitle:
+      "Méthode directe : encaissements et décaissements mesurés sur les comptes de trésorerie (classe 5), classés d'après leur contrepartie.",
+    opening: "Trésorerie d'ouverture",
+    variation: "Variation de trésorerie",
+    closing: "Trésorerie de clôture",
+    coherent: "TFT cohérent avec la trésorerie réelle",
+    incoherent: "TFT incohérent avec le solde de trésorerie : signalez-le au support.",
     showEmpty: "Afficher les postes à zéro",
   },
+
   journals: {
     title: "Journaux",
     subtitle: "Chaque écriture est enregistrée dans un journal, numérotée de façon continue par exercice.",

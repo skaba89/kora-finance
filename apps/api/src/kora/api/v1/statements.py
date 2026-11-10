@@ -6,7 +6,7 @@ from datetime import date
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from kora.accounting import reports, statements
+from kora.accounting import cashflows, reports, statements
 from kora.accounting.statements import Statements
 from kora.api.v1.common import TENANT_ERRORS, SignedMoney
 from kora.auth.deps import DbSession
@@ -40,6 +40,29 @@ class PeriodRef(BaseModel):
     date_to: date
 
 
+class CashFlowLineOut(BaseModel):
+    code: str
+    label: str
+    is_section: bool
+    is_total: bool
+    amount: SignedMoney
+    previous_amount: SignedMoney | None
+
+
+class CashFlowStatementOut(BaseModel):
+    reference: str = Field(description="Version du référentiel d'affectation du TFT")
+    period: PeriodRef
+    previous_period: PeriodRef | None
+    opening: SignedMoney = Field(description="Trésorerie nette d'ouverture")
+    variation: SignedMoney = Field(description="Variation de trésorerie de la période")
+    closing: SignedMoney = Field(description="Trésorerie nette de clôture")
+    coherent: bool = Field(
+        description="Ouverture + variation = solde réel de la trésorerie, sans contrepartie ignorée"
+    )
+    unmapped_accounts: list[str]
+    lines: list[CashFlowLineOut]
+
+
 class FinancialStatementsOut(BaseModel):
     reference: str = Field(description="Version du référentiel d'affectation des comptes")
     period: PeriodRef
@@ -52,7 +75,7 @@ class FinancialStatementsOut(BaseModel):
     unmapped_accounts: list[str]
 
 
-def _period(result: Statements) -> PeriodRef:
+def _period(result: Statements | cashflows.CashFlows) -> PeriodRef:
     return PeriodRef(
         fiscal_year_id=result.fiscal_year.id,
         start_date=result.fiscal_year.start_date,
@@ -121,4 +144,46 @@ def financial_statements(
         net_result=current.net_result,
         balanced=current.balanced,
         unmapped_accounts=current.unmapped,
+    )
+
+
+@router.get("/cash-flow-statement", responses={**TENANT_ERRORS, 422: TENANT_ERRORS[404]})
+def cash_flow_statement(
+    tenant: EntriesRead, db: DbSession, fiscal_year_id: uuid.UUID, date_to: date | None = None
+) -> CashFlowStatementOut:
+    """Tableau des flux de trésorerie SYSCOHADA révisé (méthode directe), exercice N
+    avec N-1 en comparaison s'il existe dans Kora.
+
+    Le flux d'une écriture est mesuré sur ses comptes de trésorerie (classe 5) et
+    classé d'après sa contrepartie ; voir `docs/ARBITRAGE_COMPTABLE.md` (KF-15).
+    """
+    period = reports.resolve_period(db, tenant.company_id, fiscal_year_id, None, date_to)
+    with lecture_instantanee(tenant.company_id) as snap:
+        current = cashflows.compute(snap, tenant.company_id, period.fiscal_year, period.date_to)
+        before = cashflows.previous_year(snap, tenant.company_id, period.fiscal_year)
+        previous = cashflows.compute(snap, tenant.company_id, before) if before else None
+
+    def prev(code: str) -> int | None:
+        return previous.amount(code) if previous else None
+
+    return CashFlowStatementOut(
+        reference=cashflows.REFERENCE,
+        period=_period(current),
+        previous_period=_period(previous) if previous else None,
+        opening=current.opening,
+        variation=current.variation,
+        closing=current.closing,
+        coherent=current.coherent,
+        unmapped_accounts=current.unmapped,
+        lines=[
+            CashFlowLineOut(
+                code=line.code,
+                label=line.label,
+                is_section=line.kind == "section",
+                is_total=line.kind == "total",
+                amount=current.amount(line.code),
+                previous_amount=prev(line.code),
+            )
+            for line in cashflows.template()
+        ],
     )

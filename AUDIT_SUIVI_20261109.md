@@ -617,3 +617,58 @@ détection du fichier par GitHub. Déduction résiduelle : 0.
 **Score : 81/100.** Reste prioritaire (§8) : l'arbitrage expert-comptable
 (KF-15/16), la phase 3 (trésorerie/Mobile Money), KF-14 (CSP) et la vérification en
 staging (KF-11).
+
+## 20. KF-15 — Arbitrage expert-comptable et TFT en méthode directe (2026-11-11)
+
+**Constat** (§4, P1) : jeu d'états SYSCOHADA incomplet (pas de TFT ni notes annexes) —
+à arbitrer par un expert-comptable. La phase 2e-bis était restée ouverte « méthode à
+valider avant implémentation ».
+
+**Arbitrage** (`docs/ARBITRAGE_COMPTABLE.md`, nouveau) : le TFT est livré en **méthode
+directe** — les flux sont les mouvements réels des comptes de trésorerie (classe 5,
+même définition que le bilan), classés d'après la contrepartie de chaque écriture
+valide, ligne à ligne (une écriture « remboursement + intérêts » est ventilée
+automatiquement). Trois sections (opérationnel, investissement, financement) encadrées
+par la trésorerie d'ouverture et de clôture ; les à-nouveaux (origine CLOSING) portent
+l'ouverture, même convention que le bilan. Un contrôle indépendant recalcule le solde
+réel de la classe 5 à la date de coupure : toute divergence (`coherent = false`) ou
+contrepartie sans affectation (`unmapped_accounts`) est signalée, jamais ignorée.
+Classement des charges financières payées (opérationnel) documenté et à confirmer en
+revue finale ; notes annexes arbitrées en livraison progressive (phase 3+) ; KF-16
+closé côté produit (aucun taux codé en dur, mentions factures planifiées phase 4,
+conservation sans suppression).
+
+**Correctif** (branche `feature/kora-kf15-tft-arbitrage`) :
+
+- référentiels versionnés `tft_syscohada_2017.csv` (lignes, sections, totaux) et
+  `tft_affectations_2017.csv` (76 préfixes couvrant toutes les classes hors 5) ;
+  chaque compte du plan est affecté (test), la variation XV couvre chaque ligne une
+  fois exactement (test d'expansion) ;
+- `accounting/cashflows.py` : moteur TFT (mouvements par écriture, ventilation par
+  contrepartie, ouverture par à-nouveaux, contrôle indépendant) ;
+- route `GET /companies/{id}/cash-flow-statement` (N et N-1 sous le même instantané
+  REPEATABLE READ, comme les autres états) ; contrat d'API régénéré ;
+- web : onglet « Tableau des flux de trésorerie » dans les états financiers
+  (synthèse ouverture/variation/clôture, badge de cohérence, N-1 en comparaison,
+  sections et postes, postes nuls masqués par défaut) ; i18n fr/en ; le marqueur
+  « TFT à venir » est retiré.
+
+**Preuve** : suite API complète hors Docker : **591/591**, dont 10 nouveaux
+(`tests/test_cashflows.py` : couverture du plan, expansion des totaux, classe 5
+exclue, jeu de référence, ventilation multi-contreparties, acquisitions/cessions/
+subventions + virements internes sans flux, ouverture par à-nouveaux + comparatif
+N-1, troncature à date, invariant de cohérence sur 40 écritures aléatoires, garde-fou
+contrepartie inconnue). Ruff, mypy strict, ESLint, tsc, Vitest 60/60, build Next OK ;
+contrat bloquant à jour (67 chemins). Les affectations couvrent les 520 comptes du
+plan (test), y compris les racines et nœuds intermédiaires.
+
+**Reste** : export PDF/Excel du TFT (même chemin que les exports des autres états) ;
+classement des charges financières payées à confirmer par la revue finale ; notes
+annexes livrées progressivement à partir de la phase 3 (cf. arbitrage §2).
+Déduction résiduelle KF-15 : TFT livré (−1 → 0) ; la déduction « arbitrage expert »
+(−2) reste ouverte jusqu'à la revue finale documentée par un inscrit à l'ONECCA.
+
+**Déductions levées (§7)** : intégrité comptable, TFT absent (−1 → 0) → +1.
+**Score : 82/100.** Reste prioritaire (§8) : la phase 3 (trésorerie/Mobile Money),
+la revue expert-comptable finale (KF-15/16 : −2 résiduels), KF-14 (CSP) et la
+vérification en staging (KF-11).

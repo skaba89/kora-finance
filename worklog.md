@@ -856,3 +856,31 @@ informationnel jusqu'à stabilisation de la baseline. Suivi :
 `AUDIT_SUIVI_20261109.md` §19. **Score : 81/100** (KF-20 : −1 → 0).
 Prochaines priorités : arbitrage expert-comptable (KF-15/16), phase 3 (trésorerie /
 Mobile Money), KF-14 (CSP).
+
+## 2026-11-11 — KF-15 : arbitrage expert-comptable et TFT en méthode directe
+
+**Constat** (audit §4, P1) : pas de TFT ni notes annexes ; la phase 2e-bis attendait
+une validation de méthode avant implémentation.
+
+**Arbitrage** (`docs/ARBITRAGE_COMPTABLE.md`) : TFT en méthode directe — flux mesurés
+sur la classe 5, classés par contrepartie ligne à ligne ; ouverture portée par les
+à-nouveaux ; contrôle indépendant avec le solde réel (coherent/unmapped). Notes
+annexes : livraison progressive à partir de la phase 3. KF-16 : aucun taux en dur,
+mentions factures en phase 4, conservation sans suppression.
+
+**Correctif** (branche `feature/kora-kf15-tft-arbitrage`) : référentiels
+`tft_syscohada_2017.csv` + `tft_affectations_2017.csv` (76 préfixes, toutes classes
+hors 5) ; `accounting/cashflows.py` ; route `/cash-flow-statement` (N et N-1 sous
+instantané) ; onglet TFT dans la page états-financiers (synthèse, badge de cohérence,
+N-1, sections) ; i18n fr/en ; contrat régénéré.
+
+**Vérifié** : suite API complète hors Docker : **591/591**, dont 10 nouveaux
+(`tests/test_cashflows.py` : couverture du plan, expansion des totaux, classe 5
+exclue, référence, multi-contreparties, cessions/subventions, à-nouveaux + comparatif,
+troncature à date, invariant sur 40 écritures aléatoires, garde-fou). Ruff, mypy
+strict, ESLint, tsc strict, Vitest 60/60, build Next OK. Aucune migration de base.
+
+**Reste** : export PDF/Excel du TFT ; charges financières payées à confirmer en revue
+finale. Suivi : `AUDIT_SUIVI_20261109.md` §20. **Score : 82/100** (TFT absent :
+−1 → 0). Prochaines priorités : phase 3 (trésorerie/Mobile Money), revue expert
+(KF-15/16), KF-14 (CSP).
