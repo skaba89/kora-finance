@@ -414,3 +414,60 @@ encore rejoué sur le VPS. Déduction résiduelle maintenue : −0,5.
 `OnFailure=`, sonde externe, contrôle de fraîcheur), KF-13 (budgets et quotas :
 quota Redis des exports, `mem_limit`/`cpus`), l'arbitrage expert-comptable (KF-15/16)
 et la phase 3 (trésorerie/Mobile Money).
+
+## 16. KF-12 : corrigé le jour même (suite de la session)
+
+**Correctif** (branche `feature/kora-kf12-supervision-sauvegardes`) :
+
+- `deploy/vps/kora-backup.service` : `OnFailure=kora-alert@%n.service` — tout échec de
+  la sauvegarde quotidienne déclenche désormais l'alerte (oneshot systemd : sans ce
+  lien, un échec restait dans le journal, personne n'était prévenu).
+- `deploy/vps/kora-alert@.service` + `alert.sh` (nouveaux) : unité d'alerte instanciable
+  — trace locale horodatée (`backups/alertes/journal.log`), puis email d'exploitation
+  via le conteneur `backup` (`python -m kora.scripts.notify`, destinataire
+  `KORA_ALERT_EMAIL`) ; image épinglée à la release (KF-11) ; **anti-tempête** : au plus
+  un email par unité défaillante et par 4 h, la trace reste écrite à chaque fois.
+- **Contrôle de fraîcheur** : `kora-freshness.service`/`.timer` (quotidien 03:45 UTC,
+  après la sauvegarde de 02:30) → `backup-status.sh` →
+  `python -m kora.scripts.backup status --max-age-hours 26` (nouvelle sous-commande
+  `status` + `freshness()` dans `kora.scripts.backup` : la sauvegarde la plus récente
+  du bucket dédié doit dater de moins de 26 h, sinon échec → `OnFailure=`). Le cas
+  « sauvegarde qui ne tourne plus sans jamais échouer » (timer désactivé, serveur
+  éteint à 02:30, `Persistent=true` non joué) est couvert.
+- **Sonde externe** : `kora-probe.service`/`.timer` (toutes les 5 minutes) → `probe.sh`
+  → `https://<domaine>/health/ready` : la chaîne complète HTTPS → Caddy → API →
+  PostgreSQL/Redis, **certificat TLS inclus**, depuis l'hôte (hors réseau Docker).
+  Deux échecs consécutifs (compteur `backups/sonde-etat`, remis à zéro au premier
+  succès) → code 1 → `OnFailure=` → alerte. `Caddyfile` : route étroite
+  `handle /health/* { reverse_proxy api:8000 }` — les sondes (`/health/live`,
+  `/health/ready`, statut ok|erreur des dépendances, aucune donnée métier) sont les
+  seuls chemins d'API exposés publiquement.
+- `apps/api/src/kora/scripts/notify.py` (nouveau) : notification d'exploitation —
+  **honnête** : sans `KORA_ALERT_EMAIL` (nouveau réglage `alert_email` de la config) ou
+  avec `KORA_EMAIL_BACKEND=disabled`, l'alerte n'est pas prétendue envoyée (message
+  explicite, code de sortie 1) ; corps HTML échappé ; aucun secret transmis.
+- `deploy/vps/install-backup-timer.sh` : installe les sept unités (sauvegarde,
+  fraîcheur, sonde, alerte + trois timers) d'un seul geste.
+- `scripts/check-supervision.py` (nouveau, CI job API) : contrats mécaniques —
+  `OnFailure=` sur les trois unités, modèle d'alerte présent, calendriers des deux
+  timers, épinglage de release, appel `backup status`, `notify`, route Caddy,
+  `KORA_ALERT_EMAIL` dans config/Compose/env.example, `bash -n` des trois scripts.
+- `deploy/vps/env.example` (+ `compose.yml`, `docker-compose.yml`) :
+  `KORA_ALERT_EMAIL` documenté et transmis au conteneur `backup`.
+
+**Preuve** : suite API complète sur l'environnement réel hors Docker (PostgreSQL 16.4,
+Redis 8.0.2, Garage v2.4.1 avec bucket `kora-backups` + clé dédiée, Mailpit v1.33.1) :
+**567/567** — dont 9 nouveaux : fraîcheur (récent OK, trop ancienne refusée en
+fonction et en CLI, bucket vide refusé) et notification (destinataire, échappement
+HTML, refus sans destinataire, refus honnête backend désactivé, usage incomplet).
+`python3 scripts/check-supervision.py` → code 0. Aucun changement de contrat d'API.
+
+**Reste** : l'exercice sur VPS réel (recevoir réellement l'email d'alerte après
+arrêt de `kora-backup.timer`, et la sonde rouge pendant une coupure) exige l'accès
+hébergeur — même limite que KF-09 (Object Lock) et KF-11 (staging). Déduction
+résiduelle maintenue : −0,5.
+
+**Déductions levées (§7)** : exploitation/production, KF-12 (−2 → −0,5) → +1,5.
+**Score : 77,5/100.** Reste prioritaire (§8) : KF-13 (budgets et quotas : quota Redis
+des exports, `mem_limit`/`cpus`), KF-23 (contrôles taille/chemin des sauvegardes),
+l'arbitrage expert-comptable (KF-15/16) et la phase 3 (trésorerie/Mobile Money).

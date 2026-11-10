@@ -711,3 +711,50 @@ dépendait des registres du moment.
 healthcheck échoué → retour à la version connue) en attente d'accès hébergeur ;
 déduction résiduelle −0,5 maintenue dans le suivi (§15). Prochaines priorités :
 **KF-12** (supervision des sauvegardes), **KF-13** (budgets et quotas).
+
+## 2026-11-10 — KF-12 : supervision des sauvegardes et de l'application
+
+**Constat** (audit §4, P1) : la supervision se limitait aux healthchecks Compose et aux
+logs. L'unité `kora-backup.service` était un oneshot sans `OnFailure=` : l'échec de la
+sauvegarde quotidienne restait dans le journal sans prévenir — des jours sans sauvegarde
+pouvaient s'accumuler en silence (panne du fournisseur S3, disque plein, image cassée).
+Aucune sonde externe de l'application, aucun contrôle de fraîcheur de la dernière
+sauvegarde (timer désactivé = sauvegardes qui s'arrêtent sans aucune erreur nulle part).
+
+**Correctif** (branche `feature/kora-kf12-supervision-sauvegardes`) :
+
+- `OnFailure=kora-alert@%n.service` sur `kora-backup.service` ;
+- `kora-alert@.service` + `alert.sh` : trace horodatée locale
+  (`backups/alertes/journal.log`) puis email d'exploitation via le conteneur `backup`
+  (`python -m kora.scripts.notify`, nouveau script ; destinataire `KORA_ALERT_EMAIL`,
+  nouveau réglage `alert_email`) ; anti-tempête 1 email / unité / 4 h ;
+- contrôle de fraîcheur quotidien 03:45 UTC (`kora-freshness.timer` →
+  `backup-status.sh` → nouvelle sous-commande `backup status --max-age-hours 26` :
+  la plus récente sauvegarde du bucket dédié doit dater de moins de 26 h) ;
+- sonde externe toutes les 5 minutes (`kora-probe.timer` → `probe.sh` →
+  `https://<domaine>/health/ready`, deux échecs consécutifs → alerte, compteur remis à
+  zéro au premier succès) ; `Caddyfile` : route étroite `handle /health/*` vers l'API —
+  les sondes sont le seul chemin d'API exposé publiquement (statut ok|erreur, aucune
+  donnée métier) ; le certificat TLS est couvert par la sonde ;
+- `install-backup-timer.sh` : installe les sept unités d'un geste ;
+- `scripts/check-supervision.py` (nouveau, CI) : contrats mécaniques (`OnFailure=`,
+  timers, épinglage de release, `notify`, route Caddy, `KORA_ALERT_EMAIL` partout où
+  requis, `bash -n`) ; `notify.py` honnête (ne prétend pas envoyer sans destinataire ou
+  avec le backend désactivé ; HTML échappé) ;
+- `deploy/vps/env.example` + `compose.yml` + `docker-compose.yml` :
+  `KORA_ALERT_EMAIL` documenté et transmis au conteneur `backup`.
+
+**Vérifié** : `python3 scripts/check-supervision.py` → code 0 ; suite API complète sur
+l'environnement réel hors Docker (PostgreSQL 16.4, Redis 8.0.2, Garage v2.4.1 — bucket
+`kora-backups` + clé dédiée —, Mailpit v1.33.1) : **567/567** dont 9 nouveaux (fraîcheur
+: récent OK, trop ancienne refusée en fonction et en CLI, bucket vide refusé ;
+notification : destinataire, échappement HTML, refus sans destinataire, refus honnête
+backend désactivé, usage incomplet). Aucun changement de contrat d'API.
+
+**Reste** : recevoir réellement un email d'alerte sur un VPS (arrêt de
+`kora-backup.timer`, sonde rouge pendant une coupure) — accès hébergeur requis ; même
+limite que KF-09 (Object Lock) et KF-11 (staging) ; déduction résiduelle −0,5.
+Suivi : `AUDIT_SUIVI_20261109.md` §16. **Score : 77,5/100** (KF-12 : −2 → −0,5).
+Prochaines priorités : **KF-13** (quota Redis des exports, `mem_limit`/`cpus`), KF-23
+(contrôles taille/chemin des sauvegardes), KF-20 (SCA en CI), arbitrage expert-comptable
+(KF-15/16), phase 3 (trésorerie/Mobile Money).
