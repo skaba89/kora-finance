@@ -1,0 +1,28 @@
+etat;code;libelle;type;formule
+TFT;TO;Trésorerie nette d'ouverture;ouverture;
+TFT;S1;Flux opérationnels;section;
+TFT;OA;Ventes de biens et services encaissées;ligne;
+TFT;OB;Subventions d'exploitation encaissées;ligne;
+TFT;OC;Autres encaissements d'exploitation;ligne;
+TFT;OD;Fournisseurs de stocks et services décaissés;ligne;
+TFT;OE;Personnel et organismes sociaux décaissés;ligne;
+TFT;OF;Impôts, taxes et assimilés décaissés;ligne;
+TFT;OG;Charges financières décaissées;ligne;
+TFT;OH;Autres décaissements d'exploitation;ligne;
+TFT;XA;FLUX OPÉRATIONNELS NETS;total;OA+OB+OC+OD+OE+OF+OG+OH
+TFT;S2;Flux d'investissement;section;
+TFT;IA;Acquisitions d'immobilisations incorporelles;ligne;
+TFT;IB;Acquisitions d'immobilisations corporelles;ligne;
+TFT;IC;Acquisitions d'immobilisations financières;ligne;
+TFT;ID;Cessions d'immobilisations incorporelles et corporelles encaissées;ligne;
+TFT;IE;Cessions d'immobilisations financières encaissées;ligne;
+TFT;XB;FLUX D'INVESTISSEMENT NETS;total;IA+IB+IC+ID+IE
+TFT;S3;Flux de financement;section;
+TFT;FA;Capital et primes émis encaissés;ligne;
+TFT;FB;Dividendes et prélèvements versés;ligne;
+TFT;FC;Emprunts et dettes financières encaissés;ligne;
+TFT;FD;Remboursements d'emprunts et dettes financières;ligne;
+TFT;FE;Subventions d'investissement reçues;ligne;
+TFT;XC;FLUX DE FINANCEMENT NETS;total;FA+FB+FC+FD+FE
+TFT;XV;VARIATION DE TRÉSORERIE;total;XA+XB+XC
+TFT;TC;Trésorerie nette de clôture;total;TO+XV

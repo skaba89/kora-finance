@@ -560,6 +560,127 @@
         "title": "BalanceTotals",
         "type": "object"
       },
+      "CashFlowLineOut": {
+        "properties": {
+          "amount": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "is_section": {
+            "title": "Is Section",
+            "type": "boolean"
+          },
+          "is_total": {
+            "title": "Is Total",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "previous_amount": {
+            "anyOf": [
+              {
+                "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+                "pattern": "^-?(0|[1-9][0-9]*)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Amount"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "is_section",
+          "is_total",
+          "amount",
+          "previous_amount"
+        ],
+        "title": "CashFlowLineOut",
+        "type": "object"
+      },
+      "CashFlowStatementOut": {
+        "properties": {
+          "closing": {
+            "description": "Trésorerie nette de clôture",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Closing",
+            "type": "string"
+          },
+          "coherent": {
+            "description": "Ouverture + variation = solde réel de la trésorerie, sans contrepartie ignorée",
+            "title": "Coherent",
+            "type": "boolean"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/CashFlowLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "opening": {
+            "description": "Trésorerie nette d'ouverture",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Opening",
+            "type": "string"
+          },
+          "period": {
+            "$ref": "#/components/schemas/PeriodRef"
+          },
+          "previous_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PeriodRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reference": {
+            "description": "Version du référentiel d'affectation du TFT",
+            "title": "Reference",
+            "type": "string"
+          },
+          "unmapped_accounts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmapped Accounts",
+            "type": "array"
+          },
+          "variation": {
+            "description": "Variation de trésorerie de la période",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Variation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference",
+          "period",
+          "previous_period",
+          "opening",
+          "variation",
+          "closing",
+          "coherent",
+          "unmapped_accounts",
+          "lines"
+        ],
+        "title": "CashFlowStatementOut",
+        "type": "object"
+      },
       "ChangePasswordRequest": {
         "additionalProperties": false,
         "properties": {
@@ -6311,6 +6432,114 @@
         "summary": "Verify Audit Chain",
         "tags": [
           "dossiers"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/cash-flow-statement": {
+      "get": {
+        "description": "Tableau des flux de trésorerie SYSCOHADA révisé (méthode directe), exercice N\navec N-1 en comparaison s'il existe dans Kora.\n\nLe flux d'une écriture est mesuré sur ses comptes de trésorerie (classe 5) et\nclassé d'après sa contrepartie ; voir `docs/ARBITRAGE_COMPTABLE.md` (KF-15).",
+        "operationId": "cash_flow_statement_api_v1_companies__company_id__cash_flow_statement_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fiscal_year_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Fiscal Year Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CashFlowStatementOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cash Flow Statement",
+        "tags": [
+          "états financiers"
         ]
       }
     },

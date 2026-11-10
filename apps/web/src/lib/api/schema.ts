@@ -426,6 +426,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/cash-flow-statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cash Flow Statement
+         * @description Tableau des flux de trésorerie SYSCOHADA révisé (méthode directe), exercice N
+         *     avec N-1 en comparaison s'il existe dans Kora.
+         *
+         *     Le flux d'une écriture est mesuré sur ses comptes de trésorerie (classe 5) et
+         *     classé d'après sa contrepartie ; voir `docs/ARBITRAGE_COMPTABLE.md` (KF-15).
+         */
+        get: operations["cash_flow_statement_api_v1_companies__company_id__cash_flow_statement_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/dashboard": {
         parameters: {
             query?: never;
@@ -1479,6 +1503,58 @@ export interface components {
              * @description Montant entier en unités mineures, sous forme de chaîne
              */
             period_debit: string;
+        };
+        /** CashFlowLineOut */
+        CashFlowLineOut: {
+            /**
+             * Amount
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            amount: string;
+            /** Code */
+            code: string;
+            /** Is Section */
+            is_section: boolean;
+            /** Is Total */
+            is_total: boolean;
+            /** Label */
+            label: string;
+            /** Previous Amount */
+            previous_amount: string | null;
+        };
+        /** CashFlowStatementOut */
+        CashFlowStatementOut: {
+            /**
+             * Closing
+             * @description Trésorerie nette de clôture
+             */
+            closing: string;
+            /**
+             * Coherent
+             * @description Ouverture + variation = solde réel de la trésorerie, sans contrepartie ignorée
+             */
+            coherent: boolean;
+            /** Lines */
+            lines: components["schemas"]["CashFlowLineOut"][];
+            /**
+             * Opening
+             * @description Trésorerie nette d'ouverture
+             */
+            opening: string;
+            period: components["schemas"]["PeriodRef"];
+            previous_period: components["schemas"]["PeriodRef"] | null;
+            /**
+             * Reference
+             * @description Version du référentiel d'affectation du TFT
+             */
+            reference: string;
+            /** Unmapped Accounts */
+            unmapped_accounts: string[];
+            /**
+             * Variation
+             * @description Variation de trésorerie de la période
+             */
+            variation: string;
         };
         /** ChangePasswordRequest */
         ChangePasswordRequest: {
@@ -4508,6 +4584,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cash_flow_statement_api_v1_companies__company_id__cash_flow_statement_get: {
+        parameters: {
+            query: {
+                fiscal_year_id: string;
+                date_to?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashFlowStatementOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

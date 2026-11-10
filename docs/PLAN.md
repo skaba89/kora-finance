@@ -37,7 +37,7 @@ Découpage (2026-10-24) :
 - ✅ **2c** Lettrage des comptes de tiers.
 - ✅ **2d** Verrouillage de période, clôture / réouverture d'exercice, à-nouveaux.
 - ✅ **2e** Bilan et compte de résultat (référentiel d'affectation versionné, à valider par un expert).
-- **2e-bis** Tableau des flux de trésorerie (méthode à valider par un expert-comptable).
+- ✅ **2e-bis** Tableau des flux de trésorerie, méthode directe (arbitrage : `docs/ARBITRAGE_COMPTABLE.md`).
 - ✅ **2f** Exports PDF et Excel.
 - **2g1** Pièces justificatives (stockage S3 chiffré). ✅
 - **2g2** Saisie guidée pour non-comptables (« j'ai payé une facture », « j'ai reçu un paiement »). ✅

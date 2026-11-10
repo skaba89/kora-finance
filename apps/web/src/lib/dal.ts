@@ -188,6 +188,14 @@ export async function getFinancialStatements(companyId: string, query: { fiscal_
   );
 }
 
+export async function getCashFlowStatement(companyId: string, query: { fiscal_year_id: string; date_to?: string }) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/cash-flow-statement", {
+      params: { path: { company_id: companyId }, query },
+    }),
+  );
+}
+
 export async function getAuditEvents(companyId: string, limit: number, offset: number) {
   return read(
     (await api()).GET("/api/v1/companies/{company_id}/audit-events", {
