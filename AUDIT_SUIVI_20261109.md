@@ -562,3 +562,58 @@ le plafond rend ce choix sûr et visible. Déduction résiduelle : 0.
 **Déductions levées (§7)** : exploitation/production, KF-23 (−1 → 0) → +1.
 **Score : 80/100.** Reste prioritaire (§8) : KF-20 (SCA/SBOM en CI), l'arbitrage
 expert-comptable (KF-15/16) et la phase 3 (trésorerie/Mobile Money).
+
+## 19. KF-20 — SCA, SBOM et scan d'images dans la CI (2026-11-11)
+
+**Constat** (§4, P2) : aucun audit de dépendances dans la CI — pip-audit, npm audit,
+Dependabot et trivy tous absents. Une vulnérabilité introduite par une dépendance
+entrait en production sans aucun garde-fou.
+
+**Correctif** (branche `feature/kora-kf20-sca-sbom`) :
+
+- `shadcn` déplacé des dépendances de production vers les dépendances de
+  développement (`apps/web/package.json`) : le CLI de génération de code n'est jamais
+  importé à l'exécution (vérifié : zéro import dans `src/`), ses transitives
+  vulnérables (deepmerge, ts-morph, minimatch) sortent de l'arbre de production.
+  Résultat : `npm audit --omit=dev` passe de 6 vulnérabilités à **0** ;
+- Makefile : `api-audit` (pip-audit sur l'environnement verrouillé du conteneur dev,
+  `/opt/venv` — exactement ce que ruff/mypy/pytest utilisent), `web-audit`
+  (production sans tolérance : `--omit=dev --audit-level=low` ; arbre de
+  développement sans haut ni critique : `--audit-level=high`), `sbom` (CycloneDX via
+  `cyclonedx-py` et `@cyclonedx/cyclonedx-npm`, sortis dans `sbom/`), cible agrégée
+  `sca` ;
+- CI : nouveau job **bloquant** `sca` dans `ci.yml` (mêmes conteneurs épinglés que
+  les autres jobs), ajouté aux `needs` du « Résultat » ; SBOM conservés en artefacts
+  (30 jours) ;
+- `.github/dependabot.yml` (nouveau) : écosystèmes pip (`apps/api`), npm (`apps/web`)
+  et github-actions, veille hebdomadaire lundi 04:00 Europe/Paris, PR limitées à 10
+  par écosystème ;
+- `.github/workflows/security-scan.yml` (nouveau) : scan hebdomadaire des images
+  runtime API et Web par trivy 0.65.0 (image épinglée, même convention que gitleaks),
+  HIGH/CRITICAL corrigées uniquement (`--ignore-unfixed`), rapports en artefacts
+  (90 jours) ; informationnel à l'installation, passage en bloquant après
+  stabilisation de la baseline (documenté dans le fichier).
+
+**Preuve** : `pip-audit` sur l'environnement verrouillé : **aucune vulnérabilité
+connue**. `npm audit --omit=dev --audit-level=low` : **0 vulnérabilité** (exit 0) ;
+`npm audit --audit-level=high` : exit 0 (2 low, 10 moderate, toutes dans l'outillage
+de développement : shadcn/@shadcn/registry via deepmerge
+GHSA-gcqx-w48m-w2h4, minimatch GHSA-g3hv-75wg-m249 via ts-morph et
+typescript-eslint 8.72.2 — aucune version corrigée publiée à ce jour) ; la même
+commande avec `--audit-level=moderate` échoue (exit 1), preuve que le verrou bloque.
+SBOM générés et validés : API **76 composants** (CycloneDX 1.6), Web **670
+composants** (CycloneDX 1.7). Suite web réexécutée après le déplacement de shadcn :
+ESLint (0 avertissement), tsc strict, Vitest **60/60**, build Next de production OK.
+Les trois fichiers YAML validés par un parseur ; `make -n sca` reprend exactement les
+commandes conteneurisées de la CI.
+
+**Reste** : les 12 advisories de l'arbre de développement subsistent (pas de
+version corrigée disponible) — sous verrou « haut/critique », surveillées par
+Dependabot ; le scan trivy hebdomadaire est informationnel au départ (baseline des
+images à stabiliser avant de le rendre bloquant) ; Dependabot s'activera à la
+détection du fichier par GitHub. Déduction résiduelle : 0.
+
+**Déductions levées (§7)** : qualité logicielle, KF-20 (−1 → 0) → +1.
+**Score : 81/100.** Reste prioritaire (§8) : l'arbitrage expert-comptable
+(KF-15/16), la phase 3 (trésorerie/Mobile Money), KF-14 (CSP) et la vérification en
+staging (KF-11).
