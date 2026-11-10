@@ -50,7 +50,7 @@ api-lock: ## Régénère uv.lock après modification de pyproject.toml
 	$(API) uv lock
 
 api-audit: ## pip-audit sur l'environnement verrouillé (vulnérabilités connues, SCA)
-	$(API_NODEPS) uvx pip-audit --path /opt/venv/lib/python3.13/site-packages --desc off
+	$(API_NODEPS) sh -c "HOME=/tmp UV_TOOL_DIR=/tmp/uv-tools uv tool run pip-audit --path /opt/venv/lib/python3.13/site-packages --desc off"
 
 storage-check: ## Vérifie le stockage S3 de la pile (écriture, lecture, chiffrement, suppression)
 	$(COMPOSE) run --rm --no-deps api python -m kora.scripts.check_storage
@@ -94,7 +94,7 @@ secrets-scan: ## Recherche de secrets dans le dépôt (gitleaks)
 
 sbom: ## Génère les SBOM CycloneDX (API et Web) dans sbom/
 	mkdir -p sbom
-	$(API_NODEPS) uvx cyclonedx-py environment --of JSON -o /repo/sbom/kora-api.json /opt/venv/bin/python
+	$(API_NODEPS) sh -c "HOME=/tmp UV_TOOL_DIR=/tmp/uv-tools uv tool run cyclonedx-py environment --of JSON -o /repo/sbom/kora-api.json /opt/venv/bin/python"
 	$(WEB) sh -c "npx --yes @cyclonedx/cyclonedx-npm --output-file /repo/sbom/kora-web.json --output-format JSON"
 
 sca: api-audit web-audit sbom ## Analyse de composition logicielle (audits + SBOM)
