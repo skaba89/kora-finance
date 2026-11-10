@@ -1,8 +1,9 @@
-"""Quotas d'envoi d'emails (fenêtre fixe, Redis) : empêchent d'inonder une boîte ou
-d'utiliser Kora pour envoyer du spam.
+"""Quotas à fenêtre fixe (Redis) : bornent le débit d'opérations coûteuses ou
+abusibles — emails transactionnels, exports PDF/Excel (KF-13), invitations…
 
 Une panne Redis lève une exception : la protection n'est jamais désactivée
-silencieusement.
+silencieusement (mieux vaut refuser une opération que laisser un conteneur
+saturer CPU et mémoire sans garde-fou).
 """
 
 import logging
@@ -19,15 +20,15 @@ DAY = 24 * HOUR
 
 
 def allowed(scope: str, subject: str, *, limit: int, window_seconds: int) -> bool:
-    """Compte un envoi ; faux si `limit` est dépassée dans la fenêtre courante."""
-    key = f"emails:{scope}:{subject}:{int(time.time()) // window_seconds}"
+    """Compte une opération ; faux si `limit` est dépassée dans la fenêtre courante."""
+    key = f"quota:{scope}:{subject}:{int(time.time()) // window_seconds}"
     try:
         pipe = get_redis().pipeline()
         pipe.incr(key)
         pipe.expire(key, window_seconds * 2)
         count = int(pipe.execute()[0])
     except RedisError:
-        logger.exception("Quota d'emails indisponible (Redis)", extra={"scope": scope})
+        logger.exception("Quota indisponible (Redis)", extra={"scope": scope})
         raise
     return count <= limit
 

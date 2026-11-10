@@ -471,3 +471,55 @@ résiduelle maintenue : −0,5.
 **Score : 77,5/100.** Reste prioritaire (§8) : KF-13 (budgets et quotas : quota Redis
 des exports, `mem_limit`/`cpus`), KF-23 (contrôles taille/chemin des sauvegardes),
 l'arbitrage expert-comptable (KF-15/16) et la phase 3 (trésorerie/Mobile Money).
+
+## 17. KF-13 — Budgets de ressources et quotas d'exports (2026-11-10)
+
+**Constat** (§4, P1) : aucun budget global — les exports synchrones n'avaient ni rate
+limit ni quota (seule borne `MAX_PDF_ROWS = 20 000` lignes), et aucun
+`mem_limit`/`cpus` sur les conteneurs : quelques requêtes automatisées (`/exports/*`
+en boucle, rendu PDF/Excel entièrement en mémoire) suffisaient à saturer l'API, et un
+conteneur fugueur pouvait affamer ses voisins ou l'hôte.
+
+**Correctif** (branche `feature/kora-kf13-budgets-quotas`) :
+
+- `apps/api/src/kora/core/quota.py` (nouveau) : le compteur Redis à fenêtre fixe
+  quitte `email/quota.py` (supprimé) — générique et fail-closed : une panne Redis
+  lève l'exception, la protection n'est jamais désactivée silencieusement ; clés
+  `quota:{scope}:{sujet}:{fenêtre}` ; invitations et récupération de compte passent
+  par ce module, comportement inchangé ;
+- `exports/service.py` : deux compteurs avant toute lecture sous instantané —
+  `export-user` (30/h par utilisateur) puis `export-company` (120/h par dossier) ;
+  dépassement → `429` avec `Retry-After` (fenêtre de l'heure), documenté dans le
+  contrat OpenAPI des 4 endpoints (`429: {"model": ErrorResponse}`) ;
+- `core/config.py` : `exports_per_user_per_hour` / `exports_per_company_per_hour`
+  (réglages `KORA_EXPORTS_*`, défauts 30/120) ;
+- `docker-compose.yml` + `deploy/vps/compose.yml` : `deploy.resources.limits`
+  (mémoire + CPU) sur chaque service de production (postgres 1g/1.0, redis 256m/0.5,
+  api 512m/1.0, worker 512m/1.0, web 512m/0.5, storage 512m/1.0, backup 512m/1.0,
+  migrate 256m/0.5, mailpit, storage-init et caddy bornés) ; Redis :
+  `--maxmemory 200mb --maxmemory-policy noeviction` — au-delà du budget, les
+  compteurs échouent fermés plutôt qu'un OOM hôte ; les outils de développement
+  (profils tools/e2e) restent explicitement hors budget ; réglages `KORA_EXPORTS_*`
+  transmis aux conteneurs, documentés dans `.env.example` et `deploy/vps/env.example` ;
+- `scripts/check-compose-budgets.py` (nouveau, CI job API) : budgets attendus par
+  service (toute valeur modifiée ou service nouveau exige une décision explicite au
+  diff), maxmemory Redis, contrat quota (config, compteurs, 429, fail-closed).
+
+**Preuve** : suite API complète hors Docker (PostgreSQL 16.4, Redis 8.0.2, Garage
+v2.4.1, Mailpit) : **573/573** — dont 6 nouveaux (`tests/test_exports_quota.py`) :
+quota utilisateur → 429 + Retry-After ; quota par dossier borne l'ensemble des
+membres (second membre bloqué avec compteur utilisateur vierge) ; dossiers comptés
+séparément ; panne Redis → exception traversante (échec fermé, jamais d'export
+dégradé) ; comptage par fenêtre ; panne Redis sur le module. `python3
+scripts/check-compose-budgets.py` → code 0. Contrat d'API régénéré : `429` ajouté
+aux 4 endpoints exports (openapi.json + schema.ts, +76 lignes, aucun autre
+changement).
+
+**Reste** : les budgets (512m API, 1g PostgreSQL…) sont des valeurs de départ pour
+un VPS modeste, à affiner avec la charge réelle de staging — exercice déjà compté
+sous KF-11 ; déduction résiduelle : 0 (le garde-fou mécanique verrouille le contrat).
+
+**Déductions levées (§7)** : exploitation/production, KF-13 (−1,5 → 0) → +1,5.
+**Score : 79/100.** Reste prioritaire (§8) : KF-23 (contrôles taille/chemin des
+sauvegardes), KF-20 (SCA/SBOM en CI), l'arbitrage expert-comptable (KF-15/16) et la
+phase 3 (trésorerie/Mobile Money).

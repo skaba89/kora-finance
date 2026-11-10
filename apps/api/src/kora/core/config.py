@@ -81,9 +81,12 @@ class Settings(BaseSettings):
     email_verification_ttl_hours: int = Field(default=48, ge=1, le=24 * 14)
     invitation_ttl_days: int = Field(default=7, ge=1, le=30)
     # Anti-abus : emails de réinitialisation et de vérification par compte et par heure,
-    # invitations par dossier sur 24 heures.
+    # invitations par dossier sur 24 heures, exports (PDF/Excel) par utilisateur et par
+    # dossier par heure (KF-13 : chaque export est synchrone et coûteux).
     account_emails_per_hour: int = Field(default=3, ge=1)
     invitations_per_company_per_day: int = Field(default=20, ge=1)
+    exports_per_user_per_hour: int = Field(default=30, ge=1)
+    exports_per_company_per_hour: int = Field(default=120, ge=1)
 
     # --- Stockage des pièces justificatives (S3 compatible : Garage en local, fournisseur
     # S3 en production). Les objets sont chiffrés par l'application avant l'envoi.

@@ -22,9 +22,10 @@ from kora.auth.service import (
     check_password_policy,
     get_user_by_email,
 )
+from kora.core import quota
 from kora.core.config import get_settings
 from kora.core.errors import BusinessRuleError, InvalidLinkError, TooManyRequestsError
-from kora.email import quota, templates
+from kora.email import templates
 from kora.email.sender import OutgoingEmail
 from kora.models.common import utcnow
 from kora.models.identity import EmailToken, EmailTokenPurpose, User

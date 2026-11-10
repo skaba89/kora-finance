@@ -758,3 +758,40 @@ Suivi : `AUDIT_SUIVI_20261109.md` §16. **Score : 77,5/100** (KF-12 : −2 → �
 Prochaines priorités : **KF-13** (quota Redis des exports, `mem_limit`/`cpus`), KF-23
 (contrôles taille/chemin des sauvegardes), KF-20 (SCA en CI), arbitrage expert-comptable
 (KF-15/16), phase 3 (trésorerie/Mobile Money).
+
+## 2026-11-10 — KF-13 : budgets de ressources et quotas d'exports
+
+**Constat** (audit §4, P1) : exports synchrones sans rate limit ni quota (seule borne
+`MAX_PDF_ROWS`), rendu PDF/Excel entièrement en mémoire ; aucun `mem_limit`/`cpus` sur
+les conteneurs. Quelques requêtes automatisées suffisaient à saturer l'API ; un
+conteneur fugueur pouvait affamer ses voisins ou l'hôte.
+
+**Correctif** (branche `feature/kora-kf13-budgets-quotas`) :
+
+- compteur Redis à fenêtre fixe généralisé : `kora/core/quota.py` (nouveau, fail-closed
+  — panne Redis = exception, jamais de contournement silencieux), `email/quota.py`
+  supprimé (invitations et récupération passent par le module commun, sans changement
+  de comportement) ;
+- exports : compteurs `export-user` (30/h) puis `export-company` (120/h), réglages
+  `KORA_EXPORTS_PER_USER_PER_HOUR` / `KORA_EXPORTS_PER_COMPANY_PER_HOUR` ; dépassement
+  → `429` + `Retry-After`, documenté dans le contrat des 4 endpoints exports ;
+- les deux Compose : `deploy.resources.limits` (mémoire + CPU) sur chaque service de
+  production (postgres 1g, redis 256m + `--maxmemory 200mb noeviction`, api/worker/
+  backup/storage 512m, web 512m, migrate 256m, mailpit/storage-init/caddy bornés) ;
+  outils de développement (profils tools/e2e) explicitement hors budget ;
+  `KORA_EXPORTS_*` documentés dans `.env.example` et `deploy/vps/env.example` ;
+- `scripts/check-compose-budgets.py` (nouveau, CI) : budgets attendus par service
+  (changement = décision explicite au diff), maxmemory Redis, contrat quota.
+
+**Vérifié** : suite API complète hors Docker : **573/573** dont 6 nouveaux
+(`tests/test_exports_quota.py` : 429 + Retry-After, second membre bloqué par le quota
+du dossier, dossiers comptés séparément, panne Redis échoue fermé, comptage par
+fenêtre, panne Redis sur le module). `python3 scripts/check-compose-budgets.py` →
+code 0. Contrat régénéré : `429` sur les 4 endpoints exports (openapi.json +
+schema.ts, aucun autre changement). Aucune migration de base.
+
+**Reste** : budgets à affiner avec la charge réelle de staging (déjà compté sous
+KF-11) ; déduction résiduelle 0. Suivi : `AUDIT_SUIVI_20261109.md` §17.
+**Score : 79/100** (KF-13 : −1,5 → 0). Prochaines priorités : KF-23 (contrôles
+taille/chemin des sauvegardes), KF-20 (SCA/SBOM en CI), arbitrage expert-comptable
+(KF-15/16), phase 3 (trésorerie/Mobile Money).

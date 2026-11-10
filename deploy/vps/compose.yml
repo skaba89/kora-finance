@@ -5,6 +5,8 @@
 #  - proxy existant : compose.proxy-externe.yml, le web rejoint le réseau « edge »
 #    et le proxy déjà en place sur le serveur le publie.
 # Mode d'emploi : docs/DEPLOIEMENT.md. Variables : deploy/vps/.env (jamais committé).
+# Chaque service porte un budget de ressources (KF-13) : un conteneur fugeur
+# (export PDF, sauvegarde) ne peut pas affamer ses voisins ni l'hôte.
 
 name: kora
 
@@ -22,6 +24,9 @@ x-api-env: &api-env
   # Chaîne : Caddy → web → API. L'API ne fait confiance qu'au serveur web.
   KORA_TRUSTED_PROXY_COUNT: "1"
   KORA_AUTH_RATE_LIMIT_PER_MINUTE: "20"
+  # Quotas d'exports (KF-13) : par utilisateur et par dossier, par heure.
+  KORA_EXPORTS_PER_USER_PER_HOUR: ${KORA_EXPORTS_PER_USER_PER_HOUR:-30}
+  KORA_EXPORTS_PER_COMPANY_PER_HOUR: ${KORA_EXPORTS_PER_COMPANY_PER_HOUR:-120}
   KORA_WEB_PUBLIC_URL: https://${KORA_DOMAIN:?}
   # Emails : « disabled » tant qu'aucun fournisseur SMTP n'est configuré.
   KORA_EMAIL_BACKEND: ${KORA_EMAIL_BACKEND:-disabled}
@@ -62,12 +67,18 @@ services:
       interval: 10s
       timeout: 5s
       retries: 30
+    deploy:
+      resources:
+        limits: { memory: 1g, cpus: "1.0" }
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     logging: *logging
-    command: ["redis-server", "--appendonly", "yes"]
+    # maxmemory aligné sur le budget du conteneur (KF-13) : au-delà, Redis refuse
+    # d'écrire (noeviction, défaut) — les compteurs de débit et les files Dramatiq
+    # échouent fermés plutôt que de laisser l'hôte tuer le conteneur (OOM).
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "200mb", "--maxmemory-policy", "noeviction"]
     volumes:
       - redis_data:/data
     healthcheck:
@@ -75,6 +86,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 30
+    deploy:
+      resources:
+        limits: { memory: 256m, cpus: "0.5" }
 
   migrate:
     build: { context: ../../apps/api, target: runtime }
@@ -85,6 +99,9 @@ services:
     logging: *logging
     depends_on:
       postgres: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { memory: 256m, cpus: "0.5" }
 
   api:
     image: kora-api:${KORA_IMAGE_TAG:-prod}
@@ -99,6 +116,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 30
+    deploy:
+      resources:
+        limits: { memory: 512m, cpus: "1.0" }
 
   worker:
     image: kora-api:${KORA_IMAGE_TAG:-prod}
@@ -109,6 +129,9 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { memory: 512m, cpus: "1.0" }
 
   # Sauvegardes (KF-09) : bucket et identifiants DÉDIÉS, jamais présents dans les
   # conteneurs api/worker/web. One-shot sous profil, exécuté à la demande par
@@ -126,6 +149,9 @@ services:
       KORA_BACKUP_S3_BUCKET: ${KORA_BACKUP_S3_BUCKET:?}
       KORA_BACKUP_S3_ACCESS_KEY_ID: ${KORA_BACKUP_S3_ACCESS_KEY_ID:?}
       KORA_BACKUP_S3_SECRET_ACCESS_KEY: ${KORA_BACKUP_S3_SECRET_ACCESS_KEY:?}
+    deploy:
+      resources:
+        limits: { memory: 512m, cpus: "1.0" }
 
   web:
     build: { context: ../../apps/web, target: runtime }
@@ -143,6 +169,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 30
+    deploy:
+      resources:
+        limits: { memory: 512m, cpus: "0.5" }
 
   caddy:
     image: caddy:2.11.6-alpine
@@ -162,6 +191,9 @@ services:
       - caddy_config:/config
     depends_on:
       web: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { memory: 128m, cpus: "0.25" }
 
 volumes:
   postgres_data:
