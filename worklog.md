@@ -820,3 +820,39 @@ aucune migration.
 (documenté dans le module). Suivi : `AUDIT_SUIVI_20261109.md` §18.
 **Score : 80/100** (KF-23 : −1 → 0). Prochaines priorités : KF-20 (SCA/SBOM en CI),
 arbitrage expert-comptable (KF-15/16), phase 3 (trésorerie/Mobile Money).
+
+## 2026-11-11 — KF-20 : SCA, SBOM et scan d'images dans la CI
+
+**Constat** (audit §4, P2) : aucun audit de dépendances dans la CI (pip-audit, npm
+audit, Dependabot, trivy absents). Par ailleurs le CLI `shadcn` (générateur de code,
+jamais importé à l'exécution) traînait dans les dépendances de production et y
+tirait 6 vulnérabilités (deepmerge, ts-morph, minimatch).
+
+**Correctif** (branche `feature/kora-kf20-sca-sbom`) :
+
+- `shadcn` déplacé en devDependencies → arbre de production propre (`npm audit
+  --omit=dev` : 6 → 0) ;
+- Makefile : `api-audit` (pip-audit sur l'environnement verrouillé `/opt/venv`),
+  `web-audit` (production sans tolérance, dev sans haut ni critique), `sbom`
+  (CycloneDX API + Web), cible agrégée `sca` ;
+- CI : job `sca` bloquant (SBOM en artefacts 30 jours) ajouté au « Résultat » ;
+- `.github/dependabot.yml` : pip, npm, github-actions, hebdomadaire lundi 04:00
+  Europe/Paris ;
+- `.github/workflows/security-scan.yml` : scan hebdomadaire trivy 0.65.0 des images
+  runtime (HIGH/CRITICAL corrigées uniquement, rapports 90 jours, informationnel au
+  départ — documenté).
+
+**Vérifié** : pip-audit sur l'environnement verrouillé : 0 vulnérabilité connue ;
+`npm audit --omit=dev --audit-level=low` : 0 (exit 0) ; `--audit-level=high` : exit 0
+(2 low, 10 moderate restantes dans l'outillage dev, aucune version corrigée
+publiée) ; la gate moderate échoue (exit 1) — le verrou bloque bien. SBOM : API 76
+composants (CycloneDX 1.6), Web 670 (1.7). Suite web après le déplacement de shadcn :
+ESLint 0 avertissement, tsc strict, Vitest 60/60, build Next OK. YAML validés ;
+`make -n sca` conforme à la CI. Aucun changement Python, aucune migration, aucun
+changement de contrat d'API.
+
+**Reste** : 12 advisories dev sous verrou haut/critique + Dependabot ; trivy
+informationnel jusqu'à stabilisation de la baseline. Suivi :
+`AUDIT_SUIVI_20261109.md` §19. **Score : 81/100** (KF-20 : −1 → 0).
+Prochaines priorités : arbitrage expert-comptable (KF-15/16), phase 3 (trésorerie /
+Mobile Money), KF-14 (CSP).

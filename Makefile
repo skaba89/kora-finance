@@ -11,9 +11,9 @@ API_NODEPS := $(COMPOSE) run --rm --no-deps -T api-tools
 WEB := $(COMPOSE) run --rm --no-deps web-tools
 
 .PHONY: help env up down logs ps \
-        api-lint api-typecheck api-test api-lock permissions-doc migrate \
-        web-install web-lint web-typecheck web-test web-build \
-        contract e2e secrets-scan check
+        api-lint api-typecheck api-test api-lock api-audit permissions-doc migrate \
+        web-install web-lint web-typecheck web-test web-build web-audit \
+        contract e2e secrets-scan sbom check
 
 help: ## Affiche cette aide
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*?## ' '{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -49,6 +49,9 @@ api-test: ## Tests pytest (vraie base kora_test)
 api-lock: ## Régénère uv.lock après modification de pyproject.toml
 	$(API) uv lock
 
+api-audit: ## pip-audit sur l'environnement verrouillé (vulnérabilités connues, SCA)
+	$(API_NODEPS) sh -c "HOME=/tmp UV_TOOL_DIR=/tmp/uv-tools uv tool run pip-audit --path /opt/venv/lib/python3.13/site-packages --desc off"
+
 storage-check: ## Vérifie le stockage S3 de la pile (écriture, lecture, chiffrement, suppression)
 	$(COMPOSE) run --rm --no-deps api python -m kora.scripts.check_storage
 
@@ -71,6 +74,9 @@ web-test: ## Tests unitaires Vitest
 web-build: ## Build de production Next.js
 	$(WEB) npm run build
 
+web-audit: ## npm audit : production sans tolérance, dev sans haut ni critique
+	$(WEB) sh -c "npm audit --omit=dev --audit-level=low && npm audit --audit-level=high"
+
 # --- Transverse
 contract: ## Vérifie que openapi.json et les types TS du frontend sont à jour
 	./scripts/check-contract.sh
@@ -85,5 +91,12 @@ e2e: env ## Tests de bout en bout Playwright contre la pile démarrée
 
 secrets-scan: ## Recherche de secrets dans le dépôt (gitleaks)
 	docker run --rm -v "$(CURDIR)":/repo ghcr.io/gitleaks/gitleaks:v8.28.0 git /repo --redact -v
+
+sbom: ## Génère les SBOM CycloneDX (API et Web) dans sbom/
+	mkdir -p sbom
+	$(API_NODEPS) sh -c "HOME=/tmp UV_TOOL_DIR=/tmp/uv-tools uv tool run cyclonedx-py environment --of JSON -o /repo/sbom/kora-api.json /opt/venv/bin/python"
+	$(WEB) sh -c "npx --yes @cyclonedx/cyclonedx-npm --output-file /repo/sbom/kora-web.json --output-format JSON"
+
+sca: api-audit web-audit sbom ## Analyse de composition logicielle (audits + SBOM)
 
 check: api-lint api-typecheck api-test web-lint web-typecheck web-test contract ## Tout ce que la CI vérifie (hors E2E)

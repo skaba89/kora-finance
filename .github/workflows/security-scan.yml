@@ -1,0 +1,68 @@
+# Scan hebdomadaire des images de production (trivy).
+# Le job « SCA » de la CI bloque les vulnérabilités des dépendances sur chaque PR ;
+# ce workflow complète la couverture par les images Docker construites (système de
+# base inclus). Informationnel à l'installation : les rapports sont publiés en
+# artefacts et consultables dans l'onglet Actions ; le passage en bloquant se fera
+# après stabilisation de la référence (bruit des CVE du système de base évalué).
+name: Scan de sécurité (images)
+
+on:
+  schedule:
+    - cron: "17 4 * * 1" # chaque lundi 04:17 UTC, après Dependabot
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image-api:
+    name: Image API (trivy)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Construire l'image runtime de l'API
+        run: docker build -t kora-api:scan apps/api
+      - name: Scanner l'image (HIGH, CRITICAL, corrigées uniquement)
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD":/repo \
+            aquasec/trivy:0.65.0 image \
+            --ignore-unfixed --severity HIGH,CRITICAL \
+            --format table --output /repo/artifacts/trivy-api.txt \
+            kora-api:scan
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: trivy-api
+          path: artifacts/trivy-api.txt
+          if-no-files-found: error
+          retention-days: 90
+
+  image-web:
+    name: Image Web (trivy)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Construire l'image runtime du web
+        run: docker build -t kora-web:scan apps/web
+      - name: Scanner l'image (HIGH, CRITICAL, corrigées uniquement)
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD":/repo \
+            aquasec/trivy:0.65.0 image \
+            --ignore-unfixed --severity HIGH,CRITICAL \
+            --format table --output /repo/artifacts/trivy-web.txt \
+            kora-web:scan
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: trivy-web
+          path: artifacts/trivy-web.txt
+          if-no-files-found: error
+          retention-days: 90
