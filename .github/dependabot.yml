@@ -1,0 +1,44 @@
+# Dépendabot : veille hebdomadaire des dépendances et des actions GitHub.
+# Complément du job CI « SCA » : pip-audit et npm audit bloquent les vulnérabilités
+# connues sur chaque PR ; Dependabot propose à l'avance les mises à jour de versions.
+version: 2
+
+updates:
+  - package-ecosystem: pip
+    directory: /apps/api
+    schedule:
+      interval: weekly
+      day: monday
+      time: "04:00"
+      timezone: Europe/Paris
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+      include: scope
+    labels: [dependencies, api]
+
+  - package-ecosystem: npm
+    directory: /apps/web
+    schedule:
+      interval: weekly
+      day: monday
+      time: "04:00"
+      timezone: Europe/Paris
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+      include: scope
+    labels: [dependencies, web]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "04:00"
+      timezone: Europe/Paris
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+      include: scope
+    labels: [dependencies, ci]
