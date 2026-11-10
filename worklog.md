@@ -884,3 +884,22 @@ strict, ESLint, tsc strict, Vitest 60/60, build Next OK. Aucune migration de bas
 finale. Suivi : `AUDIT_SUIVI_20261109.md` §20. **Score : 82/100** (TFT absent :
 −1 → 0). Prochaines priorités : phase 3 (trésorerie/Mobile Money), revue expert
 (KF-15/16), KF-14 (CSP).
+
+## 2026-11-11 — N-B6 : plafonds de session PostgreSQL au runtime
+
+**Constat** (audit §5, P3) : aucun statement_timeout/lock_timeout au runtime.
+
+**Correctif** (branche `feature/kora-nb6-timeouts-session`) : réglages
+`KORA_STATEMENT_TIMEOUT_MS` (défaut 60 000) / `KORA_LOCK_TIMEOUT_MS` (défaut 5 000),
+0 = désactivé ; options psycopg transmises à chaque connexion du moteur runtime
+(API et worker) ; migrations non concernées ; .env.example et env.example VPS
+complétés.
+
+**Vérifié** : 4 tests nouveaux, dont l'annulation réelle d'un `pg_sleep` sous
+`statement_timeout=100` ; moteur de test détruit explicitement pour éviter une
+ResourceWarning « unraisable » imputée au test suivant. 35/35 sur les fichiers
+concernés ; ruff, mypy strict. Aucune migration, aucun changement de contrat.
+
+**Reste** : rien. Suivi : `AUDIT_SUIVI_20261109.md` §21. **Score : 82,5/100**
+(N-B6 : −0,5 → 0). Prochaines priorités : phase 3 (trésorerie/Mobile Money), revue
+expert (KF-15/16), KF-14 (CSP).

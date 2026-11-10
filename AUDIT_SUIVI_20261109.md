@@ -672,3 +672,33 @@ Déduction résiduelle KF-15 : TFT livré (−1 → 0) ; la déduction « arbitr
 **Score : 82/100.** Reste prioritaire (§8) : la phase 3 (trésorerie/Mobile Money),
 la revue expert-comptable finale (KF-15/16 : −2 résiduels), KF-14 (CSP) et la
 vérification en staging (KF-11).
+
+## 21. N-B6 — Plafonds de session PostgreSQL au runtime (2026-11-11)
+
+**Constat** (§5, P3) : aucun `statement_timeout`/`lock_timeout` par défaut au runtime —
+une lecture d'export pouvait retenir des verrous indéfiniment.
+
+**Correctif** (branche `feature/kora-nb6-timeouts-session`) :
+
+- `core/config.py` : `statement_timeout_ms` (défaut 60 000) et `lock_timeout_ms`
+  (défaut 5 000), réglables via `KORA_STATEMENT_TIMEOUT_MS` / `KORA_LOCK_TIMEOUT_MS`,
+  0 pour désactiver (à éviter en production) ; documentés dans `.env.example` et
+  `deploy/vps/env.example` (activés par défaut sur le VPS) ;
+- `db/session.py` : les options psycopg sont passées à chaque connexion du moteur du
+  runtime (API et worker). Les migrations (rôle propriétaire, DDL long) ne sont pas
+  concernées.
+
+**Preuve** : 4 tests nouveaux (`tests/test_runtime_settings.py`) : réglages et
+surcharge d'environnement, validation (négatif refusé), chaîne d'options générée
+(vide quand 0), et **annulation réelle** — une connexion avec
+`statement_timeout=100` exécutant `pg_sleep(1)` lève bien l'erreur de dépassement.
+Le moteur du test est détruit explicitement (`dispose()`) : une connexion oubliée au
+ramasse-miettes déclenchait une ResourceWarning « unraisable » imputée au setup du
+test suivant (course de nettoyage, corrigée). Suite locale : 35/35 sur les fichiers
+concernés (runtime_settings, cashflows, statements), ruff + mypy strict verts.
+
+**Reste** : déduction résiduelle 0.
+**Déductions levées (§7)** : sécurité du socle, N-B6 (−0,5 → 0) → +0,5.
+**Score : 82,5/100.** Reste prioritaire (§8) : la phase 3 (trésorerie/Mobile Money),
+la revue expert-comptable finale (KF-15/16), KF-14 (CSP) et la vérification en
+staging (KF-11).
