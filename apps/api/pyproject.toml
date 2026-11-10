@@ -33,7 +33,7 @@ dev = [
     "ruff>=0.17,<0.18",
     "mypy>=2.4,<2.5",
     "hypothesis>=6.170,<6.171",
-    "time-machine>=3.5,<3.6",
+    "time-machine>=3.5,<3.7",
     "types-openpyxl==3.1.5.20260827",
     "types-reportlab==5.0.0.20261006",
     "types-boto3[s3]==1.43.111",
