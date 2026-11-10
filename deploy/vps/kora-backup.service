@@ -2,6 +2,8 @@
 Description=Sauvegarde chiffrée de Kora Finance
 Wants=network-online.target
 After=network-online.target docker.service
+# KF-12 : tout échec déclenche l'unité d'alerte (trace locale + email d'exploitation).
+OnFailure=kora-alert@%n.service
 
 [Service]
 Type=oneshot

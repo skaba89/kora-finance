@@ -1,0 +1,11 @@
+[Unit]
+Description=Sonde externe de Kora Finance (/health/ready via HTTPS public, KF-12)
+Wants=network-online.target
+After=network-online.target docker.service
+# KF-12 : deux échecs consécutifs de la sonde → code 1 → alerte (anti-tempête dans
+# alert.sh : au plus un email par unité et par 4 h).
+
+[Service]
+Type=oneshot
+User=__USER__
+ExecStart=__DIR__/probe.sh

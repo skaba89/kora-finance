@@ -125,3 +125,45 @@ def test_suppression_cote_pieces_natteint_pas_les_sauvegardes(tmp_path: Path) ->
     key = backup.upload(path)
     objects.delete(key)  # chemin applicatif : bucket des pièces uniquement
     assert backup.download_bytes(key) == content
+
+
+def test_fraicheur_ok(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """KF-12 : une sauvegarde récente passe le contrôle, en fonction et en CLI."""
+    path, _ = _dump(tmp_path)
+    backup.upload(path)
+    ok, message = backup.freshness(26)
+    assert ok
+    assert path.name in message
+    with pytest.raises(SystemExit) as exit_code:
+        backup.main(["status", "--max-age-hours", "26"])
+    assert exit_code.value.code == 0
+    assert "Dernière sauvegarde" in capsys.readouterr().out
+
+
+def test_fraicheur_trop_ancienne(tmp_path: Path) -> None:
+    """KF-12 : une sauvegarde de plus de `max_age_hours` heures échoue au contrôle."""
+    path, _ = _dump(tmp_path)
+    backup.upload(path)
+    dans_30_jours = datetime.now(UTC) + timedelta(days=30)
+    ok, message = backup.freshness(26, now=dans_30_jours)
+    assert not ok
+    assert "trop ancienne" in message
+    assert path.name in message
+
+
+def test_fraicheur_aucune_sauvegarde() -> None:
+    """KF-12 : bucket vide = sauvegarde quotidienne arrêtée, contrôle en échec."""
+    ok, message = backup.freshness(26)
+    assert not ok
+    assert "Aucune sauvegarde" in message
+
+
+def test_fraicheur_cli_en_echec(tmp_path: Path) -> None:
+    path, _ = _dump(tmp_path)
+    backup.upload(path)
+    dans_30_jours = datetime.now(UTC) + timedelta(days=30)
+    with pytest.MonkeyPatch.context() as patcher:
+        patcher.setattr(backup, "_now", lambda: dans_30_jours)
+        with pytest.raises(SystemExit) as exit_code:
+            backup.main(["status"])
+    assert exit_code.value.code == 1

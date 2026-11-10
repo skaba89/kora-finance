@@ -69,6 +69,10 @@ class Settings(BaseSettings):
     smtp_username: str | None = None
     smtp_password: SecretStr | None = None
     smtp_timeout_seconds: int = Field(default=15, ge=1, le=120)
+    # Destinataire des alertes d'exploitation (KF-12 : échec de sauvegarde, sonde
+    # externe) — distinct des emails transactionnels des utilisateurs. Utilisé par
+    # `python -m kora.scripts.notify` ; sans lui, les alertes restent journalisées.
+    alert_email: str | None = None
     # URL publique du frontend, pour les liens des emails (sans barre finale).
     web_public_url: str = "http://localhost:3100"
 
