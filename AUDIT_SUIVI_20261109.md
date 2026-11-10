@@ -523,3 +523,42 @@ sous KF-11 ; déduction résiduelle : 0 (le garde-fou mécanique verrouille le c
 **Score : 79/100.** Reste prioritaire (§8) : KF-23 (contrôles taille/chemin des
 sauvegardes), KF-20 (SCA/SBOM en CI), l'arbitrage expert-comptable (KF-15/16) et la
 phase 3 (trésorerie/Mobile Money).
+
+## 18. KF-23 — Contrôles de taille et de chemin des sauvegardes (2026-11-10)
+
+**Constat** (§4, P2) : la sauvegarde était chargée intégralement en mémoire
+(`read_bytes()`) AVANT le contrôle de taille — un fichier de 50 Go (ou un fifo, un
+périphérique) saturait la mémoire avant d'être refusé ; le chemin de restauration ne
+contrôlait rien (clé libre, fichier déchiffré jamais vérifié avant la confirmation
+destructrice, copie en clair qui pouvait traîner) ; aucun test de dépassement.
+
+**Correctif** (branche `feature/kora-kf23-controles-sauvegarde`) :
+
+- `scripts/backup.py` : contrôle par `stat()` AVANT toute lecture — fichier régulier
+  exigé (fifo/périphérique refusé sans lire un octet), taille comparée au plafond
+  AVANT chargement ; plafond devenu réglage `KORA_BACKUP_S3_MAX_BYTES`
+  (`backup_max_bytes`, défaut 400 Mo, aligné sur le budget de 512 Mo du conteneur
+  « backup » — KF-13), plancher 1 Mo ; clés imposées au préfixe des sauvegardes
+  (`backups/`, ni `..`, ni `//`) en téléchargement ; écriture du fichier déchiffré
+  atomique (`.partiel` + `os.replace`) : aucun fichier tronqué ne peut être confondu
+  avec un dump restaurable ;
+- `deploy/vps/restore.sh` : clé imposée au format `backups/kora-….dump.enc`
+  (expression régulière) ; signature `PGDMP` du dump déchiffré vérifiée AVANT la
+  confirmation destructrice ; `trap` qui efface `backups/restauration.dump` à la
+  sortie (échec, abandon ou succès) — jamais de copie en clair qui traîne ;
+- `core/config.py` : `backup_max_bytes` documenté dans `BackupSettings`.
+
+**Preuve** : suite API complète hors Docker : **578/578**, dont 5 nouveaux
+(`tests/test_backup.py`) : plafond dépassé refusé sans lecture (bucket vide ensuite),
+fichier spécial refusé, clé hors préfixe refusée, destination répertoire refusée +
+écriture atomique sans `.partiel` résiduel, contrat restore.sh (clé, PGDMP avant
+confirmation, trap). `bash -n restore.sh` OK ; les trois garde-fous CI restent verts.
+
+**Reste** : le traitement reste en mémoire sous le plafond (adapté à des dumps de
+quelques centaines de Mo) ; si les bases grossissent au-delà, le streaming chiffré
+vers S3 (multipart) est du travail futur explicitement documenté dans le module —
+le plafond rend ce choix sûr et visible. Déduction résiduelle : 0.
+
+**Déductions levées (§7)** : exploitation/production, KF-23 (−1 → 0) → +1.
+**Score : 80/100.** Reste prioritaire (§8) : KF-20 (SCA/SBOM en CI), l'arbitrage
+expert-comptable (KF-15/16) et la phase 3 (trésorerie/Mobile Money).

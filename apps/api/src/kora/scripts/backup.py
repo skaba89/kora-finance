@@ -22,26 +22,40 @@ distincte KORA_BACKUP_ADMIN_S3_* ; garde toujours les sept plus récentes) :
 
     python -m kora.scripts.backup prune --keep-days 30
 
-Limite : le fichier est traité en mémoire (adapté jusqu'à quelques centaines de Mo).
+Limite : le fichier est contrôlé par stat() avant toute lecture (KF-23) — un fichier
+surdimensionné ou spécial est refusé sans charger un octet ; au-delà du plafond
+(KORA_BACKUP_S3_MAX_BYTES, aligné sur le budget du conteneur « backup »), la
+sauvegarde est refusée et le streaming S3 reste du travail futur.
 """
 
 import argparse
 import hashlib
+import os
+import stat
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from kora.core.config import get_backup_settings
 from kora.storage import backups_store, objects
 
 PREFIX = "backups/"
 _MAGIC = b"KORA-BKP1"
 # Sauvegardes toujours conservées, quel que soit leur âge.
 _KEEP_AT_LEAST = 7
-MAX_BYTES = 2 * 1024**3
 
 
 def object_key(filename: str) -> str:
     return f"{PREFIX}{filename}.enc"
+
+
+def _check_key(key: str) -> None:
+    """Le module ne gère que les objets du préfixe des sauvegardes (KF-23) : ni
+    traversée de préfixe, ni clé hors bucket de sauvegardes."""
+    if not key.startswith(PREFIX) or ".." in key or "//" in key:
+        raise SystemExit(
+            f"Clé de sauvegarde invalide : {key!r} (format attendu : {PREFIX}kora-….dump.enc)."
+        )
 
 
 def pack(sealed: objects.SealedObject) -> bytes:
@@ -59,11 +73,20 @@ def unpack(data: bytes) -> objects.SealedObject:
 
 
 def upload(path: Path) -> str:
-    content = path.read_bytes()
-    if not content:
+    # KF-23 : contrôle AVANT lecture — stat() ne charge rien en mémoire, donc un
+    # fichier de 50 Go (ou un fifo, un périphérique) est refusé sans saturer.
+    infos = path.stat()
+    if not stat.S_ISREG(infos.st_mode):
+        raise SystemExit(f"Pas un fichier régulier : {path}")
+    if infos.st_size == 0:
         raise SystemExit(f"Sauvegarde vide : {path}")
-    if len(content) > MAX_BYTES:
-        raise SystemExit("Sauvegarde trop volumineuse pour un traitement en mémoire.")
+    limite = get_backup_settings().max_bytes
+    if infos.st_size > limite:
+        raise SystemExit(
+            f"Sauvegarde trop volumineuse ({infos.st_size} octets, plafond {limite}) : "
+            "augmentez KORA_BACKUP_S3_MAX_BYTES dans la limite du budget du conteneur."
+        )
+    content = path.read_bytes()
     key = object_key(path.name)
     sealed = objects.seal(content, key)
     backups_store.put(key, pack(sealed))
@@ -75,8 +98,20 @@ def upload(path: Path) -> str:
 
 
 def download_bytes(key: str) -> bytes:
+    _check_key(key)
     sealed = unpack(backups_store.get(key))
     return objects.unseal(sealed.blob, sealed.wrapped_key, key)
+
+
+def download_to(key: str, path: Path) -> None:
+    """Déchiffre vers `path` par écriture temporaire + renommage atomique (KF-23) :
+    aucun fichier tronqué ne peut être confondu avec un dump restaurable."""
+    if path.is_dir():
+        raise SystemExit(f"La destination est un répertoire : {path}")
+    content = download_bytes(key)
+    partiel = path.with_name(path.name + ".partiel")
+    partiel.write_bytes(content)
+    os.replace(partiel, path)
 
 
 def list_backups() -> list[tuple[str, datetime, int]]:
@@ -148,7 +183,7 @@ def main(argv: list[str] | None = None) -> None:
         for key, modified, size in list_backups():
             print(f"{modified:%Y-%m-%d %H:%M} UTC  {size:>12} octets  {key}")
     elif args.command == "download":
-        args.path.write_bytes(download_bytes(args.key))
+        download_to(args.key, args.path)
         print(f"Sauvegarde déchiffrée : {args.path}")
     elif args.command == "prune":
         removed = prune(args.keep_days)

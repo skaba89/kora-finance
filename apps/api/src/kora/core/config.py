@@ -140,6 +140,10 @@ class BackupSettings(BaseSettings):
     access_key_id: str
     secret_access_key: SecretStr
     timeout_seconds: int = Field(default=60, ge=1, le=300)
+    # Plafond mémoire d'une sauvegarde (KF-23) : contrôlé par stat() AVANT lecture du
+    # fichier. Défaut aligné sur le budget du conteneur « backup » (512 Mo, KF-13) ;
+    # à augmenter seulement si le budget du conteneur suit.
+    max_bytes: int = Field(default=400 * 1024**2, ge=1024 * 1024)
 
     @model_validator(mode="after")
     def _check_backup_settings(self) -> Self:

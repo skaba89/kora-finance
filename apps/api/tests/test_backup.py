@@ -7,6 +7,7 @@ exécution. Le test d'isolation prouve qu'une suppression par le chemin applicat
 """
 
 import os
+import re
 import uuid
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
@@ -14,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from kora.core.config import get_settings
+from kora.core.config import get_backup_settings, get_settings
 from kora.scripts import backup
 from kora.storage import backups_store, objects
 
@@ -167,3 +168,68 @@ def test_fraicheur_cli_en_echec(tmp_path: Path) -> None:
         with pytest.raises(SystemExit) as exit_code:
             backup.main(["status"])
     assert exit_code.value.code == 1
+
+
+def test_trop_volumineuse_refusee_avant_lecture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """KF-23 : le plafond est appliqué par stat() — un fichier trop gros est refusé
+    sans être lu, et rien n'est envoyé au bucket."""
+    gros = tmp_path / "kora-trop-gros.dump"
+    gros.write_bytes(b"x" * (2 * 1024 * 1024))
+    monkeypatch.setenv("KORA_BACKUP_S3_MAX_BYTES", str(1024 * 1024))
+    get_backup_settings.cache_clear()
+    try:
+        with pytest.raises(SystemExit) as exit_code:
+            backup.upload(gros)
+        assert "trop volumineuse" in str(exit_code.value)
+        assert backup.list_backups() == []
+    finally:
+        get_backup_settings.cache_clear()
+
+
+def test_fichier_special_refuse(tmp_path: Path) -> None:
+    """KF-23 : un fifo (ou tout non-régulier) est refusé sans tenter de le lire."""
+    fifo = tmp_path / "kora-fifo.dump"
+    os.mkfifo(fifo)
+    with pytest.raises(SystemExit) as exit_code:
+        backup.upload(fifo)
+    assert "régulier" in str(exit_code.value)
+
+
+def test_cle_hors_sauvegardes_refusee() -> None:
+    """KF-23 : le module ne télécharge que dans le préfixe des sauvegardes."""
+    with pytest.raises(SystemExit) as exit_code:
+        backup.download_bytes("pieces/piece-1.enc")
+    assert "invalide" in str(exit_code.value)
+    with pytest.raises(SystemExit):
+        backup.download_bytes(f"backups/{backup.PREFIX}traversee.enc")
+
+
+def test_destination_repertoire_refusee(tmp_path: Path) -> None:
+    """KF-23 : refuser d'écraser un répertoire, écrire de façon atomique."""
+    path, content = _dump(tmp_path)
+    key = backup.upload(path)
+    cible = tmp_path / "destination"
+    cible.mkdir()
+    with pytest.raises(SystemExit) as exit_code:
+        backup.download_to(key, cible)
+    assert "répertoire" in str(exit_code.value)
+    # Écriture normale : aucun .partiel ne subsiste.
+    cible_fichier = tmp_path / "restaure.dump"
+    backup.download_to(key, cible_fichier)
+    assert cible_fichier.read_bytes() == content
+    assert not cible_fichier.with_name("restaure.dump.partiel").exists()
+
+
+def test_restore_sh_controle_cle_format_et_signature() -> None:
+    """KF-23 : restore.sh valide la clé, vérifie la signature PGDMP avant toute
+    confirmation destructrice, et nettoie le dump par un trap."""
+    script = (Path(__file__).resolve().parents[3] / "deploy" / "vps" / "restore.sh").read_text(
+        encoding="utf-8"
+    )
+    assert re.search(r"\^backups/\[A-Za-z0-9\]", script)
+    assert "PGDMP" in script
+    assert script.index("PGDMP") < script.index("Tapez RESTAURER")
+    assert "trap" in script
+    assert "rm -f backups/restauration.dump" in script

@@ -795,3 +795,28 @@ KF-11) ; déduction résiduelle 0. Suivi : `AUDIT_SUIVI_20261109.md` §17.
 **Score : 79/100** (KF-13 : −1,5 → 0). Prochaines priorités : KF-23 (contrôles
 taille/chemin des sauvegardes), KF-20 (SCA/SBOM en CI), arbitrage expert-comptable
 (KF-15/16), phase 3 (trésorerie/Mobile Money).
+
+## 2026-11-10 — KF-23 : contrôles de taille et de chemin des sauvegardes
+
+**Constat** (audit §4, P2) : sauvegarde chargée intégralement avant contrôle de
+taille ; chemin de restauration sans contrôle ; aucun test de dépassement.
+
+**Correctif** (branche `feature/kora-kf23-controles-sauvegarde`) :
+
+- `backup.py` : `stat()` avant toute lecture (fichier régulier exigé, taille comparée
+  au plafond AVANT chargement) ; plafond réglable `KORA_BACKUP_S3_MAX_BYTES`
+  (défaut 400 Mo, aligné sur le conteneur « backup » de KF-13) ; clés imposées au
+  préfixe `backups/` ; téléchargement atomique (`.partiel` + `os.replace`) ;
+- `restore.sh` : clé validée par expression régulière, signature `PGDMP` vérifiée
+  avant la confirmation destructrice, `trap` qui efface le dump en clair à la sortie ;
+- nouveaux réglages : `backup_max_bytes` dans `BackupSettings`.
+
+**Vérifié** : suite API complète : **578/578** dont 5 nouveaux (plafond sans lecture,
+fifo refusé, clé hors préfixe refusée, répertoire refusé + atomicité, contrat
+restore.sh). `bash -n` OK, garde-fous CI verts. Aucun changement de contrat d'API,
+aucune migration.
+
+**Reste** : streaming chiffré vers S3 si les dumps dépassent un jour le plafond
+(documenté dans le module). Suivi : `AUDIT_SUIVI_20261109.md` §18.
+**Score : 80/100** (KF-23 : −1 → 0). Prochaines priorités : KF-20 (SCA/SBOM en CI),
+arbitrage expert-comptable (KF-15/16), phase 3 (trésorerie/Mobile Money).
