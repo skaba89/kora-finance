@@ -10,6 +10,7 @@ from fastapi import APIRouter, Query, Response
 from kora.accounting import reports
 from kora.api.v1.common import TENANT_ERRORS
 from kora.auth.deps import Ctx, DbSession
+from kora.core.errors import ErrorResponse
 from kora.exports import service
 from kora.exports.service import Format, Kind
 from kora.tenancy.deps import EntriesRead
@@ -26,6 +27,8 @@ _FILE: dict[int | str, dict[str, Any]] = {
     },
     **TENANT_ERRORS,
     422: TENANT_ERRORS[404],
+    # KF-13 : quota d'exports dépassé (par utilisateur ou par dossier).
+    429: {"model": ErrorResponse},
 }
 
 FileFormat = Annotated[Format, Query(alias="format", description="pdf ou xlsx")]

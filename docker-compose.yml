@@ -1,5 +1,7 @@
 # Pile locale Kora Finance. Démarrage : `make up` (voir README).
 # Tous les ports sont liés à 127.0.0.1 : rien n'est exposé sur le réseau.
+# Chaque service porte un budget de ressources (KF-13) : un conteneur fugeur
+# (export PDF, sauvegarde, index) ne peut pas affamer ses voisins ni l'hôte.
 
 x-api-env: &api-env
   KORA_ENV: local
@@ -12,6 +14,9 @@ x-api-env: &api-env
   # En production, l'API ne doit pas être joignable directement depuis internet.
   KORA_TRUSTED_PROXY_COUNT: "1"
   KORA_AUTH_RATE_LIMIT_PER_MINUTE: ${KORA_AUTH_RATE_LIMIT_PER_MINUTE:-20}
+  # Quotas d'exports (KF-13) : par utilisateur et par dossier, par heure.
+  KORA_EXPORTS_PER_USER_PER_HOUR: ${KORA_EXPORTS_PER_USER_PER_HOUR:-30}
+  KORA_EXPORTS_PER_COMPANY_PER_HOUR: ${KORA_EXPORTS_PER_COMPANY_PER_HOUR:-120}
   # Emails : en local, tout part vers Mailpit (aucun email réel n'est envoyé).
   # En production : SMTP du fournisseur choisi, KORA_SMTP_SECURITY=starttls ou tls.
   KORA_SMTP_HOST: mailpit
@@ -62,10 +67,16 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    deploy:
+      resources:
+        limits: { memory: 1g, cpus: "1.0" }
 
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "--appendonly", "yes"]
+    # maxmemory aligné sur le budget du conteneur (KF-13) : au-delà, Redis refuse
+    # d'écrire (noeviction, défaut) — les compteurs de débit échouent fermés plutôt
+    # que de laisser l'hôte tuer le conteneur (OOM) ou perdre la file d'attente.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "200mb", "--maxmemory-policy", "noeviction"]
     volumes:
       - redis_data:/data
     ports:
@@ -75,6 +86,9 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    deploy:
+      resources:
+        limits: { memory: 256m, cpus: "0.5" }
 
   # Serveur SMTP de développement : capture les emails, interface sur 127.0.0.1:58025.
   mailpit:
@@ -90,6 +104,9 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    deploy:
+      resources:
+        limits: { memory: 256m, cpus: "0.5" }
 
   # Stockage S3 de développement (Garage, un nœud). Image sans shell : le contrôle de
   # santé passe par la CLI de Garage ; l'initialisation par storage-init.
@@ -106,6 +123,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    deploy:
+      resources:
+        limits: { memory: 512m, cpus: "1.0" }
 
   # Nœud, clé d'accès et buckets (« kora » pour la pile, « kora-test » pour pytest),
   # plus le bucket et la clé dédiés des sauvegardes (KF-09 : la clé de l'API n'y a
@@ -127,6 +147,9 @@ services:
       S3_BACKUP_BUCKET: kora-backups
     depends_on:
       storage: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { memory: 128m, cpus: "0.5" }
 
   # Les migrations sont une étape distincte : l'API ne modifie jamais le schéma au démarrage.
   migrate:
@@ -137,6 +160,9 @@ services:
       KORA_DATABASE_MIGRATION_URL: postgresql+psycopg://kora_owner:${KORA_DB_OWNER_PASSWORD:?lancer make env}@postgres:5432/kora
     depends_on:
       postgres: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { memory: 256m, cpus: "0.5" }
 
   api:
     image: kora-api:local
@@ -152,6 +178,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    deploy:
+      resources:
+        limits: { memory: 512m, cpus: "1.0" }
 
   worker:
     image: kora-api:local
@@ -162,6 +191,9 @@ services:
       redis: { condition: service_healthy }
       mailpit: { condition: service_healthy }
       storage-init: { condition: service_completed_successfully }
+    deploy:
+      resources:
+        limits: { memory: 512m, cpus: "1.0" }
 
   # Sauvegardes (KF-09) : conteneur one-shot sous profil, exécuté à la demande —
   # docker compose --profile backup run --rm --no-deps backup python -m kora.scripts.backup …
@@ -171,6 +203,9 @@ services:
     profiles: ["backup"]
     image: kora-api:local
     environment: *backup-env
+    deploy:
+      resources:
+        limits: { memory: 512m, cpus: "1.0" }
 
   web:
     build: { context: ./apps/web, target: runtime }
@@ -188,8 +223,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    deploy:
+      resources:
+        limits: { memory: 512m, cpus: "0.5" }
 
   # --- Outillage (profil « tools ») : tests, lint, typage, dans des conteneurs épinglés.
+  # Sans budget de ressources : outils de développement, jamais déployés en production
+  # (la suite de tests a besoin de toute la mémoire disponible sur la machine d'exécution).
   api-tools:
     profiles: ["tools"]
     build: { context: ./apps/api, target: dev }

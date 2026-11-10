@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 from kora.accounting.reports import Period
 from kora.audit.service import record_event
 from kora.auth.service import RequestContext
-from kora.core.errors import BusinessRuleError, NotFoundError
+from kora.core import quota
+from kora.core.config import get_settings
+from kora.core.errors import BusinessRuleError, NotFoundError, TooManyRequestsError
 from kora.db.snapshot import lecture_instantanee
 from kora.exports import builders, pdf, xlsx
 from kora.exports.document import Document
@@ -55,6 +57,31 @@ def generate(
     company = session.get(Company, company_id)
     if company is None:
         raise NotFoundError("Dossier introuvable.")
+    # KF-13 : budget d'exports. Chaque export est synchrone et coûteux (lecture
+    # complète sous instantané, rendu PDF/Excel entièrement en mémoire) : sans quota,
+    # quelques requêtes automatisées suffisent à saturer l'API. Deux compteurs : par
+    # utilisateur (un compte ne peut pas tout consommer) et par dossier (l'ensemble
+    # de ses membres reste borné). Comme pour les emails, une panne Redis interrompt
+    # l'export (jamais de contournement silencieux).
+    settings = get_settings()
+    user_limit = settings.exports_per_user_per_hour
+    user_allowed = quota.allowed(
+        "export-user", str(actor_user_id), limit=user_limit, window_seconds=quota.HOUR
+    )
+    if not user_allowed:
+        raise TooManyRequestsError(
+            f"Limite de {user_limit} exports par heure atteinte pour votre compte.",
+            headers={"Retry-After": quota.retry_after(quota.HOUR)},
+        )
+    company_limit = settings.exports_per_company_per_hour
+    company_allowed = quota.allowed(
+        "export-company", str(company_id), limit=company_limit, window_seconds=quota.HOUR
+    )
+    if not company_allowed:
+        raise TooManyRequestsError(
+            f"Limite de {company_limit} exports par heure atteinte pour ce dossier.",
+            headers={"Retry-After": quota.retry_after(quota.HOUR)},
+        )
     document: Document
     # KF-05 : les données du document sont lues sous un unique instantané (REPEATABLE
     # READ) — une validation concurrente ne peut pas mélanger deux instants dans un
