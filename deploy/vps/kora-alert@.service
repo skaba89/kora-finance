@@ -1,0 +1,9 @@
+[Unit]
+Description=Alerte d'exploitation Kora Finance (%i)
+# Modèle instancié par OnFailure= des unités de sauvegarde, de fraîcheur et de sonde.
+# Anti-tempête et trace locale dans alert.sh.
+
+[Service]
+Type=oneshot
+User=__USER__
+ExecStart=__DIR__/alert.sh "%i"

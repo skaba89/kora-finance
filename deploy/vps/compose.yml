@@ -31,6 +31,8 @@ x-api-env: &api-env
   KORA_SMTP_SECURITY: ${KORA_SMTP_SECURITY:-starttls}
   KORA_SMTP_USERNAME: ${KORA_SMTP_USERNAME:-}
   KORA_SMTP_PASSWORD: ${KORA_SMTP_PASSWORD:-}
+  # Alertes d'exploitation (KF-12) : destinataire des notifications kora.scripts.notify.
+  KORA_ALERT_EMAIL: ${KORA_ALERT_EMAIL:-}
   # Pièces justificatives et sauvegardes : buckets S3 privés SÉPARÉS (KF-09), en https.
   # Les identifiants ci-dessous ne touchent que les pièces ; ceux des sauvegardes ne
   # sont transmis qu'au service « backup » (clé sans droit de suppression).

@@ -18,6 +18,8 @@ x-api-env: &api-env
   KORA_SMTP_PORT: "1025"
   KORA_SMTP_SECURITY: none
   KORA_EMAIL_FROM: Kora Finance <no-reply@kora.local>
+  # Alertes d'exploitation (KF-12) : optionnel en développement.
+  KORA_ALERT_EMAIL: ${KORA_ALERT_EMAIL:-}
   KORA_WEB_PUBLIC_URL: ${KORA_PUBLIC_URL:-http://localhost:3100}
   # Pièces justificatives : Garage en local. En production : point d'accès https:// du
   # fournisseur S3, bucket privé, clé limitée à ce bucket.

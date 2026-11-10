@@ -1,5 +1,7 @@
 # Point d'entrée public : HTTPS automatique (Let's Encrypt), puis le serveur web Next.js.
-# L'API n'est jamais exposée : seul le serveur web l'appelle, sur le réseau Docker.
+# L'API n'est jamais exposée, sauf ses sondes de santé (KF-12) : /health/live et
+# /health/ready ne renvoient qu'un statut ok|erreur des dépendances, sans donnée
+# métier — la sonde externe probe.sh les interroge depuis l'hôte (certificat TLS inclus).
 {
 	email {$KORA_ACME_EMAIL}
 }
@@ -13,6 +15,9 @@
 	header {
 		Strict-Transport-Security "max-age=31536000"
 		-Server
+	}
+	handle /health/* {
+		reverse_proxy api:8000
 	}
 	reverse_proxy web:3000
 }

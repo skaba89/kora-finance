@@ -15,6 +15,7 @@ Lock), pas par l'application.
     python -m kora.scripts.backup upload /backups/kora-20261025T023000Z.dump
     python -m kora.scripts.backup list
     python -m kora.scripts.backup download backups/kora-….dump.enc /backups/restaure.dump
+    python -m kora.scripts.backup status --max-age-hours 26   # fraîcheur (KF-12)
 
 Purge manuelle (opération d'administration, depuis un poste hors VPS, avec la clé
 distincte KORA_BACKUP_ADMIN_S3_* ; garde toujours les sept plus récentes) :
@@ -101,6 +102,32 @@ def prune(keep_days: int, now: datetime | None = None) -> list[str]:
     return removed
 
 
+def _now() -> datetime:
+    """Heure courante (point d'injection pour les tests du contrôle de fraîcheur)."""
+    return datetime.now(UTC)
+
+
+def freshness(max_age_hours: int, now: datetime | None = None) -> tuple[bool, str]:
+    """Contrôle de fraîcheur (KF-12) : la sauvegarde la plus récente doit dater de
+    moins de `max_age_hours` heures — sinon la sauvegarde quotidienne ne tourne plus.
+    Retourne (ok, message) ; aucun secret n'est affiché."""
+    listed = list_backups()
+    if not listed:
+        return False, (
+            "Aucune sauvegarde dans le bucket dédié : la sauvegarde quotidienne ne "
+            "tourne plus (voir deploy/vps/kora-backup.timer)."
+        )
+    key, modified, _ = listed[-1]
+    age = (now or _now()) - modified
+    hours = age.total_seconds() / 3600
+    if age > timedelta(hours=max_age_hours):
+        return False, (
+            f"Dernière sauvegarde trop ancienne : {key} ({hours:.1f} h, limite "
+            f"{max_age_hours} h). La sauvegarde quotidienne ne tourne plus."
+        )
+    return True, f"Dernière sauvegarde : {key} ({hours:.1f} h)."
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="kora.scripts.backup", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -111,6 +138,8 @@ def main(argv: list[str] | None = None) -> None:
     down.add_argument("path", type=Path)
     pr = sub.add_parser("prune")
     pr.add_argument("--keep-days", type=int, default=30)
+    st = sub.add_parser("status")
+    st.add_argument("--max-age-hours", type=int, default=26)
     args = parser.parse_args(argv)
 
     if args.command == "upload":
@@ -124,6 +153,10 @@ def main(argv: list[str] | None = None) -> None:
     elif args.command == "prune":
         removed = prune(args.keep_days)
         print(f"{len(removed)} sauvegarde(s) supprimée(s) (plus de {args.keep_days} jours).")
+    elif args.command == "status":
+        ok, message = freshness(args.max_age_hours)
+        print(message)
+        sys.exit(0 if ok else 1)
     sys.exit(0)
 
 

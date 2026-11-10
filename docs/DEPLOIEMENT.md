@@ -148,6 +148,33 @@ limitée à ce bucket, en lecture/écriture **sans suppression** ; régler son c
 (rétention) côté fournisseur ; séquestrer la clé d'administration hors du serveur. Les
 pièces justificatives elles-mêmes reposent sur la durabilité de B2 (pas de seconde copie).
 
+## 5 bis. Supervision (KF-12)
+
+Quatre unités systemd supervisent l'exploitation ; elles s'installent d'un geste avec
+`./install-backup-timer.sh` (remplace l'ancienne installation à deux fichiers).
+
+| Unité | Rythme | Rôle | En cas d'échec |
+|---|---|---|---|
+| `kora-backup.service` (+ `.timer`) | quotidienne 02:30 UTC | sauvegarde chiffrée | `OnFailure=` → alerte |
+| `kora-freshness.service` (+ `.timer`) | quotidienne 03:45 UTC | la dernière sauvegarde doit dater de moins de 26 h (`backup status`) | `OnFailure=` → alerte |
+| `kora-probe.service` (+ `.timer`) | toutes les 5 min | sonde externe `https://<domaine>/health/ready` (HTTPS → Caddy → API → PostgreSQL/Redis, certificat TLS inclus) | 2 échecs consécutifs → alerte |
+| `kora-alert@.service` | à la demande (instanciée par `OnFailure=`) | trace locale + email d'exploitation | — |
+
+- **Alertes** : `alert.sh` écrit toujours une trace horodatée
+  (`deploy/vps/backups/alertes/journal.log`), puis envoie un email au destinataire
+  `KORA_ALERT_EMAIL` (à renseigner dans `.env`) via le conteneur `backup`
+  (`python -m kora.scripts.notify`). Anti-tempête : au plus un email par unité
+  défaillante et par 4 h. Sans `KORA_ALERT_EMAIL` ou avec `KORA_EMAIL_BACKEND=disabled`,
+  l'alerte n'est pas prétendue envoyée : elle reste tracée et visible dans
+  `journalctl -u kora-alert`.
+- **Sondes publiques** : le Caddyfile expose uniquement `handle /health/*` vers l'API
+  (statut `ok|erreur` des dépendances, aucune donnée métier). C'est le seul chemin d'API
+  joignable depuis internet, et il sert à la sonde : une coupure applicative, une base
+  indisponible ou un certificat TLS expiré déclenchent une alerte en 10 minutes maximum.
+- Vérification manuelle : `systemctl list-timers 'kora-*' --no-pager` ; forcer un essai :
+  `sudo systemctl start kora-freshness.service kora-probe.service` ; journal :
+  `journalctl -u kora-freshness -u kora-probe -u kora-alert`.
+
 ## 6. Activer les emails (plus tard)
 
 Dans `.env` : `KORA_EMAIL_BACKEND=smtp`, `KORA_EMAIL_FROM`, `KORA_SMTP_HOST`,

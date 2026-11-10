@@ -35,6 +35,7 @@ jobs:
       - run: make env
       - run: python3 scripts/check-runtime-db-separation.py
       - run: python3 scripts/check-deploy-versioning.py
+      - run: python3 scripts/check-supervision.py
       - run: make api-lint
       - run: make api-typecheck
       - run: make api-test

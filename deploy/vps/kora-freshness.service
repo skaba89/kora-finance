@@ -1,0 +1,11 @@
+[Unit]
+Description=Contrôle de fraîcheur de la dernière sauvegarde Kora Finance (KF-12)
+Wants=network-online.target
+After=network-online.target docker.service
+# KF-12 : une sauvegarde de plus de 26 h (quotidienne 02:30 UTC + marge) est un échec.
+OnFailure=kora-alert@%n.service
+
+[Service]
+Type=oneshot
+User=__USER__
+ExecStart=__DIR__/backup-status.sh
