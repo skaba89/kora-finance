@@ -7,9 +7,13 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from fastapi.testclient import TestClient
 from pydantic import ValidationError
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import DBAPIError
 
-from kora.core.config import MigrationSettings, Settings
+from kora.core.config import MigrationSettings, Settings, get_settings
+from kora.db.session import _session_options
 
 RUNTIME: dict[str, Any] = {
     "database_url": "postgresql+psycopg://runtime:local-only@localhost/kora_test",
@@ -92,3 +96,40 @@ def test_alembic_genere_le_schema_avec_seule_configuration_de_migration() -> Non
     )
     assert result.returncode == 0, result.stderr
     assert "CREATE TABLE journal_entries" in result.stdout
+
+
+def test_les_plafonds_de_session_sont_reglables(monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = Settings(**RUNTIME)
+    assert settings.statement_timeout_ms == 60_000
+    assert settings.lock_timeout_ms == 5_000
+    monkeypatch.setenv("KORA_STATEMENT_TIMEOUT_MS", "30000")
+    monkeypatch.setenv("KORA_LOCK_TIMEOUT_MS", "2000")
+    bounded = Settings(**RUNTIME)
+    assert bounded.statement_timeout_ms == 30_000
+    assert bounded.lock_timeout_ms == 2_000
+    with pytest.raises(ValidationError):
+        Settings(**{**RUNTIME, "statement_timeout_ms": -1})
+
+
+def test_le_moteur_du_runtime_transmet_les_plafonds(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert "statement_timeout=60000" in _session_options(Settings(**RUNTIME))
+    assert "lock_timeout=5000" in _session_options(Settings(**RUNTIME))
+    monkeypatch.setenv("KORA_STATEMENT_TIMEOUT_MS", "0")
+    monkeypatch.setenv("KORA_LOCK_TIMEOUT_MS", "0")
+    assert _session_options(Settings(**RUNTIME)) == ""
+
+
+def test_une_requete_trop_longue_est_annulee(client: TestClient) -> None:
+    # Le plafond s'applique réellement au rôle applicatif, pas seulement au mot.
+
+    engine = create_engine(
+        str(get_settings().database_url),
+        connect_args={"options": "-c statement_timeout=100"},
+    )
+    try:
+        with pytest.raises(DBAPIError, match="statement timeout"), engine.connect() as conn:
+            conn.execute(text("SELECT pg_sleep(1)"))
+    finally:
+        # Destruction déterministe : une connexion oubliée au GC déclencherait une
+        # ResourceWarning « unraisable » imputée au setup du test suivant.
+        engine.dispose()

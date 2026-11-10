@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     database_url: PostgresDsn
     redis_url: RedisDsn
 
+    # Plafonds de session (N-B6) : toute requête SQL du runtime est bornée et toute
+    # attente de verrou est plafonnée — une lecture longue (export, rapport) ne peut
+    # pas retenir des verrous indéfiniment. Les migrations (rôle propriétaire, DDL)
+    # ne sont pas concernées. 0 désactive le plafond (à éviter en production).
+    statement_timeout_ms: int = Field(default=60_000, ge=0)
+    lock_timeout_ms: int = Field(default=5_000, ge=0)
+
     cors_origins: list[str] = Field(default_factory=list)
 
     # --- Authentification
