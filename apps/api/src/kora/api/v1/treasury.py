@@ -1,10 +1,11 @@
-"""Routes de la trésorerie : comptes financiers et mouvements (sous-phase 3A)."""
+"""Routes de la trésorerie : comptes financiers, mouvements (3A) et relevés
+bancaires importés (3B)."""
 
 import uuid
 from datetime import date
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, Request, status
 from pydantic import BaseModel, Field
 
 from kora.accounting.entries import Actor
@@ -18,8 +19,11 @@ from kora.api.v1.common import (
     SignedMoney,
 )
 from kora.auth.deps import Ctx, DbSession
+from kora.core.config import get_settings
+from kora.core.errors import ErrorResponse
+from kora.models.treasury import BankStatement, StatementLineStatus
 from kora.tenancy.deps import TenantContext, TreasuryManage, TreasuryRead
-from kora.treasury import service
+from kora.treasury import service, statements
 from kora.treasury.service import AccountData, MovementData, TransferData
 
 router = APIRouter(prefix="/companies/{company_id}", tags=["trésorerie"])
@@ -108,6 +112,57 @@ class TransferRecorded(BaseModel):
     entry_id: uuid.UUID
     source_movement_id: uuid.UUID
     target_movement_id: uuid.UUID
+
+
+# --- Relevés bancaires (3B)
+
+
+class BankStatementOut(BaseModel):
+    id: uuid.UUID
+    account_id: uuid.UUID
+    filename: str
+    format: Literal["OFX", "CSV"]
+    size_bytes: int
+    sha256: str
+    line_count: int
+    period_start: date
+    period_end: date
+    created_at: str
+
+
+class BankStatementsOut(BaseModel):
+    account_id: uuid.UUID
+    items: list[BankStatementOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class StatementLineOut(BaseModel):
+    id: uuid.UUID
+    line_no: int
+    value_date: date
+    # Montant signé du point de vue du titulaire : positif = entrée de fonds.
+    amount: SignedMoney
+    label: str
+    reference: str | None
+    balance_after: SignedMoney | None
+    status: Literal["PENDING", "MATCHED", "IGNORED"]
+    # La même opération figure déjà sur un autre relevé du même compte.
+    duplicate: bool
+
+
+class StatementLinesOut(BaseModel):
+    statement_id: uuid.UUID
+    items: list[StatementLineOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class StatementLineSet(BaseModel):
+    id: uuid.UUID
+    status: Literal["PENDING", "MATCHED", "IGNORED"]
 
 
 @router.get("/treasury/accounts", responses={**TENANT_ERRORS, 422: TENANT_ERRORS[404]})
@@ -253,3 +308,200 @@ def record_transfer(
         source_movement_id=source.id,
         target_movement_id=target.id,
     )
+
+
+# --- Relevés bancaires importés (3B)
+
+
+async def _read_body(request: Request) -> bytes:
+    """Corps brut de l'import : lu par morceaux, refusé dès que la taille maximale
+    est dépassée (même mécanisme que les pièces justificatives)."""
+    limit = get_settings().statement_max_bytes
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > limit:
+        raise statements.too_large()
+    chunks: list[bytes] = []
+    size = 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > limit:
+            raise statements.too_large()
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+_STATEMENT_UPLOAD_BODY: dict[str, Any] = {
+    "requestBody": {
+        "required": True,
+        "description": f"Contenu brut du relevé ({statements.ACCEPTED_FORMATS})",
+        "content": {
+            "application/octet-stream": {"schema": {"type": "string", "format": "binary"}},
+        },
+    }
+}
+
+
+def _statement_out(statement: BankStatement, account_id: uuid.UUID) -> BankStatementOut:
+    return BankStatementOut(
+        id=statement.id,
+        account_id=account_id,
+        filename=statement.filename,
+        format=statement.format,
+        size_bytes=statement.size_bytes,
+        sha256=statement.sha256,
+        line_count=statement.line_count,
+        period_start=statement.period_start,
+        period_end=statement.period_end,
+        created_at=statement.created_at.isoformat(),
+    )
+
+
+@router.post(
+    "/treasury/accounts/{account_id}/statements",
+    status_code=status.HTTP_201_CREATED,
+    openapi_extra=_STATEMENT_UPLOAD_BODY,
+    responses={
+        **WRITE_ERRORS,
+        413: {"model": ErrorResponse},
+    },
+)
+async def import_statement(
+    tenant: TreasuryManage,
+    db: DbSession,
+    ctx: Ctx,
+    account_id: uuid.UUID,
+    request: Request,
+    filename: Annotated[str | None, Query(max_length=200)] = None,
+) -> BankStatementOut:
+    """Importe un relevé bancaire (OFX ou CSV) sur un compte financier : lignes en
+    attente de rapprochement, fichier original conservé, réimport refusé."""
+    content = await _read_body(request)
+    # Le nom du fichier sert à l'affichage et à l'audit : la détection du format
+    # ne se fie qu'au contenu.
+    statement = statements.import_statement(
+        db,
+        _actor(tenant, ctx),
+        account_id,
+        filename or "releve",
+        content,
+    )
+    return _statement_out(statement, account_id)
+
+
+@router.get(
+    "/treasury/accounts/{account_id}/statements",
+    responses={**TENANT_ERRORS, 422: TENANT_ERRORS[404]},
+)
+def list_statements(
+    account_id: uuid.UUID,
+    tenant: TreasuryRead,
+    db: DbSession,
+    limit: Limit = 50,
+    offset: Offset = 0,
+) -> BankStatementsOut:
+    """Relevés importés d'un compte, du plus récent au plus ancien."""
+    page = statements.list_statements(db, tenant.company_id, account_id, limit=limit, offset=offset)
+    return BankStatementsOut(
+        account_id=account_id,
+        items=[_statement_out(view.statement, account_id) for view in page.items],
+        total=page.total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get(
+    "/treasury/statements/{statement_id}/lines",
+    responses={**TENANT_ERRORS, 422: TENANT_ERRORS[404]},
+)
+def list_statement_lines(
+    statement_id: uuid.UUID,
+    tenant: TreasuryRead,
+    db: DbSession,
+    limit: Limit = 100,
+    offset: Offset = 0,
+) -> StatementLinesOut:
+    """Lignes d'un relevé, dans l'ordre du fichier, doublons signalés."""
+    page = statements.list_statement_lines(
+        db, tenant.company_id, statement_id, limit=limit, offset=offset
+    )
+    return StatementLinesOut(
+        statement_id=statement_id,
+        items=[
+            StatementLineOut(
+                id=row.id,
+                line_no=row.line_no,
+                value_date=date.fromisoformat(row.value_date),
+                amount=row.amount,
+                label=row.label,
+                reference=row.reference,
+                balance_after=row.balance_after,
+                status=row.status,
+                duplicate=row.duplicate,
+            )
+            for row in page.items
+        ],
+        total=page.total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.post(
+    "/treasury/statements/{statement_id}/lines/{line_id}/ignore",
+    responses={**WRITE_ERRORS, 422: TENANT_ERRORS[404]},
+)
+def ignore_statement_line(
+    statement_id: uuid.UUID,
+    line_id: uuid.UUID,
+    tenant: TreasuryManage,
+    db: DbSession,
+    ctx: Ctx,
+) -> StatementLineSet:
+    """Écarte une ligne du rapprochement (agios déjà comptabilisés, doublon d'export…) ;
+    la ligne reste dans le relevé pour la traçabilité."""
+    line = statements.set_line_status(
+        db,
+        _actor(tenant, ctx),
+        statement_id,
+        line_id,
+        StatementLineStatus.IGNORED,
+    )
+    return StatementLineSet(id=line.id, status=line.status)
+
+
+@router.post(
+    "/treasury/statements/{statement_id}/lines/{line_id}/restore",
+    responses={**WRITE_ERRORS, 422: TENANT_ERRORS[404]},
+)
+def restore_statement_line(
+    statement_id: uuid.UUID,
+    line_id: uuid.UUID,
+    tenant: TreasuryManage,
+    db: DbSession,
+    ctx: Ctx,
+) -> StatementLineSet:
+    """Remet une ligne ignorée en attente de rapprochement."""
+    line = statements.set_line_status(
+        db,
+        _actor(tenant, ctx),
+        statement_id,
+        line_id,
+        StatementLineStatus.PENDING,
+    )
+    return StatementLineSet(id=line.id, status=line.status)
+
+
+@router.delete(
+    "/treasury/statements/{statement_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={**WRITE_ERRORS, 422: TENANT_ERRORS[404]},
+)
+def delete_statement(
+    statement_id: uuid.UUID,
+    tenant: TreasuryManage,
+    db: DbSession,
+    ctx: Ctx,
+) -> None:
+    """Supprime un relevé non rapproché (et son fichier original conservé)."""
+    statements.delete_statement(db, _actor(tenant, ctx), statement_id)

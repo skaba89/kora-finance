@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ActionForm } from "@/components/forms/action-form";
+import { InlineAction } from "@/components/forms/inline-action";
 import { Field, SelectField } from "@/components/forms/field";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -14,17 +15,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { StatementUploadForm } from "@/components/treasury/statement-upload-form";
 import {
   createTreasuryAccountAction,
+  deleteStatementAction,
+  ignoreStatementLineAction,
+  importStatementAction,
   recordTreasuryMovementAction,
   recordTreasuryTransferAction,
+  restoreStatementLineAction,
 } from "@/lib/actions/treasury";
 import {
   can,
   getActiveAccounts,
   getCompany,
+  getStatementLines,
   getTreasuryAccounts,
   getTreasuryMovements,
+  getTreasuryStatements,
 } from "@/lib/dal";
 import { formatMoney } from "@/lib/format";
 import { getDictionary } from "@/lib/i18n/server";
@@ -38,14 +46,16 @@ const KINDS = ["BANQUE", "CAISSE", "MOBILE_MONEY"] as const;
 const MOVEMENTS = ["DEPOT", "RETRAIT", "FRAIS"] as const;
 const OPERATORS = ["ORANGE_MONEY_GN", "MTN_MOMO_GN"] as const;
 
-/** Page trésorerie : comptes financiers, mouvements et virements internes (3A). */
+/** Page trésorerie : comptes financiers, mouvements et virements internes (3A),
+ * relevés bancaires importés (3B). */
 export default async function TreasuryPage({
   params,
   searchParams,
 }: PageProps<"/[lang]/dossiers/[companyId]/tresorerie">) {
   const { companyId } = await params;
-  const { compte } = await searchParams;
+  const { compte, releve } = await searchParams;
   const compteParam = typeof compte === "string" ? compte : compte?.[0];
+  const releveParam = typeof releve === "string" ? releve : releve?.[0];
   const [{ t, locale }, company, accountList, glAccounts] = await Promise.all([
     getDictionary(),
     getCompany(companyId),
@@ -57,6 +67,13 @@ export default async function TreasuryPage({
   const selectedId = compteParam ?? accounts[0]?.id;
   const selected = accounts.find((account) => account.id === selectedId);
   const movements = selected ? await getTreasuryMovements(companyId, selected.id) : null;
+  // Les relevés sont visibles dès la lecture (treasury:read) ; import et tri exigent treasury:manage.
+  const statements = selected ? await getTreasuryStatements(companyId, selected.id) : null;
+  const selectedStatement =
+    statements && releveParam ? statements.items.find((item) => item.id === releveParam) : null;
+  const statementLines = selectedStatement
+    ? await getStatementLines(companyId, selectedStatement.id)
+    : null;
   const treasuryGl = glAccounts.filter((account) => /^(52|57)/.test(account.number));
 
   return (
@@ -163,6 +180,156 @@ export default async function TreasuryPage({
                       <TableCell className="text-right font-mono">
                         {formatMoney(Number(movement.amount), "GNF", locale)}
                       </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {selected && statements ? (
+        <Card className="mt-8" role="region" aria-labelledby="statements-title">
+          <CardHeader>
+            <CardTitle id="statements-title" className="text-base">
+              {t.treasury.releves.title} — {selected.name}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <p className="text-muted-foreground text-sm">{t.treasury.releves.subtitle}</p>
+            {selectedStatement && statementLines ? (
+              <>
+                <p className="text-sm">
+                  <Link
+                    href={`?compte=${selected.id}`}
+                    className="underline underline-offset-4"
+                  >
+                    {t.treasury.releves.backToList}
+                  </Link>
+                  <span className="text-muted-foreground ml-2 font-mono text-xs">
+                    {selectedStatement.filename} ·{" "}
+                    {selectedStatement.line_count} {t.treasury.releves.linesCount.toLowerCase()}
+                  </span>
+                </p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">{t.treasury.releves.lineNo}</TableHead>
+                      <TableHead className="w-28">{t.treasury.releves.lineDate}</TableHead>
+                      <TableHead>{t.treasury.releves.lineLabel}</TableHead>
+                      <TableHead className="hidden md:table-cell">{t.treasury.releves.lineRef}</TableHead>
+                      <TableHead className="text-right">{t.treasury.releves.lineAmount}</TableHead>
+                      <TableHead className="w-32">{t.treasury.releves.lineStatus}</TableHead>
+                      {manage ? <TableHead className="w-28" /> : null}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {statementLines.items.map((line) => (
+                      <TableRow key={line.id} className={line.status === "IGNORED" ? "opacity-60" : undefined}>
+                        <TableCell className="font-mono text-xs">{line.line_no}</TableCell>
+                        <TableCell>{line.value_date}</TableCell>
+                        <TableCell className="whitespace-normal">
+                          {line.label}
+                          {line.duplicate ? (
+                            <Badge variant="outline" className="ml-2">
+                              {t.treasury.releves.duplicate}
+                            </Badge>
+                          ) : null}
+                        </TableCell>
+                        <TableCell className="hidden font-mono text-xs md:table-cell">
+                          {line.reference}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {formatMoney(Number(line.amount), "GNF", locale)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              line.status === "IGNORED"
+                                ? "outline"
+                                : line.status === "MATCHED"
+                                  ? "secondary"
+                                  : "default"
+                            }
+                          >
+                            {t.treasury.releves.statuses[line.status]}
+                          </Badge>
+                        </TableCell>
+                        {manage ? (
+                          <TableCell>
+                            {line.status === "IGNORED" ? (
+                              <InlineAction
+                                action={restoreStatementLineAction.bind(
+                                  null,
+                                  companyId,
+                                  selectedStatement.id,
+                                  line.id,
+                                )}
+                                label={t.treasury.releves.restore}
+                                pendingLabel={t.common.pending}
+                              />
+                            ) : (
+                              <InlineAction
+                                action={ignoreStatementLineAction.bind(
+                                  null,
+                                  companyId,
+                                  selectedStatement.id,
+                                  line.id,
+                                )}
+                                label={t.treasury.releves.ignore}
+                                pendingLabel={t.common.pending}
+                                variant="ghost"
+                              />
+                            )}
+                          </TableCell>
+                        ) : null}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </>
+            ) : statements.items.length === 0 ? (
+              <p className="text-muted-foreground">{t.treasury.releves.noStatement}</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t.treasury.releves.filename}</TableHead>
+                    <TableHead className="w-20">{t.treasury.releves.format}</TableHead>
+                    <TableHead className="hidden sm:table-cell">{t.treasury.releves.period}</TableHead>
+                    <TableHead className="text-right">{t.treasury.releves.linesCount}</TableHead>
+                    {manage ? <TableHead className="w-40" /> : null}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {statements.items.map((view) => (
+                    <TableRow key={view.id}>
+                      <TableCell className="break-all font-medium">{view.filename}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{view.format}</Badge>
+                      </TableCell>
+                      <TableCell className="hidden text-sm sm:table-cell">
+                        {view.period_start} → {view.period_end}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">{view.line_count}</TableCell>
+                      {manage ? (
+                        <TableCell className="flex flex-wrap items-center gap-3">
+                          <Link
+                            href={`?compte=${selected.id}&releve=${view.id}`}
+                            className="text-sm underline underline-offset-4"
+                          >
+                            {t.treasury.releves.viewLines}
+                          </Link>
+                          <InlineAction
+                            action={deleteStatementAction.bind(null, companyId, view.id)}
+                            label={t.treasury.releves.delete}
+                            pendingLabel={t.common.pending}
+                            variant="destructive"
+                            confirm={t.treasury.releves.deleteConfirm}
+                          />
+                        </TableCell>
+                      ) : null}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -313,6 +480,25 @@ export default async function TreasuryPage({
               ) : null}
             </CardContent>
           </Card>
+
+          {selected ? (
+            <Card className="max-w-xl">
+              <CardHeader>
+                <CardTitle className="text-base">{t.treasury.releves.importTitle}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StatementUploadForm
+                  action={importStatementAction.bind(null, companyId, selected.id)}
+                  labels={{
+                    file: t.treasury.releves.file,
+                    hint: t.treasury.releves.fileHint,
+                    submit: t.treasury.releves.import,
+                    pending: t.treasury.releves.importing,
+                  }}
+                />
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
       ) : null}
     </>

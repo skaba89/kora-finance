@@ -947,3 +947,52 @@ Mobile Money), 3E (prévisions) ; classes 52/57 portant les portefeuilles Mobile
 à confirmer par la revue expert (KF-15/16). Suivi : `AUDIT_SUIVI_20261109.md` §22.
 **Score : 83,5/100** (périmètre fonctionnel : phase 3 entamée, 3A livrée et testée :
 +1). Prochaines priorités : 3B import de relevés, revue expert (KF-15/16), KF-14 (CSP).
+
+## 2026-11-11 — Phase 3B : import de relevés bancaires (OFX/CSV)
+
+**Contexte** : 3A en PR (#58) vérifiée localement (quota Actions toujours épuisé) ;
+la priorité d'audit suivante est l'import de relevés. Branche
+`feature/kora-3b-import-releves` (empilée sur la 3A).
+
+**Livré** :
+- migration `0012` (`bank_statements`, `bank_statement_lines`) : RLS + FORCE RLS,
+  FKs composites tenant, empreinte SHA-256 du fichier **unique par couple
+  (dossier, compte)** — le réimport du même relevé est refusé en base (première
+  barrière contre le double comptage) ; lignes avec montant signé du point de vue
+  du titulaire, empreinte métier (date, montant, libellé, référence) pour signaler
+  les doublons entre relevés successifs, statut de rapprochement
+  PENDING/MATCHED/IGNORED avec contrainte de cohérence (MATCHED ⇔ mouvement lié) ;
+- parseur sur mesure sans dépendance nouvelle (`treasury/parsing.py`) : OFX 1.x
+  SGML (balises souvent non fermées — BCRG, Ecobank), OFX 2.x XML, CSV à
+  détection de colonnes (en-tête FR par mots-clés, sinon inférence par nature des
+  données) ; montants « 2 500 000 » (espaces insécables), virgule décimale,
+  colonnes débit/crédit séparées (débit = sortie), formats JJ/MM/AAAA, BOM UTF-8
+  et cp1252 ; arrondi à l'unité (GNF sans sous-unité) ; format détecté au contenu
+  jamais à l'extension ;
+- service `treasury/statements.py` : import atomique (objet chiffré au stockage
+  d'abord, base ensuite, purge à l'échec — même ordre que les pièces), verrou de
+  compte sérialisant les imports concurrents, plafonds réglables
+  (`KORA_STATEMENT_MAX_BYTES` = 5 Mo, `KORA_STATEMENT_MAX_LINES` = 5000) ;
+  lignes ignorées/remises en attente (idempotent, MATCHED interdit hors 3C),
+  suppression de relevé non rapproché avec purge de l'objet ; audit tracé à
+  chaque opération (`treasury.statement.*`) ;
+- API : `POST /treasury/accounts/{id}/statements` (corps brut, `filename` en
+  requête, 413/409 documentés), `GET …/statements`, `GET
+  /treasury/statements/{id}/lines` (doublons signalés), `POST …/lines/{id}/ignore`,
+  `POST …/lines/{id}/restore`, `DELETE /treasury/statements/{id}` ; contrat +
+  types TS régénérés ; permissions 3A réutilisées (aucune permission nouvelle) ;
+- page Trésorerie : section « Relevés importés » (liste, import avec formulaire
+  fichier dédié, consultation ligne à ligne, badges doublon et statut, tri
+  écarter/remettre, suppression avec confirmation), i18n fr/en.
+
+**Vérifié** (même environnement réel hors Docker) : **667/667** tests API — 44
+nouveaux : 14 tests parseur (OFX SGML/XML, CSV en-tête FR, débit/crédit, inférence
+sans en-tête, cp1252, décimales arrondies, formats refusés) + 12 tests API (import,
+réimport refusé 409, même fichier sur deux comptes accepté, doublons symétriques,
+ignorer/remettre idempotent, suppression, lecteur 200/403, isolation 404, 413,
+plafond de lignes) + ajustements ; ruff, mypy strict, contrat, ESLint, tsc, Vitest
+60/60, build Next OK, **E2E Playwright 31/31 chromium + 31/31 mobile** contre la
+pile native (PG 16, Redis, Garage, Mailpit).
+
+**Reste** : 3C rapprochement (match ligne ↔ mouvement avec confirmation humaine),
+3D connecteurs, 3E prévisions ; suivi : `AUDIT_SUIVI_20261109.md` §23.

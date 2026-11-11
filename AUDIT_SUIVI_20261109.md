@@ -730,3 +730,41 @@ Actions épuisé (dépôt privé) — validation locale documentée dans la PR.
 expert. **Déductions §7** : périmètre fonctionnel, phase 3 entamée (+1).
 **Score : 83,5/100.** Prochaines priorités : 3B import de relevés, revue expert
 (KF-15/16), KF-14 (CSP), vérifications staging (KF-11).
+
+## 23. Phase 3B — Import de relevés bancaires OFX/CSV (2026-11-11)
+
+**Constat** (`docs/PLAN.md`, §8) : après la 3A (comptes financiers), le lien
+opérationnel avec les banques exige l'import des relevés — aujourd'hui, les
+écritures de trésorerie ne naissent que d'une saisie manuelle.
+
+**Correctif** (branche `feature/kora-3b-import-releves`, empilée sur la 3A) :
+
+- migration `0012` : `bank_statements` + `bank_statement_lines` (RLS + FORCE RLS,
+  FKs composites tenant, trigger de cohérence par CHECK — MATCHED ⇔ mouvement lié) ;
+  empreinte du fichier **unique par (dossier, compte)** : réimport refusé en base ;
+  empreinte métier des lignes pour le signalement des doublons entre relevés qui
+  se recouvrent ;
+- parseur sans dépendance : OFX 1.x SGML (balises non fermées), OFX 2.x XML, CSV
+  à en-tête FR ou inféré des données ; débit/crédit séparés → signe correct ;
+  espaces insécables, virgule décimale, JJ/MM/AAAA, cp1252 ; arrondi GNF au plus
+  près, lignes sans date ni montant jamais inventées ;
+- service : import atomique avec objet original chiffré au stockage (traçabilité,
+  litige banque), verrou de compte anti-imports concurrents, plafonds réglables
+  (5 Mo / 5 000 lignes), tri des lignes (ignorer/remettre, idempotent, MATCHED
+  réservé à la 3C), suppression d'un relevé non rapproché ; audit complet ;
+- API + contrat + types TS ; page Trésorerie augmentée (liste, import, lignes,
+  doublons signalés, tri, suppression), i18n fr/en ; permissions 3A réutilisées.
+
+**Preuve** : **667/667** tests API hors Docker (PG 16.15, Redis, Garage, Mailpit
+réels), dont 26 nouveaux (14 parseur + 12 API : dédup, doublons symétriques,
+idempotence du tri, lecteur 200/403, isolation 404, 413, plafond de lignes) ;
+ruff, mypy strict, contrat, ESLint, tsc, Vitest 60/60, build Next OK ; E2E
+Playwright **31/31 chromium + 31/31 mobile** contre la pile native. CI GitHub
+toujours en attente de quota ; validation locale documentée dans la PR.
+
+**Reste** : 3C (rapprochement ligne ↔ mouvement, proposition assistée avec
+confirmation humaine obligatoire), 3D (connecteurs Orange/MTN — API officielles
+seulement), 3E (prévisions de trésorerie 30/60/90 jours).
+**Déductions §7** : périmètre fonctionnel, phase 3 poursuivie (3B livrée) : +0,5.
+**Score : 84/100.** Prochaines priorités : 3C rapprochement, revue expert
+(KF-15/16), KF-14 (CSP), vérifications staging (KF-11).

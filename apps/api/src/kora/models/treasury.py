@@ -30,6 +30,7 @@ from sqlalchemy import (
     ForeignKey,
     ForeignKeyConstraint,
     Index,
+    LargeBinary,
     String,
     UniqueConstraint,
     text,
@@ -188,4 +189,135 @@ class FinancialMovement(Base):
             "financial_account_id",
             "movement_date",
         ),
+    )
+
+
+class StatementFormat(StrEnum):
+    OFX = "OFX"
+    CSV = "CSV"
+
+
+class StatementLineStatus(StrEnum):
+    """État d'une ligne de relevé face au rapprochement (sous-phase 3C).
+
+    PENDING : à rapprocher. MATCHED : rapprochée d'un mouvement (ou d'une écriture)
+    — posé dès 3B, rempli en 3C. IGNORED : écartée par l'utilisateur (frais
+    d'agios déjà comptabilisés, doublon d'export bancaire…) ; elle reste dans le
+    relevé pour la traçabilité mais n'entrera plus dans aucun rapprochement.
+    """
+
+    PENDING = "PENDING"
+    MATCHED = "MATCHED"
+    IGNORED = "IGNORED"
+
+
+class BankStatement(Base):
+    """Relevé bancaire importé pour un compte financier (sous-phase 3B).
+
+    Le fichier original est conservé chiffré dans le stockage d'objets : les lignes
+    lues restent vérifiables (audit, litige avec la banque). L'empreinte SHA-256 du
+    fichier refuse le double import du même relevé sur un compte — source classique
+    de mouvements comptés deux fois.
+    """
+
+    __tablename__ = "bank_statements"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"))
+    financial_account_id: Mapped[uuid.UUID]
+    filename: Mapped[str] = mapped_column(String(200))
+    format: Mapped[str] = mapped_column(String(8))
+    size_bytes: Mapped[int] = mapped_column(BigInteger)
+    sha256: Mapped[str] = mapped_column(String(64))
+    line_count: Mapped[int] = mapped_column(BigInteger)
+    period_start: Mapped[date] = mapped_column(Date)
+    period_end: Mapped[date] = mapped_column(Date)
+    # Objet chiffré du fichier original (pièce de traçabilité, réimportable).
+    storage_key: Mapped[str] = mapped_column(String(300))
+    wrapped_key: Mapped[bytes] = mapped_column(LargeBinary)
+    uploaded_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = created_at_column()
+    updated_at: Mapped[datetime] = updated_at_column()
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        # Un même fichier importé deux fois sur un compte est refusé (pas de double
+        # comptage). Un même fichier sur deux comptes distincts n'est pas impossible
+        # (export multi-comptes) : la contrainte porte donc sur le couple.
+        UniqueConstraint("tenant_id", "financial_account_id", "sha256"),
+        CheckConstraint("format IN ('OFX', 'CSV')", name="format_valid"),
+        CheckConstraint("length(trim(filename)) > 0", name="filename_not_blank"),
+        CheckConstraint("line_count > 0", name="line_count_positive"),
+        CheckConstraint("period_start <= period_end", name="period_ordered"),
+        ForeignKeyConstraint(
+            ["tenant_id", "financial_account_id"],
+            ["financial_accounts.tenant_id", "financial_accounts.id"],
+            ondelete="RESTRICT",
+        ),
+        Index(
+            "ix_bank_statements_tenant_account_created",
+            "tenant_id",
+            "financial_account_id",
+            "created_at",
+        ),
+    )
+
+
+class BankStatementLine(Base):
+    """Ligne d'un relevé importé : opération vue par la banque, pas encore comptable.
+
+    Le montant est signé du point de vue du titulaire (positif = entrée de fonds) ;
+    le contenu métier (date, montant, libellé, référence) est haché pour signaler
+    les doublons entre relevés successifs. La ligne est en ajout seul jusqu'à son
+    statut : elle ne peut être que rapprochée (3C) ou ignorée, jamais corrigée.
+    """
+
+    __tablename__ = "bank_statement_lines"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"))
+    statement_id: Mapped[uuid.UUID]
+    line_no: Mapped[int] = mapped_column(BigInteger)
+    value_date: Mapped[date] = mapped_column(Date)
+    # Signé, du point de vue du titulaire : positif = entrée, négatif = sortie.
+    amount: Mapped[int] = mapped_column(BigInteger)
+    label: Mapped[str] = mapped_column(String(200))
+    reference: Mapped[str | None] = mapped_column(String(60))
+    balance_after: Mapped[int | None] = mapped_column(BigInteger)
+    content_hash: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(12), server_default=text("'PENDING'"))
+    # Mouvement (ou écriture) apparié par le rapprochement (3C) ; NULL tant que la
+    # ligne n'est pas rapprochée.
+    matched_movement_id: Mapped[uuid.UUID | None]
+    created_at: Mapped[datetime] = created_at_column()
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        UniqueConstraint("tenant_id", "statement_id", "line_no"),
+        CheckConstraint("status IN ('PENDING', 'MATCHED', 'IGNORED')", name="status_valid"),
+        CheckConstraint(f"amount <> 0 AND abs(amount) <= {MAX_LINE_AMOUNT}", name="amount_range"),
+        CheckConstraint("length(trim(label)) > 0", name="label_not_blank"),
+        CheckConstraint("line_no > 0", name="line_no_positive"),
+        CheckConstraint(
+            "(status = 'MATCHED' AND matched_movement_id IS NOT NULL)"
+            " OR (status <> 'MATCHED' AND matched_movement_id IS NULL)",
+            name="match_state_consistent",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "statement_id"],
+            ["bank_statements.tenant_id", "bank_statements.id"],
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "matched_movement_id"],
+            ["financial_movements.tenant_id", "financial_movements.id"],
+            ondelete="RESTRICT",
+        ),
+        Index(
+            "ix_bank_statement_lines_tenant_statement_date",
+            "tenant_id",
+            "statement_id",
+            "value_date",
+        ),
+        Index("ix_bank_statement_lines_tenant_hash", "tenant_id", "content_hash"),
     )

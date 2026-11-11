@@ -93,6 +93,26 @@ export async function getTreasuryMovements(companyId: string, accountId: string)
   );
 }
 
+/** Relevés bancaires importés d'un compte (3B), du plus récent au plus ancien. */
+export async function getTreasuryStatements(companyId: string, accountId: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/treasury/accounts/{account_id}/statements", {
+      params: { path: { company_id: companyId, account_id: accountId } },
+      query: { limit: 50, offset: 0 },
+    }),
+  );
+}
+
+/** Lignes d'un relevé importé, dans l'ordre du fichier, doublons signalés. */
+export async function getStatementLines(companyId: string, statementId: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines", {
+      params: { path: { company_id: companyId, statement_id: statementId } },
+      query: { limit: 500, offset: 0 },
+    }),
+  );
+}
+
 /** Tous les comptes actifs (sélecteur de saisie) : quelques centaines, en pages de 200. */
 export async function getActiveAccounts(companyId: string) {
   const client = await api();

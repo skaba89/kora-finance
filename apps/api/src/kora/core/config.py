@@ -106,6 +106,11 @@ class Settings(BaseSettings):
     # Taille maximale d'une pièce (les photos sont réduites dans le navigateur avant envoi).
     attachment_max_bytes: int = Field(default=10 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024)
     attachments_per_entry: int = Field(default=20, ge=1, le=100)
+    # Relevés bancaires importés (3B) : un relevé texte (OFX/CSV) est bien plus léger
+    # qu'une photo ; 5 Mo couvre largement un relevé annuel. Le plafond de lignes
+    # protège la transaction d'import (insertion en masse) et la page de consultation.
+    statement_max_bytes: int = Field(default=5 * 1024 * 1024, ge=1024, le=20 * 1024 * 1024)
+    statement_max_lines: int = Field(default=5000, ge=10, le=50000)
 
     @model_validator(mode="after")
     def _check_settings(self) -> Self:
