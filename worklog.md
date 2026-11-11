@@ -996,3 +996,32 @@ pile native (PG 16, Redis, Garage, Mailpit).
 
 **Reste** : 3C rapprochement (match ligne ↔ mouvement avec confirmation humaine),
 3D connecteurs, 3E prévisions ; suivi : `AUDIT_SUIVI_20261109.md` §23.
+
+## 2026-11-12 — Fusion des PRs 55-59, `main` revalidé de bout en bout
+
+**Diagnostic CI** : les 5 PRs (#55 React 19.3.1, #56 Playwright 1.65, #57 export TFT
+(KF-15), #58 trésorerie 3A, #59 import relevés 3B) restaient rouges sans aucun défaut
+de code : quota GitHub Actions épuisé (dépôt privé, spending limit 0 $) — les jobs
+sont rejetés à la file en 2-3 s avec **0 étape exécutée** (sonde : re-run du job
+gitleaks → même échec immédiat, aucun step).
+
+**Fusion** : séquence **#57 → #55 → #56 → #58 → #59** par l'API GitHub (commits de
+merge, aucun conflit ; #59 contient la 3A). Le #59 a été intégralement revalidé sur
+sa branche avant fusion (667/674 pytest, contrat, web, E2E 62/62).
+
+**Revalidation complète de `main` composé**, pile rootless native (PG 16.4, Redis
+7.4.6, Mailpit 1.31.3 — AUTH activé pour le test SMTP réel —, Garage 2.4.1, buckets
+kora/kora-test/kora-backups) :
+- ruff (check + format), mypy strict : OK (156 fichiers) ;
+- **674/674** tests pytest (dont test SMTP réel corrigé côté pile locale) ;
+- contrat OpenAPI : `openapi.json` identique, types TS sans diff ;
+- 4 checks transverses (runtime/migration, KF-11, KF-12, KF-13) : OK ;
+- Web : ESLint 0 warning, tsc, **Vitest 60/60**, build Next OK ;
+- E2E Playwright **62/62** (31 desktop + 31 mobile) avec React **19.3.1** et
+  Playwright **1.65.0** appairés (chromium 1254) ;
+- `npm audit` production : 0 vulnérabilité.
+
+**Reste à la CI** (daemon Docker indisponible en local) : restauration synthétique
+(restore-drill), pip-audit et SBOM — à rejouer dès que le quota Actions est
+restauré (spending limit > 0 ou reset du 1er décembre). Suivi :
+`AUDIT_SUIVI_20261109.md` §24.

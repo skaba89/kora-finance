@@ -768,3 +768,36 @@ seulement), 3E (prévisions de trésorerie 30/60/90 jours).
 **Déductions §7** : périmètre fonctionnel, phase 3 poursuivie (3B livrée) : +0,5.
 **Score : 84/100.** Prochaines priorités : 3C rapprochement, revue expert
 (KF-15/16), KF-14 (CSP), vérifications staging (KF-11).
+
+## 24. Fusion des PRs 55-59 sur `main` — pile composée revalidée (2026-11-12)
+
+**Constat** : les 5 PRs ouverts (#55 React 19.3.1, #56 Playwright 1.65, #57 export
+TFT KF-15, #58 trésorerie 3A, #59 import relevés 3B) restaient « en erreur » sans
+défaut de code : quota GitHub Actions épuisé (dépôt privé, spending limit 0 $). Les
+jobs sont rejetés à la file en 2-3 secondes avec **0 étape exécutée** (sonde de
+re-run documentée). Sans spending limit, aucune CI ne peut tourner avant le reset du
+1er décembre.
+
+**Décision** : re-vérification locale intégrale puis fusion séquentielle
+**#57 → #55 → #56 → #58 → #59** (API GitHub, commits de merge, aucun conflit ; le
+#59 contient la 3A et a été revalidé sur sa branche avant fusion : 667/674 pytest,
+contrat, web, E2E 62/62).
+
+**Preuve sur `main` composé** (pile rootless native : PG 16.4, Redis 7.4.6, Mailpit
+1.31.3 avec AUTH, Garage 2.4.1 — buckets `kora`, `kora-test`, `kora-backups`) :
+ruff check + format OK ; mypy strict OK (156 fichiers) ; **674/674** tests pytest
+(dont le test SMTP réel contre Mailpit) ; contrat OpenAPI — `openapi.json` identique
+et types TS régénérés sans diff ; 4 checks transverses (séparation
+runtime/migration, versionnement KF-11, supervision KF-12, budgets/quotas KF-13) OK
+; ESLint 0 warning, tsc strict, **Vitest 60/60**, build Next OK ; E2E Playwright
+**62/62** (31 desktop + 31 mobile) sur les versions appairées React **19.3.1** et
+Playwright **1.65.0** (chromium 1254) ; `npm audit` production : 0 vulnérabilité.
+
+**Reste à la CI** (daemon Docker indisponible en sandbox) : restauration synthétique
+(restore-drill), pip-audit et SBOM CycloneDX — à rejouer dès que le quota Actions
+est restauré.
+
+**Reste** : inchangé — 3C rapprochement (confirmation humaine obligatoire), revue
+expert (KF-15/16), KF-14 (CSP), vérifications staging (KF-11), puis 3D connecteurs
+et 3E prévisions. **Déductions §7** : aucune variation — le score ne bouge pas, la
+preuve d'intégration s'ajoute à la 3A/3B déjà comptabilisées. **Score : 84/100.**
