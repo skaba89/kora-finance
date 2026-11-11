@@ -1140,6 +1140,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/treasury/accounts/{account_id}/reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reconciliation Overview
+         * @description Vue d'ensemble du rapprochement d'un compte : compteurs par statut, solde
+         *     des lignes en attente, mouvements restés sans ligne.
+         */
+        get: operations["reconciliation_overview_api_v1_companies__company_id__treasury_accounts__account_id__reconciliation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/treasury/accounts/{account_id}/statements": {
         parameters: {
             query?: never;
@@ -1205,6 +1226,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines/{line_id}/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Match Candidates
+         * @description Candidats de rapprochement d'une ligne en attente : mouvements du même
+         *     compte, montant égal, direction cohérente, jamais rapprochés — classés par
+         *     ressemblance. Propositions seulement : la confirmation reste humaine.
+         */
+        get: operations["match_candidates_api_v1_companies__company_id__treasury_statements__statement_id__lines__line_id__candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines/{line_id}/ignore": {
         parameters: {
             query?: never;
@@ -1226,6 +1269,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines/{line_id}/match": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Match
+         * @description Confirme le rapprochement d'une ligne avec le mouvement choisi : la ligne
+         *     passe en MATCHED, le lien est tracé dans le journal d'audit, réversible.
+         */
+        post: operations["confirm_match_api_v1_companies__company_id__treasury_statements__statement_id__lines__line_id__match_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines/{line_id}/restore": {
         parameters: {
             query?: never;
@@ -1240,6 +1304,27 @@ export interface paths {
          * @description Remet une ligne ignorée en attente de rapprochement.
          */
         post: operations["restore_statement_line_api_v1_companies__company_id__treasury_statements__statement_id__lines__line_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines/{line_id}/unmatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unmatch Statement Line
+         * @description Retire le rapprochement d'une ligne : elle repasse en attente, le mouvement
+         *     redevient disponible.
+         */
+        post: operations["unmatch_statement_line_api_v1_companies__company_id__treasury_statements__statement_id__lines__line_id__unmatch_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2931,6 +3016,74 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** MatchCandidateOut */
+        MatchCandidateOut: {
+            /**
+             * Amount
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            amount: string;
+            /** Days Apart */
+            days_apart: number;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "DEBIT" | "CREDIT";
+            /** Entry Number */
+            entry_number: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "DEPOT" | "RETRAIT" | "VIREMENT_INTERNE" | "FRAIS";
+            /** Label */
+            label: string;
+            /**
+             * Movement Date
+             * Format: date
+             */
+            movement_date: string;
+            /** Score */
+            score: number;
+        };
+        /** MatchCandidatesOut */
+        MatchCandidatesOut: {
+            /**
+             * Amount
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            amount: string;
+            /** Candidates */
+            candidates: components["schemas"]["MatchCandidateOut"][];
+            /** Label */
+            label: string;
+            /**
+             * Line Id
+             * Format: uuid
+             */
+            line_id: string;
+            /** Line No */
+            line_no: number;
+            /**
+             * Value Date
+             * Format: date
+             */
+            value_date: string;
+        };
+        /** MatchConfirm */
+        MatchConfirm: {
+            /**
+             * Movement Id
+             * Format: uuid
+             */
+            movement_id: string;
+        };
         /** MemberAdded */
         MemberAdded: {
             member: components["schemas"]["MemberOut"];
@@ -3178,6 +3331,27 @@ export interface components {
             code: string;
             /** Password */
             password: string;
+        };
+        /** ReconciliationOut */
+        ReconciliationOut: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Lines Ignored */
+            lines_ignored: number;
+            /** Lines Matched */
+            lines_matched: number;
+            /** Lines Pending */
+            lines_pending: number;
+            /** Movements Unmatched */
+            movements_unmatched: number;
+            /**
+             * Pending Net
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            pending_net: string;
         };
         /** RecoveryCodesResponse */
         RecoveryCodesResponse: {
@@ -8435,6 +8609,66 @@ export interface operations {
             };
         };
     };
+    reconciliation_overview_api_v1_companies__company_id__treasury_accounts__account_id__reconciliation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_statements_api_v1_companies__company_id__treasury_accounts__account_id__statements_get: {
         parameters: {
             query?: {
@@ -8717,6 +8951,67 @@ export interface operations {
             };
         };
     };
+    match_candidates_api_v1_companies__company_id__treasury_statements__statement_id__lines__line_id__candidates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+                line_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchCandidatesOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     ignore_statement_line_api_v1_companies__company_id__treasury_statements__statement_id__lines__line_id__ignore_post: {
         parameters: {
             query?: never;
@@ -8787,7 +9082,151 @@ export interface operations {
             };
         };
     };
+    confirm_match_api_v1_companies__company_id__treasury_statements__statement_id__lines__line_id__match_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+                line_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MatchConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatementLineSet"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     restore_statement_line_api_v1_companies__company_id__treasury_statements__statement_id__lines__line_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+                line_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatementLineSet"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    unmatch_statement_line_api_v1_companies__company_id__treasury_statements__statement_id__lines__line_id__unmatch_post: {
         parameters: {
             query?: never;
             header?: never;

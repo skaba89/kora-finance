@@ -498,7 +498,7 @@ export const fr = {
     releves: {
       title: "Relevés importés",
       subtitle:
-        "Fichiers OFX ou CSV exportés de votre banque. Les lignes attendent le rapprochement (à venir) : rien n'est comptabilisé à l'import.",
+        "Fichiers OFX ou CSV exportés de votre banque. Les lignes attendent le rapprochement : rien n'est comptabilisé à l'import.",
       importTitle: "Importer un relevé (OFX ou CSV)",
       file: "Fichier du relevé",
       fileHint: "Le contenu est analysé tel quel ; le réimport du même fichier est refusé.",
@@ -528,6 +528,32 @@ export const fr = {
         "Supprimer ce relevé et toutes ses lignes ? Les lignes rapprochées bloquent la suppression.",
       deleted: "Relevé supprimé.",
       backToList: "Retour aux relevés",
+    },
+    rapprochement: {
+      title: "Rapprochement bancaire",
+      subtitle:
+        "Reliez chaque ligne de relevé au mouvement qui l'explique. Le moteur propose des candidats classés ; vous confirmez — jamais l'inverse.",
+      propose: "Rapprocher",
+      candidatesTitle: "Candidats proposés pour la ligne n°{line}",
+      backToLines: "Retour aux lignes",
+      confirmNotice:
+        "Propositions classées par ressemblance (montant exact, proximité de date, libellé). La confirmation est un acte humain : rien n'est jamais rapproché automatiquement, et un rapprochement confirmé reste réversible.",
+      confirm: "Confirmer",
+      cancel: "Annuler",
+      unmatch: "Retirer",
+      unmatchConfirm:
+        "Retirer ce rapprochement ? La ligne repassera en attente et le mouvement redeviendra disponible.",
+      noCandidates:
+        "Aucun candidat : créez le mouvement correspondant (dépôt, retrait ou frais) sur ce compte, puis revenez sur cette ligne.",
+      daysApart: "Écart : {days} jour(s)",
+      entryNumber: "Écriture n°{number}",
+      overview: {
+        pending: "À rapprocher",
+        matched: "Rapprochées",
+        ignored: "Écartées",
+        pendingNet: "Montant restant à expliquer",
+        movements: "Mouvements libres",
+      },
     },
   },
   statements: {

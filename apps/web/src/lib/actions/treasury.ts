@@ -168,6 +168,41 @@ export async function restoreStatementLineAction(
   return { status: "success", message: (await actionDictionary()).common.saved };
 }
 
+/** Retire le rapprochement d'une ligne (repasse en attente, mouvement libéré). */
+export async function unmatchStatementLineAction(
+  companyId: string,
+  statementId: string,
+  lineId: string,
+): Promise<ActionState> {
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines/{line_id}/unmatch",
+    { params: { path: { company_id: companyId, statement_id: statementId, line_id: lineId } } },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  return { status: "success", message: (await actionDictionary()).common.saved };
+}
+
+/** Confirme le rapprochement d'une ligne avec le mouvement choisi (acte humain,
+ * réversible) : le mouvement est passé lié au clic, jamais par le formulaire. */
+export async function matchStatementLineAction(
+  companyId: string,
+  statementId: string,
+  lineId: string,
+  movementId: string,
+): Promise<ActionState> {
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines/{line_id}/match",
+    {
+      params: { path: { company_id: companyId, statement_id: statementId, line_id: lineId } },
+      body: { movement_id: movementId },
+    },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  return { status: "success", message: (await actionDictionary()).common.saved };
+}
+
 /** Supprime un relevé non rapproché (et son fichier original conservé). */
 export async function deleteStatementAction(
   companyId: string,

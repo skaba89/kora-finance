@@ -498,7 +498,7 @@ export const en: typeof fr = {
     releves: {
       title: "Imported statements",
       subtitle:
-        "OFX or CSV files exported from your bank. Lines await reconciliation (coming soon): nothing is posted at import time.",
+        "OFX or CSV files exported from your bank. Lines await reconciliation: nothing is posted at import time.",
       importTitle: "Import a statement (OFX or CSV)",
       file: "Statement file",
       fileHint: "Content is parsed as-is; importing the same file twice is rejected.",
@@ -528,6 +528,32 @@ export const en: typeof fr = {
         "Delete this statement and all its lines? Reconciled lines block deletion.",
       deleted: "Statement deleted.",
       backToList: "Back to statements",
+    },
+    rapprochement: {
+      title: "Bank reconciliation",
+      subtitle:
+        "Link each statement line to the movement that explains it. The engine ranks candidate matches; you confirm — never the other way round.",
+      propose: "Reconcile",
+      candidatesTitle: "Proposed candidates for line #{line}",
+      backToLines: "Back to lines",
+      confirmNotice:
+        "Candidates ranked by likeness (exact amount, date proximity, label). Confirmation is a human act: nothing is ever reconciled automatically, and a confirmed match stays reversible.",
+      confirm: "Confirm",
+      cancel: "Cancel",
+      unmatch: "Remove",
+      unmatchConfirm:
+        "Remove this match? The line goes back to pending and the movement becomes available again.",
+      noCandidates:
+        "No candidate: create the matching movement (deposit, withdrawal or fees) on this account, then come back to this line.",
+      daysApart: "Gap: {days} day(s)",
+      entryNumber: "Entry #{number}",
+      overview: {
+        pending: "To reconcile",
+        matched: "Reconciled",
+        ignored: "Dismissed",
+        pendingNet: "Amount still unexplained",
+        movements: "Free movements",
+      },
     },
   },
   statements: {

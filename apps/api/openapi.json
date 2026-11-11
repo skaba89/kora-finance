@@ -3618,6 +3618,140 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "MatchCandidateOut": {
+        "properties": {
+          "amount": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "days_apart": {
+            "title": "Days Apart",
+            "type": "integer"
+          },
+          "direction": {
+            "enum": [
+              "DEBIT",
+              "CREDIT"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "entry_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Number"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "DEPOT",
+              "RETRAIT",
+              "VIREMENT_INTERNE",
+              "FRAIS"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "movement_date": {
+            "format": "date",
+            "title": "Movement Date",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "direction",
+          "amount",
+          "movement_date",
+          "label",
+          "entry_number",
+          "days_apart",
+          "score"
+        ],
+        "title": "MatchCandidateOut",
+        "type": "object"
+      },
+      "MatchCandidatesOut": {
+        "properties": {
+          "amount": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/MatchCandidateOut"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "line_id": {
+            "format": "uuid",
+            "title": "Line Id",
+            "type": "string"
+          },
+          "line_no": {
+            "title": "Line No",
+            "type": "integer"
+          },
+          "value_date": {
+            "format": "date",
+            "title": "Value Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line_id",
+          "line_no",
+          "value_date",
+          "amount",
+          "label",
+          "candidates"
+        ],
+        "title": "MatchCandidatesOut",
+        "type": "object"
+      },
+      "MatchConfirm": {
+        "additionalProperties": false,
+        "properties": {
+          "movement_id": {
+            "format": "uuid",
+            "title": "Movement Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "movement_id"
+        ],
+        "title": "MatchConfirm",
+        "type": "object"
+      },
       "MemberAdded": {
         "properties": {
           "member": {
@@ -4180,6 +4314,47 @@
           "code"
         ],
         "title": "ReauthRequest",
+        "type": "object"
+      },
+      "ReconciliationOut": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "lines_ignored": {
+            "title": "Lines Ignored",
+            "type": "integer"
+          },
+          "lines_matched": {
+            "title": "Lines Matched",
+            "type": "integer"
+          },
+          "lines_pending": {
+            "title": "Lines Pending",
+            "type": "integer"
+          },
+          "movements_unmatched": {
+            "title": "Movements Unmatched",
+            "type": "integer"
+          },
+          "pending_net": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Pending Net",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "lines_pending",
+          "lines_matched",
+          "lines_ignored",
+          "pending_net",
+          "movements_unmatched"
+        ],
+        "title": "ReconciliationOut",
         "type": "object"
       },
       "RecoveryCodesResponse": {
@@ -12464,6 +12639,97 @@
         ]
       }
     },
+    "/api/v1/companies/{company_id}/treasury/accounts/{account_id}/reconciliation": {
+      "get": {
+        "description": "Vue d'ensemble du rapprochement d'un compte : compteurs par statut, solde\ndes lignes en attente, mouvements restés sans ligne.",
+        "operationId": "reconciliation_overview_api_v1_companies__company_id__treasury_accounts__account_id__reconciliation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reconciliation Overview",
+        "tags": [
+          "trésorerie"
+        ]
+      }
+    },
     "/api/v1/companies/{company_id}/treasury/accounts/{account_id}/statements": {
       "get": {
         "description": "Relevés importés d'un compte, du plus récent au plus ancien.",
@@ -12932,6 +13198,107 @@
         ]
       }
     },
+    "/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines/{line_id}/candidates": {
+      "get": {
+        "description": "Candidats de rapprochement d'une ligne en attente : mouvements du même\ncompte, montant égal, direction cohérente, jamais rapprochés — classés par\nressemblance. Propositions seulement : la confirmation reste humaine.",
+        "operationId": "match_candidates_api_v1_companies__company_id__treasury_statements__statement_id__lines__line_id__candidates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchCandidatesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Match Candidates",
+        "tags": [
+          "trésorerie"
+        ]
+      }
+    },
     "/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines/{line_id}/ignore": {
       "post": {
         "description": "Écarte une ligne du rapprochement (agios déjà comptabilisés, doublon d'export…) ;\nla ligne reste dans le relevé pour la traçabilité.",
@@ -13043,6 +13410,127 @@
         ]
       }
     },
+    "/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines/{line_id}/match": {
+      "post": {
+        "description": "Confirme le rapprochement d'une ligne avec le mouvement choisi : la ligne\npasse en MATCHED, le lien est tracé dans le journal d'audit, réversible.",
+        "operationId": "confirm_match_api_v1_companies__company_id__treasury_statements__statement_id__lines__line_id__match_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementLineSet"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Confirm Match",
+        "tags": [
+          "trésorerie"
+        ]
+      }
+    },
     "/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines/{line_id}/restore": {
       "post": {
         "description": "Remet une ligne ignorée en attente de rapprochement.",
@@ -13149,6 +13637,117 @@
           }
         ],
         "summary": "Restore Statement Line",
+        "tags": [
+          "trésorerie"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines/{line_id}/unmatch": {
+      "post": {
+        "description": "Retire le rapprochement d'une ligne : elle repasse en attente, le mouvement\nredevient disponible.",
+        "operationId": "unmatch_statement_line_api_v1_companies__company_id__treasury_statements__statement_id__lines__line_id__unmatch_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Line Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementLineSet"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unmatch Statement Line",
         "tags": [
           "trésorerie"
         ]

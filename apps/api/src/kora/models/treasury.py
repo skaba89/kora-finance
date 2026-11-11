@@ -294,6 +294,11 @@ class BankStatementLine(Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "id"),
         UniqueConstraint("tenant_id", "statement_id", "line_no"),
+        # Un mouvement n'est rapproché qu'une fois (3C, migration 0013) : deux lignes
+        # — même de deux relevés distincts — ne peuvent pas désigner le même
+        # mouvement, sinon l'opération serait comptée deux fois. Les NULL restent
+        # libres (lignes non rapprochées).
+        UniqueConstraint("tenant_id", "matched_movement_id"),
         CheckConstraint("status IN ('PENDING', 'MATCHED', 'IGNORED')", name="status_valid"),
         CheckConstraint(f"amount <> 0 AND abs(amount) <= {MAX_LINE_AMOUNT}", name="amount_range"),
         CheckConstraint("length(trim(label)) > 0", name="label_not_blank"),
