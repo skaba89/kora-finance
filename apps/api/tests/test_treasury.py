@@ -14,6 +14,7 @@ from queue import Queue
 
 import pytest
 from fastapi.testclient import TestClient
+from httpx2 import Response
 from sqlalchemy import text
 
 from kora.db.session import get_sessionmaker
@@ -34,15 +35,15 @@ class Treasury:
 
     def create_account(
         self, body: dict[str, object], company: CompanyFixture | None = None
-    ) -> object:
+    ) -> Response:
         headers = (company or self.company).headers
         return self.client.post(f"{self.base}/treasury/accounts", headers=headers, json=body)
 
-    def accounts(self, company: CompanyFixture | None = None) -> object:
+    def accounts(self, company: CompanyFixture | None = None) -> Response:
         headers = (company or self.company).headers
         return self.client.get(f"{self.base}/treasury/accounts", headers=headers)
 
-    def movements(self, account_id: str, company: CompanyFixture | None = None) -> object:
+    def movements(self, account_id: str, company: CompanyFixture | None = None) -> Response:
         headers = (company or self.company).headers
         return self.client.get(
             f"{self.base}/treasury/accounts/{account_id}/movements", headers=headers
@@ -50,13 +51,13 @@ class Treasury:
 
     def movement(
         self, account_id: str, body: dict[str, object], company: CompanyFixture | None = None
-    ) -> object:
+    ) -> Response:
         headers = (company or self.company).headers
         return self.client.post(
             f"{self.base}/treasury/accounts/{account_id}/movements", headers=headers, json=body
         )
 
-    def transfer(self, body: dict[str, object], company: CompanyFixture | None = None) -> object:
+    def transfer(self, body: dict[str, object], company: CompanyFixture | None = None) -> Response:
         headers = (company or self.company).headers
         return self.client.post(f"{self.base}/treasury/transfers", headers=headers, json=body)
 
