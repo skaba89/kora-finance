@@ -19,6 +19,7 @@ from kora.api.v1 import (
     mfa,
     reports,
     statements,
+    treasury,
 )
 
 PREFIX = "/api/v1"
@@ -39,4 +40,5 @@ ROUTERS: tuple[APIRouter, ...] = (
     exports.router,
     firms.router,
     invitations.router,
+    treasury.router,
 )

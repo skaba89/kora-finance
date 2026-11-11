@@ -74,6 +74,25 @@ export async function getJournals(companyId: string) {
   );
 }
 
+/** Comptes financiers du dossier (banques, caisses, Mobile Money) et leurs soldes. */
+export async function getTreasuryAccounts(companyId: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/treasury/accounts", {
+      params: { path: { company_id: companyId } },
+    }),
+  );
+}
+
+/** Mouvements d'un compte financier (paginés, du plus ancien au plus récent). */
+export async function getTreasuryMovements(companyId: string, accountId: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/treasury/accounts/{account_id}/movements", {
+      params: { path: { company_id: companyId, account_id: accountId } },
+      query: { limit: 100, offset: 0 },
+    }),
+  );
+}
+
 /** Tous les comptes actifs (sélecteur de saisie) : quelques centaines, en pages de 200. */
 export async function getActiveAccounts(companyId: string) {
   const client = await api();

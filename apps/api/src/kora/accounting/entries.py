@@ -418,6 +418,14 @@ def post_generated(session: Session, actor: Actor, entry: JournalEntry) -> None:
     _post(session, actor, entry, system=True)
 
 
+def post_pending(session: Session, actor: Actor, entry: JournalEntry) -> None:
+    """Valide une écriture déjà préparée en session, sans commiter : le module appelant
+    (trésorerie) écrit ensuite sa trace opérationnelle et l'audit dans la même
+    transaction, avant le commit unique. Mêmes contrôles que `post_entry` (comptes
+    actifs, équilibre, exercice ouvert, numérotation)."""
+    _post(session, actor, entry, system=False)
+
+
 def post_entry(session: Session, actor: Actor, entry_id: uuid.UUID) -> JournalEntry:
     entry = _lock_entry(session, actor, entry_id)
     _require_draft(entry)

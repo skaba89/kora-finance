@@ -146,6 +146,20 @@ def _probe(permission: Permission, client: TestClient, s: Scenario, make_user: M
                 f"{base}/entries/{_draft_id_or_random(client, base, s)}/post", headers=s.headers
             ).status_code
         ),
+        Permission.TREASURY_READ: lambda: (
+            client.get(f"{base}/treasury/accounts", headers=s.headers).status_code
+        ),
+        Permission.TREASURY_MANAGE: lambda: (
+            client.post(
+                f"{base}/treasury/accounts",
+                headers=s.headers,
+                json={
+                    "name": f"Banque test {uuid.uuid4().hex[:6]}",
+                    "kind": "BANQUE",
+                    "gl_account_id": account_id(client, base, s.headers, "521"),
+                },
+            ).status_code
+        ),
     }
     return calls[permission]()
 

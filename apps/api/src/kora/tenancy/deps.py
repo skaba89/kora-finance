@@ -70,3 +70,5 @@ EntriesRead = Annotated[TenantContext, Depends(require(Permission.ENTRIES_READ))
 EntriesWrite = Annotated[TenantContext, Depends(require(Permission.ENTRIES_WRITE))]
 EntriesPost = Annotated[TenantContext, Depends(require(Permission.ENTRIES_POST))]
 LetteringManage = Annotated[TenantContext, Depends(require(Permission.LETTERING_MANAGE))]
+TreasuryRead = Annotated[TenantContext, Depends(require(Permission.TREASURY_READ))]
+TreasuryManage = Annotated[TenantContext, Depends(require(Permission.TREASURY_MANAGE))]
