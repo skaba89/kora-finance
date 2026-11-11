@@ -113,6 +113,30 @@ export async function getStatementLines(companyId: string, statementId: string) 
   );
 }
 
+/** Candidats de rapprochement d'une ligne de relevé (3C) : propositions classées,
+ * jamais appliquées — la confirmation reste humaine. */
+export async function getMatchCandidates(
+  companyId: string,
+  statementId: string,
+  lineId: string,
+) {
+  return read(
+    (await api()).GET(
+      "/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines/{line_id}/candidates",
+      { params: { path: { company_id: companyId, statement_id: statementId, line_id: lineId } } },
+    ),
+  );
+}
+
+/** Vue d'ensemble du rapprochement d'un compte financier (3C) : compteurs et écarts. */
+export async function getReconciliationOverview(companyId: string, accountId: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/treasury/accounts/{account_id}/reconciliation", {
+      params: { path: { company_id: companyId, account_id: accountId } },
+    }),
+  );
+}
+
 /** Tous les comptes actifs (sélecteur de saisie) : quelques centaines, en pages de 200. */
 export async function getActiveAccounts(companyId: string) {
   const client = await api();

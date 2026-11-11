@@ -1,5 +1,5 @@
-"""Routes de la trésorerie : comptes financiers, mouvements (3A) et relevés
-bancaires importés (3B)."""
+"""Routes de la trésorerie : comptes financiers, mouvements (3A), relevés
+bancaires importés (3B) et rapprochement (3C)."""
 
 import uuid
 from datetime import date
@@ -23,7 +23,7 @@ from kora.core.config import get_settings
 from kora.core.errors import ErrorResponse
 from kora.models.treasury import BankStatement, StatementLineStatus
 from kora.tenancy.deps import TenantContext, TreasuryManage, TreasuryRead
-from kora.treasury import service, statements
+from kora.treasury import reconciliation, service, statements
 from kora.treasury.service import AccountData, MovementData, TransferData
 
 router = APIRouter(prefix="/companies/{company_id}", tags=["trésorerie"])
@@ -163,6 +163,46 @@ class StatementLinesOut(BaseModel):
 class StatementLineSet(BaseModel):
     id: uuid.UUID
     status: Literal["PENDING", "MATCHED", "IGNORED"]
+
+
+# --- Rapprochement (3C)
+
+
+class MatchCandidateOut(BaseModel):
+    id: uuid.UUID
+    kind: Literal["DEPOT", "RETRAIT", "VIREMENT_INTERNE", "FRAIS"]
+    direction: Literal["DEBIT", "CREDIT"]
+    amount: Money
+    movement_date: date
+    label: str
+    entry_number: int | None
+    days_apart: int
+    score: int
+
+
+class MatchCandidatesOut(BaseModel):
+    line_id: uuid.UUID
+    line_no: int
+    value_date: date
+    amount: SignedMoney
+    label: str
+    # Propositions classées (score décroissant) : jamais appliquées automatiquement,
+    # la confirmation reste un acte humain.
+    candidates: list[MatchCandidateOut]
+
+
+class MatchConfirm(RequestBody):
+    movement_id: uuid.UUID
+
+
+class ReconciliationOut(BaseModel):
+    account_id: uuid.UUID
+    lines_pending: int
+    lines_matched: int
+    lines_ignored: int
+    # Somme signée des lignes à rapprocher : ce que le relevé attend d'explications.
+    pending_net: SignedMoney
+    movements_unmatched: int
 
 
 @router.get("/treasury/accounts", responses={**TENANT_ERRORS, 422: TENANT_ERRORS[404]})
@@ -505,3 +545,102 @@ def delete_statement(
 ) -> None:
     """Supprime un relevé non rapproché (et son fichier original conservé)."""
     statements.delete_statement(db, _actor(tenant, ctx), statement_id)
+
+
+# --- Rapprochement (3C)
+
+
+@router.get(
+    "/treasury/statements/{statement_id}/lines/{line_id}/candidates",
+    responses={**TENANT_ERRORS, 422: TENANT_ERRORS[404]},
+)
+def match_candidates(
+    statement_id: uuid.UUID,
+    line_id: uuid.UUID,
+    tenant: TreasuryRead,
+    db: DbSession,
+) -> MatchCandidatesOut:
+    """Candidats de rapprochement d'une ligne en attente : mouvements du même
+    compte, montant égal, direction cohérente, jamais rapprochés — classés par
+    ressemblance. Propositions seulement : la confirmation reste humaine."""
+    line = reconciliation.propose_candidates(db, tenant.company_id, statement_id, line_id)
+    return MatchCandidatesOut(
+        line_id=line.line_id,
+        line_no=line.line_no,
+        value_date=date.fromisoformat(line.value_date),
+        amount=line.amount,
+        label=line.label,
+        candidates=[
+            MatchCandidateOut(
+                id=c.id,
+                kind=c.kind,
+                direction=c.direction,
+                amount=c.amount,
+                movement_date=date.fromisoformat(c.movement_date),
+                label=c.label,
+                entry_number=c.entry_number,
+                days_apart=c.days_apart,
+                score=c.score,
+            )
+            for c in line.candidates
+        ],
+    )
+
+
+@router.post(
+    "/treasury/statements/{statement_id}/lines/{line_id}/match",
+    responses={**WRITE_ERRORS, 422: TENANT_ERRORS[404]},
+)
+def confirm_match(
+    statement_id: uuid.UUID,
+    line_id: uuid.UUID,
+    body: MatchConfirm,
+    tenant: TreasuryManage,
+    db: DbSession,
+    ctx: Ctx,
+) -> StatementLineSet:
+    """Confirme le rapprochement d'une ligne avec le mouvement choisi : la ligne
+    passe en MATCHED, le lien est tracé dans le journal d'audit, réversible."""
+    line = reconciliation.confirm_match(
+        db, _actor(tenant, ctx), statement_id, line_id, body.movement_id
+    )
+    return StatementLineSet(id=line.id, status=line.status)
+
+
+@router.post(
+    "/treasury/statements/{statement_id}/lines/{line_id}/unmatch",
+    responses={**WRITE_ERRORS, 422: TENANT_ERRORS[404]},
+)
+def unmatch_statement_line(
+    statement_id: uuid.UUID,
+    line_id: uuid.UUID,
+    tenant: TreasuryManage,
+    db: DbSession,
+    ctx: Ctx,
+) -> StatementLineSet:
+    """Retire le rapprochement d'une ligne : elle repasse en attente, le mouvement
+    redevient disponible."""
+    line = reconciliation.unmatch_line(db, _actor(tenant, ctx), statement_id, line_id)
+    return StatementLineSet(id=line.id, status=line.status)
+
+
+@router.get(
+    "/treasury/accounts/{account_id}/reconciliation",
+    responses={**TENANT_ERRORS, 422: TENANT_ERRORS[404]},
+)
+def reconciliation_overview(
+    account_id: uuid.UUID,
+    tenant: TreasuryRead,
+    db: DbSession,
+) -> ReconciliationOut:
+    """Vue d'ensemble du rapprochement d'un compte : compteurs par statut, solde
+    des lignes en attente, mouvements restés sans ligne."""
+    view = reconciliation.reconciliation_overview(db, tenant.company_id, account_id)
+    return ReconciliationOut(
+        account_id=view.account_id,
+        lines_pending=view.lines_pending,
+        lines_matched=view.lines_matched,
+        lines_ignored=view.lines_ignored,
+        pending_net=view.pending_net,
+        movements_unmatched=view.movements_unmatched,
+    )

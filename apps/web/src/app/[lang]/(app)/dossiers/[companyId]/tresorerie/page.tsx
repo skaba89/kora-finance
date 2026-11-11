@@ -21,20 +21,25 @@ import {
   deleteStatementAction,
   ignoreStatementLineAction,
   importStatementAction,
+  matchStatementLineAction,
   recordTreasuryMovementAction,
   recordTreasuryTransferAction,
   restoreStatementLineAction,
+  unmatchStatementLineAction,
 } from "@/lib/actions/treasury";
 import {
   can,
   getActiveAccounts,
   getCompany,
+  getMatchCandidates,
+  getReconciliationOverview,
   getStatementLines,
   getTreasuryAccounts,
   getTreasuryMovements,
   getTreasuryStatements,
 } from "@/lib/dal";
 import { formatMoney } from "@/lib/format";
+import { interpolate } from "@/lib/i18n/interpolate";
 import { getDictionary } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -47,15 +52,16 @@ const MOVEMENTS = ["DEPOT", "RETRAIT", "FRAIS"] as const;
 const OPERATORS = ["ORANGE_MONEY_GN", "MTN_MOMO_GN"] as const;
 
 /** Page trésorerie : comptes financiers, mouvements et virements internes (3A),
- * relevés bancaires importés (3B). */
+ * relevés bancaires importés (3B), rapprochement assisté (3C). */
 export default async function TreasuryPage({
   params,
   searchParams,
 }: PageProps<"/[lang]/dossiers/[companyId]/tresorerie">) {
   const { companyId } = await params;
-  const { compte, releve } = await searchParams;
+  const { compte, releve, ligne } = await searchParams;
   const compteParam = typeof compte === "string" ? compte : compte?.[0];
   const releveParam = typeof releve === "string" ? releve : releve?.[0];
+  const ligneParam = typeof ligne === "string" ? ligne : ligne?.[0];
   const [{ t, locale }, company, accountList, glAccounts] = await Promise.all([
     getDictionary(),
     getCompany(companyId),
@@ -74,6 +80,14 @@ export default async function TreasuryPage({
   const statementLines = selectedStatement
     ? await getStatementLines(companyId, selectedStatement.id)
     : null;
+  // Rapprochement (3C) : vue d'ensemble du compte, et candidats de la ligne choisie.
+  // Lecture pour tout le monde (proposer n'écrit rien) ; confirmer exige treasury:manage.
+  const overview = selected ? await getReconciliationOverview(companyId, selected.id) : null;
+  const selectedLine = statementLines?.items.find((line) => line.id === ligneParam) ?? null;
+  const candidates =
+    selectedStatement && selectedLine && selectedLine.status === "PENDING"
+      ? await getMatchCandidates(companyId, selectedStatement.id, selectedLine.id)
+      : null;
   const treasuryGl = glAccounts.filter((account) => /^(52|57)/.test(account.number));
 
   return (
@@ -198,6 +212,22 @@ export default async function TreasuryPage({
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <p className="text-muted-foreground text-sm">{t.treasury.releves.subtitle}</p>
+            {overview ? (
+              <p className="text-muted-foreground text-xs">
+                <span className="font-medium text-foreground">
+                  {t.treasury.rapprochement.overview.pending} : {overview.lines_pending}
+                </span>
+                {"  ·  "}
+                {t.treasury.rapprochement.overview.matched} : {overview.lines_matched}
+                {"  ·  "}
+                {t.treasury.rapprochement.overview.ignored} : {overview.lines_ignored}
+                {"  ·  "}
+                {t.treasury.rapprochement.overview.pendingNet} :{" "}
+                {formatMoney(Number(overview.pending_net), "GNF", locale)}
+                {"  ·  "}
+                {t.treasury.rapprochement.overview.movements} : {overview.movements_unmatched}
+              </p>
+            ) : null}
             {selectedStatement && statementLines ? (
               <>
                 <p className="text-sm">
@@ -258,29 +288,54 @@ export default async function TreasuryPage({
                         </TableCell>
                         {manage ? (
                           <TableCell>
-                            {line.status === "IGNORED" ? (
+                            {line.status === "MATCHED" ? (
                               <InlineAction
-                                action={restoreStatementLineAction.bind(
+                                action={unmatchStatementLineAction.bind(
                                   null,
                                   companyId,
                                   selectedStatement.id,
                                   line.id,
                                 )}
-                                label={t.treasury.releves.restore}
-                                pendingLabel={t.common.pending}
-                              />
-                            ) : (
-                              <InlineAction
-                                action={ignoreStatementLineAction.bind(
-                                  null,
-                                  companyId,
-                                  selectedStatement.id,
-                                  line.id,
-                                )}
-                                label={t.treasury.releves.ignore}
+                                label={t.treasury.rapprochement.unmatch}
                                 pendingLabel={t.common.pending}
                                 variant="ghost"
+                                confirm={t.treasury.rapprochement.unmatchConfirm}
                               />
+                            ) : (
+                              <div className="flex flex-wrap items-center gap-3">
+                                {line.status === "PENDING" ? (
+                                  <Link
+                                    href={`?compte=${selected.id}&releve=${selectedStatement.id}&ligne=${line.id}`}
+                                    className="text-sm underline underline-offset-4"
+                                  >
+                                    {t.treasury.rapprochement.propose}
+                                  </Link>
+                                ) : null}
+                                <InlineAction
+                                  action={
+                                    line.status === "IGNORED"
+                                      ? restoreStatementLineAction.bind(
+                                          null,
+                                          companyId,
+                                          selectedStatement.id,
+                                          line.id,
+                                        )
+                                      : ignoreStatementLineAction.bind(
+                                          null,
+                                          companyId,
+                                          selectedStatement.id,
+                                          line.id,
+                                        )
+                                  }
+                                  label={
+                                    line.status === "IGNORED"
+                                      ? t.treasury.releves.restore
+                                      : t.treasury.releves.ignore
+                                  }
+                                  pendingLabel={t.common.pending}
+                                  variant="ghost"
+                                />
+                              </div>
                             )}
                           </TableCell>
                         ) : null}
@@ -288,6 +343,100 @@ export default async function TreasuryPage({
                     ))}
                   </TableBody>
                 </Table>
+
+                {candidates ? (
+                  <div
+                    className="rounded-md border p-4"
+                    role="region"
+                    aria-labelledby="candidates-title"
+                  >
+                    <p className="text-sm font-medium" id="candidates-title">
+                      {interpolate(t.treasury.rapprochement.candidatesTitle, {
+                        line: selectedLine?.line_no ?? "",
+                      })}
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {selectedLine?.value_date} · {formatMoney(Number(selectedLine?.amount ?? 0), "GNF", locale)} ·{" "}
+                      {selectedLine?.label}
+                    </p>
+                    <p className="text-muted-foreground mt-2 text-xs">
+                      {t.treasury.rapprochement.confirmNotice}
+                    </p>
+                    {candidates.candidates.length === 0 ? (
+                      <p className="text-muted-foreground mt-3 text-sm">
+                        {t.treasury.rapprochement.noCandidates}
+                      </p>
+                    ) : (
+                      <Table className="mt-3">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-28">{t.treasury.movementDate}</TableHead>
+                            <TableHead>{t.treasury.movementKind}</TableHead>
+                            <TableHead>{t.treasury.label}</TableHead>
+                            <TableHead className="text-right">{t.treasury.amount}</TableHead>
+                            <TableHead className="hidden w-24 sm:table-cell">
+                              {t.treasury.rapprochement.daysApart.replace("{days}", "").trim()}
+                            </TableHead>
+                            {manage ? <TableHead className="w-28" /> : null}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {candidates.candidates.map((candidate) => (
+                            <TableRow key={candidate.id}>
+                              <TableCell>{candidate.movement_date}</TableCell>
+                              <TableCell>
+                                {t.treasury.movementKinds[candidate.kind]}
+                                <span className="text-muted-foreground block text-xs">
+                                  {t.treasury.direction[candidate.direction]}
+                                </span>
+                              </TableCell>
+                              <TableCell className="whitespace-normal">
+                                {candidate.label}
+                                {candidate.entry_number ? (
+                                  <span className="text-muted-foreground block font-mono text-xs">
+                                    {interpolate(t.treasury.rapprochement.entryNumber, {
+                                      number: candidate.entry_number,
+                                    })}
+                                  </span>
+                                ) : null}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {formatMoney(Number(candidate.amount), "GNF", locale)}
+                              </TableCell>
+                              <TableCell className="hidden font-mono text-xs sm:table-cell">
+                                {candidate.days_apart}
+                              </TableCell>
+                              {manage ? (
+                                <TableCell>
+                                  <InlineAction
+                                    action={matchStatementLineAction.bind(
+                                      null,
+                                      companyId,
+                                      selectedStatement.id,
+                                      selectedLine?.id ?? "",
+                                      candidate.id,
+                                    )}
+                                    label={t.treasury.rapprochement.confirm}
+                                    pendingLabel={t.common.pending}
+                                    variant="secondary"
+                                  />
+                                </TableCell>
+                              ) : null}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                    <p className="mt-3">
+                      <Link
+                        href={`?compte=${selected.id}&releve=${selectedStatement.id}`}
+                        className="text-sm underline underline-offset-4"
+                      >
+                        {t.treasury.rapprochement.backToLines}
+                      </Link>
+                    </p>
+                  </div>
+                ) : null}
               </>
             ) : statements.items.length === 0 ? (
               <p className="text-muted-foreground">{t.treasury.releves.noStatement}</p>
