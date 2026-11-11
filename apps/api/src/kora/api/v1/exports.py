@@ -1,4 +1,4 @@
-"""Exports PDF et Excel : balance, grand livre, journal des écritures, états financiers."""
+"""Exports PDF et Excel : balance, grand livre, journal des écritures, états financiers, TFT."""
 
 import uuid
 from datetime import date
@@ -130,5 +130,21 @@ def export_financial_statements(
 ) -> Response:
     return _export(
         tenant, db, ctx, kind="etats-financiers", file_format=file_format,
+        fiscal_year_id=fiscal_year_id, date_from=None, date_to=date_to,
+    )  # fmt: skip
+
+
+@router.get("/cash-flow-statement", response_class=Response, responses=_FILE)
+def export_cash_flow_statement(
+    tenant: EntriesRead,
+    db: DbSession,
+    ctx: Ctx,
+    fiscal_year_id: uuid.UUID,
+    file_format: FileFormat,
+    date_to: date | None = None,
+) -> Response:
+    """Export du tableau des flux de trésorerie (KF-15), même chemin que les états."""
+    return _export(
+        tenant, db, ctx, kind="tft", file_format=file_format,
         fiscal_year_id=fiscal_year_id, date_from=None, date_to=date_to,
     )  # fmt: skip

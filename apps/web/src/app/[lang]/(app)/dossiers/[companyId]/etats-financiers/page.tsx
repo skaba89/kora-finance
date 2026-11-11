@@ -155,6 +155,13 @@ export default async function StatementsPage({ params, searchParams }: PageProps
             {s.closing} : <span className="font-medium tabular-nums">{formatMoney(BigInt(tft.closing), currency, locale)}</span>
           </span>
           {!tftPrev ? <span className="text-muted-foreground">{s.noPrevious}</span> : null}
+          <ExportLinks
+            companyId={companyId}
+            kind="tft"
+            fiscalYearId={year.id}
+            dateTo={dateTo}
+            label={t.reports.export}
+          />
         </div>
         {!tft.coherent ? (
           <Alert variant="destructive" role="alert" className="mb-4">

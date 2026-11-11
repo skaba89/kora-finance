@@ -8,6 +8,7 @@ export const EXPORT_KINDS = {
   "grand-livre": "/api/v1/companies/{company_id}/exports/ledger",
   ecritures: "/api/v1/companies/{company_id}/exports/entries",
   "etats-financiers": "/api/v1/companies/{company_id}/exports/financial-statements",
+  tft: "/api/v1/companies/{company_id}/exports/cash-flow-statement",
 } as const;
 
 export type ExportKind = keyof typeof EXPORT_KINDS;
