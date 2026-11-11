@@ -30,17 +30,20 @@ type SelectProps = ComponentProps<"select"> & {
   label: string;
   name: string;
   options: { value: string; label: string }[];
+  hint?: ReactNode;
 };
 
 /** Liste déroulante native : légère et utilisable sur tous les téléphones. */
-export function SelectField({ label, name, options, id, className, ...select }: SelectProps) {
+export function SelectField({ label, name, options, id, className, hint, ...select }: SelectProps) {
   const selectId = id ?? `champ-${name}`;
+  const hintId = hint ? `${selectId}-aide` : undefined;
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={selectId}>{label}</Label>
       <select
         id={selectId}
         name={name}
+        aria-describedby={hintId}
         className={
           className ??
           "border-input bg-background h-9 rounded-md border px-3 text-sm shadow-xs focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
@@ -53,6 +56,11 @@ export function SelectField({ label, name, options, id, className, ...select }: 
           </option>
         ))}
       </select>
+      {hint ? (
+        <p id={hintId} className="text-muted-foreground text-xs">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }

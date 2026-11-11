@@ -1690,6 +1690,384 @@
         "title": "FiguresOut",
         "type": "object"
       },
+      "FinancialAccountCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "account_number_masked": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Number Masked"
+          },
+          "gl_account_id": {
+            "format": "uuid",
+            "title": "Gl Account Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "BANQUE",
+              "CAISSE",
+              "MOBILE_MONEY"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "operator": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z0-9_]{2,24}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operator"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "gl_account_id"
+        ],
+        "title": "FinancialAccountCreate",
+        "type": "object"
+      },
+      "FinancialAccountOut": {
+        "properties": {
+          "account_number_masked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Number Masked"
+          },
+          "balance": {
+            "description": "Solde du compte comptable lié (positif = débiteur)",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Balance",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "gl_account_id": {
+            "format": "uuid",
+            "title": "Gl Account Id",
+            "type": "string"
+          },
+          "gl_account_label": {
+            "title": "Gl Account Label",
+            "type": "string"
+          },
+          "gl_account_number": {
+            "title": "Gl Account Number",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "BANQUE",
+              "CAISSE",
+              "MOBILE_MONEY"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "operator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operator"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "operator",
+          "account_number_masked",
+          "gl_account_id",
+          "gl_account_number",
+          "gl_account_label",
+          "is_active",
+          "balance",
+          "created_at"
+        ],
+        "title": "FinancialAccountOut",
+        "type": "object"
+      },
+      "FinancialAccountsOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FinancialAccountOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "FinancialAccountsOut",
+        "type": "object"
+      },
+      "FinancialMovementCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "counterpart_account_id": {
+            "format": "uuid",
+            "title": "Counterpart Account Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "DEPOT",
+              "RETRAIT",
+              "FRAIS"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "movement_date": {
+            "format": "date",
+            "title": "Movement Date",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          }
+        },
+        "required": [
+          "kind",
+          "amount",
+          "movement_date",
+          "label",
+          "counterpart_account_id"
+        ],
+        "title": "FinancialMovementCreate",
+        "type": "object"
+      },
+      "FinancialMovementOut": {
+        "properties": {
+          "amount": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "counterpart_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterpart Label"
+          },
+          "counterpart_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterpart Number"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "DEBIT",
+              "CREDIT"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "entry_id": {
+            "format": "uuid",
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "entry_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Number"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "DEPOT",
+              "RETRAIT",
+              "VIREMENT_INTERNE",
+              "FRAIS"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "movement_date": {
+            "format": "date",
+            "title": "Movement Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "direction",
+          "amount",
+          "movement_date",
+          "label",
+          "counterpart_number",
+          "counterpart_label",
+          "entry_id",
+          "entry_number",
+          "created_at"
+        ],
+        "title": "FinancialMovementOut",
+        "type": "object"
+      },
+      "FinancialMovementRecorded": {
+        "properties": {
+          "entry_id": {
+            "format": "uuid",
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "entry_id"
+        ],
+        "title": "FinancialMovementRecorded",
+        "type": "object"
+      },
+      "FinancialMovementsOut": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "balance": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Balance",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FinancialMovementOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "account_id",
+          "balance",
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "FinancialMovementsOut",
+        "type": "object"
+      },
       "FinancialStatementsOut": {
         "properties": {
           "assets": {
@@ -4091,6 +4469,85 @@
           "expires_in"
         ],
         "title": "TokenResponse",
+        "type": "object"
+      },
+      "TransferCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "movement_date": {
+            "format": "date",
+            "title": "Movement Date",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "source_account_id": {
+            "format": "uuid",
+            "title": "Source Account Id",
+            "type": "string"
+          },
+          "target_account_id": {
+            "format": "uuid",
+            "title": "Target Account Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_account_id",
+          "target_account_id",
+          "amount",
+          "movement_date",
+          "label"
+        ],
+        "title": "TransferCreate",
+        "type": "object"
+      },
+      "TransferRecorded": {
+        "properties": {
+          "entry_id": {
+            "format": "uuid",
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "source_movement_id": {
+            "format": "uuid",
+            "title": "Source Movement Id",
+            "type": "string"
+          },
+          "target_movement_id": {
+            "format": "uuid",
+            "title": "Target Movement Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entry_id",
+          "source_movement_id",
+          "target_movement_id"
+        ],
+        "title": "TransferRecorded",
         "type": "object"
       },
       "TreasuryAccountOut": {
@@ -11356,6 +11813,513 @@
         "summary": "Verify Tax Rate",
         "tags": [
           "paramétrage comptable"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/treasury/accounts": {
+      "get": {
+        "description": "Comptes financiers du dossier (banques, caisses, Mobile Money) et leurs soldes.",
+        "operationId": "list_accounts_api_v1_companies__company_id__treasury_accounts_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialAccountsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Accounts",
+        "tags": [
+          "trésorerie"
+        ]
+      },
+      "post": {
+        "operationId": "create_account_api_v1_companies__company_id__treasury_accounts_post",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinancialAccountCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialAccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Account",
+        "tags": [
+          "trésorerie"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/treasury/accounts/{account_id}/movements": {
+      "get": {
+        "description": "Historique des mouvements du compte, du plus ancien au plus récent.",
+        "operationId": "list_movements_api_v1_companies__company_id__treasury_accounts__account_id__movements_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Taille de page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "description": "Taille de page",
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Décalage",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Décalage",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialMovementsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Movements",
+        "tags": [
+          "trésorerie"
+        ]
+      },
+      "post": {
+        "description": "Dépôt, retrait ou frais bancaires : crée l'écriture validée et sa trace.",
+        "operationId": "record_movement_api_v1_companies__company_id__treasury_accounts__account_id__movements_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinancialMovementCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialMovementRecorded"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Record Movement",
+        "tags": [
+          "trésorerie"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/treasury/transfers": {
+      "post": {
+        "description": "Virement interne entre deux comptes financiers du dossier.",
+        "operationId": "record_transfer_api_v1_companies__company_id__treasury_transfers_post",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferRecorded"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Record Transfer",
+        "tags": [
+          "trésorerie"
         ]
       }
     },

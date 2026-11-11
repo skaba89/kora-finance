@@ -18,6 +18,7 @@ async function CompanyNav({ params }: { params: Params }) {
     { href: `${base}/balance`, label: t.nav.balance, permission: "entries:read" },
     { href: `${base}/grand-livre`, label: t.nav.ledger, permission: "entries:read" },
     { href: `${base}/lettrage`, label: t.nav.lettering, permission: "entries:read" },
+    { href: `${base}/tresorerie`, label: t.nav.treasury, permission: "treasury:read" },
     { href: `${base}/etats-financiers`, label: t.nav.statements, permission: "entries:read" },
     { href: `${base}/hors-connexion`, label: t.nav.offline, permission: "entries:write" },
   ].filter((item) => can(company, item.permission));

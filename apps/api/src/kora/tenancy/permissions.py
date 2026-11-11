@@ -33,6 +33,8 @@ class Permission(StrEnum):
     ENTRIES_WRITE = "entries:write"
     ENTRIES_POST = "entries:post"
     LETTERING_MANAGE = "lettering:manage"
+    TREASURY_READ = "treasury:read"
+    TREASURY_MANAGE = "treasury:manage"
 
 
 DESCRIPTIONS: dict[Permission, str] = {
@@ -53,6 +55,13 @@ DESCRIPTIONS: dict[Permission, str] = {
     Permission.ENTRIES_WRITE: "Saisir et modifier des écritures en brouillon",
     Permission.ENTRIES_POST: "Valider des écritures (numérotation définitive) et les contre-passer",
     Permission.LETTERING_MANAGE: "Lettrer et délettrer les comptes de tiers",
+    Permission.TREASURY_READ: (
+        "Consulter les comptes de trésorerie (banques, caisses, Mobile Money) et leurs mouvements"
+    ),
+    Permission.TREASURY_MANAGE: (
+        "Créer des comptes de trésorerie et enregistrer dépôts, retraits, "
+        "frais et virements internes"
+    ),
 }
 
 _READ = frozenset(
@@ -62,6 +71,7 @@ _READ = frozenset(
         Permission.ACCOUNTS_READ,
         Permission.TAXES_READ,
         Permission.ENTRIES_READ,
+        Permission.TREASURY_READ,
     }
 )
 _ACCOUNTING = _READ | {
@@ -73,6 +83,7 @@ _ACCOUNTING = _READ | {
     Permission.ENTRIES_WRITE,
     Permission.ENTRIES_POST,
     Permission.LETTERING_MANAGE,
+    Permission.TREASURY_MANAGE,
 }
 _FULL = frozenset(Permission)
 

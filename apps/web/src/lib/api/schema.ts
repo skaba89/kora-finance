@@ -1095,6 +1095,71 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/treasury/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Accounts
+         * @description Comptes financiers du dossier (banques, caisses, Mobile Money) et leurs soldes.
+         */
+        get: operations["list_accounts_api_v1_companies__company_id__treasury_accounts_get"];
+        put?: never;
+        /** Create Account */
+        post: operations["create_account_api_v1_companies__company_id__treasury_accounts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/treasury/accounts/{account_id}/movements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Movements
+         * @description Historique des mouvements du compte, du plus ancien au plus récent.
+         */
+        get: operations["list_movements_api_v1_companies__company_id__treasury_accounts__account_id__movements_get"];
+        put?: never;
+        /**
+         * Record Movement
+         * @description Dépôt, retrait ou frais bancaires : crée l'écriture validée et sa trace.
+         */
+        post: operations["record_movement_api_v1_companies__company_id__treasury_accounts__account_id__movements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/treasury/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record Transfer
+         * @description Virement interne entre deux comptes financiers du dossier.
+         */
+        post: operations["record_transfer_api_v1_companies__company_id__treasury_transfers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/trial-balance": {
         parameters: {
             query?: never;
@@ -1937,6 +2002,171 @@ export interface components {
              * @description Solde signé en unités mineures (positif = débiteur), en chaîne
              */
             revenue: string;
+        };
+        /** FinancialAccountCreate */
+        FinancialAccountCreate: {
+            /** Account Number Masked */
+            account_number_masked?: string | null;
+            /**
+             * Gl Account Id
+             * Format: uuid
+             */
+            gl_account_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "BANQUE" | "CAISSE" | "MOBILE_MONEY";
+            /** Name */
+            name: string;
+            /** Operator */
+            operator?: string | null;
+        };
+        /** FinancialAccountOut */
+        FinancialAccountOut: {
+            /** Account Number Masked */
+            account_number_masked: string | null;
+            /**
+             * Balance
+             * @description Solde du compte comptable lié (positif = débiteur)
+             */
+            balance: string;
+            /** Created At */
+            created_at: string;
+            /**
+             * Gl Account Id
+             * Format: uuid
+             */
+            gl_account_id: string;
+            /** Gl Account Label */
+            gl_account_label: string;
+            /** Gl Account Number */
+            gl_account_number: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Active */
+            is_active: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "BANQUE" | "CAISSE" | "MOBILE_MONEY";
+            /** Name */
+            name: string;
+            /** Operator */
+            operator: string | null;
+        };
+        /** FinancialAccountsOut */
+        FinancialAccountsOut: {
+            /** Items */
+            items: components["schemas"]["FinancialAccountOut"][];
+        };
+        /** FinancialMovementCreate */
+        FinancialMovementCreate: {
+            /**
+             * Amount
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            amount: string;
+            /**
+             * Counterpart Account Id
+             * Format: uuid
+             */
+            counterpart_account_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "DEPOT" | "RETRAIT" | "FRAIS";
+            /** Label */
+            label: string;
+            /**
+             * Movement Date
+             * Format: date
+             */
+            movement_date: string;
+            /** Reference */
+            reference?: string | null;
+        };
+        /** FinancialMovementOut */
+        FinancialMovementOut: {
+            /**
+             * Amount
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            amount: string;
+            /** Counterpart Label */
+            counterpart_label: string | null;
+            /** Counterpart Number */
+            counterpart_number: string | null;
+            /** Created At */
+            created_at: string;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "DEBIT" | "CREDIT";
+            /**
+             * Entry Id
+             * Format: uuid
+             */
+            entry_id: string;
+            /** Entry Number */
+            entry_number: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "DEPOT" | "RETRAIT" | "VIREMENT_INTERNE" | "FRAIS";
+            /** Label */
+            label: string;
+            /**
+             * Movement Date
+             * Format: date
+             */
+            movement_date: string;
+        };
+        /** FinancialMovementRecorded */
+        FinancialMovementRecorded: {
+            /**
+             * Entry Id
+             * Format: uuid
+             */
+            entry_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
+        /** FinancialMovementsOut */
+        FinancialMovementsOut: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /**
+             * Balance
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            balance: string;
+            /** Items */
+            items: components["schemas"]["FinancialMovementOut"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
         };
         /** FinancialStatementsOut */
         FinancialStatementsOut: {
@@ -2937,6 +3167,51 @@ export interface components {
              * @constant
              */
             token_type: "bearer";
+        };
+        /** TransferCreate */
+        TransferCreate: {
+            /**
+             * Amount
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            amount: string;
+            /** Label */
+            label: string;
+            /**
+             * Movement Date
+             * Format: date
+             */
+            movement_date: string;
+            /** Reference */
+            reference?: string | null;
+            /**
+             * Source Account Id
+             * Format: uuid
+             */
+            source_account_id: string;
+            /**
+             * Target Account Id
+             * Format: uuid
+             */
+            target_account_id: string;
+        };
+        /** TransferRecorded */
+        TransferRecorded: {
+            /**
+             * Entry Id
+             * Format: uuid
+             */
+            entry_id: string;
+            /**
+             * Source Movement Id
+             * Format: uuid
+             */
+            source_movement_id: string;
+            /**
+             * Target Movement Id
+             * Format: uuid
+             */
+            target_movement_id: string;
         };
         /** TreasuryAccountOut */
         TreasuryAccountOut: {
@@ -7620,6 +7895,347 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaxRateOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_accounts_api_v1_companies__company_id__treasury_accounts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialAccountsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_account_api_v1_companies__company_id__treasury_accounts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinancialAccountCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialAccountOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_movements_api_v1_companies__company_id__treasury_accounts__account_id__movements_get: {
+        parameters: {
+            query?: {
+                /** @description Taille de page */
+                limit?: number;
+                /** @description Décalage */
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                account_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialMovementsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    record_movement_api_v1_companies__company_id__treasury_accounts__account_id__movements_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinancialMovementCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialMovementRecorded"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    record_transfer_api_v1_companies__company_id__treasury_transfers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransferRecorded"];
                 };
             };
             /** @description Unauthorized */
