@@ -29,6 +29,12 @@ updates:
       prefix: chore
       include: scope
     labels: [dependencies, web]
+    # @playwright/test est couplé à l'image Docker de navigateurs des E2E
+    # (docker-compose.yml, mcr.microsoft.com/playwright:v<version>-noble) : une
+    # mise à jour isolée de l'un sans l'autre casse la CI E2E (binaire chromium
+    # absent de l'image). Bump toujours en paire dans la même PR, manuellement.
+    ignore:
+      - dependency-name: "@playwright/test"
 
   - package-ecosystem: github-actions
     directory: /
