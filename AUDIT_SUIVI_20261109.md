@@ -801,3 +801,52 @@ est restauré.
 expert (KF-15/16), KF-14 (CSP), vérifications staging (KF-11), puis 3D connecteurs
 et 3E prévisions. **Déductions §7** : aucune variation — le score ne bouge pas, la
 preuve d'intégration s'ajoute à la 3A/3B déjà comptabilisées. **Score : 84/100.**
+
+## 25. Phase 3C — Rapprochement bancaire assisté (2026-11-12)
+
+**Constat** (`docs/PLAN.md`, §8) : après la 3B, les relevés importés s'accumulent
+sans être confrontés au grand livre. Le rapprochement ligne ↔ mouvement est le
+geste quotidien du dirigeant : il doit être assisté mais jamais automatisé.
+
+**Correctif** (branche `feature/kora-3c-rapprochement`) :
+
+- migration `0013` : unicité (dossier, mouvement) sur `bank_statement_lines` —
+  deux lignes, même issues de deux relevés distincts, ne peuvent pas désigner le
+  même mouvement : le double comptage devient impossible en base ;
+- moteur conservateur (`kora/treasury/reconciliation.py`) : candidats du **même
+  compte**, montant **strictement égal**, direction cohérente (entrée ⇔ DEBIT),
+  fenêtre ±180 jours, mouvement jamais rapproché ; score de ressemblance (date
+  exacte +30, ≤3 j +18, ≤7 j +8, mot de libellé commun +10), 5 candidats au plus ;
+  **aucun appariement automatique** — les écarts (agios, arrondis) se traitent par
+  un mouvement dédié, pas par un rapprochement forcé ;
+- confirmation réversible : verrous ligne puis mouvement (ordre unique),
+  re-vérification complète sous verrou, contrainte unique en dernier rempart
+  (`IntegrityError` → 409 propre) ; dé-rapprochement remettant la ligne en
+  attente et le mouvement en disponibilité ; audit
+  `treasury.reconciliation.matched` / `.unmatched` (relevé, ligne, mouvement,
+  écriture) ;
+- vue d'ensemble par compte : compteurs PENDING/MATCHED/IGNORED, montant restant
+  à expliquer (somme des lignes en attente), mouvements libres ;
+- API `/candidates`, `/match`, `/unmatch`, `/reconciliation` (contrat 74 chemins,
+  types TS régénérés) ; page Trésorerie augmentée : bandeau de vue d'ensemble,
+  panneau de candidats par ligne (écart en jours, écriture liée), Confirmer /
+  Retirer avec confirmation ; i18n fr/en.
+
+**Preuve** : **698/698** tests API hors Docker (PG 16.4, Redis, Garage, Mailpit
+réels), dont 12 nouveaux (classement des candidats, exclusions compte/montant/
+direction/déjà-rapproché, double rapprochement refusé **y compris en concurrence
+réelle** : deux confirmations simultanées → 200 + 409, une seule ligne MATCHED,
+montant/direction/compte incohérents refusés, réversibilité complète, vue
+d'ensemble, lecteur propose mais ne confirme pas (403), isolation 404) — la suite
+d'isolation générique a automatiquement couvert les 4 nouvelles routes (+12) ;
+ruff, mypy strict, contrat, 4 checks transverses, ESLint, tsc, Vitest 60/60,
+build Next OK ; E2E Playwright **64/64** (nouveau parcours complet desktop +
+mobile : compte → mouvement → import CSV → candidats → confirmer → MATCHED →
+retirer → PENDING).
+
+**Reste** : 3D connecteurs Orange/MTN Money (API officielles uniquement), 3E
+prévisions de trésorerie 30/60/90 jours ; revue expert (KF-15/16), KF-14 (CSP),
+vérifications staging (KF-11). **Déductions §7** : périmètre fonctionnel, phase 3
+poursuivie (3C livrée) : +0,5. **Score : 84,5/100.** Prochaines priorités :
+revue expert (KF-15/16), 3E prévisions, KF-14 (CSP), vérifications staging
+(KF-11).

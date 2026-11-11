@@ -1025,3 +1025,18 @@ kora/kora-test/kora-backups) :
 (restore-drill), pip-audit et SBOM — à rejouer dès que le quota Actions est
 restauré (spending limit > 0 ou reset du 1er décembre). Suivi :
 `AUDIT_SUIVI_20261109.md` §24.
+
+## 2026-11-12 — Phase 3C : rapprochement bancaire assisté
+
+- Migration `0013` : unicité (dossier, mouvement) — le double rapprochement est
+  refusé par la base, y compris en concurrence réelle (test à deux threads :
+  200 + 409).
+- Moteur de propositions conservateur (même compte, montant égal, direction
+  cohérente, ±180 j, jamais rapprochés ; score date/libellé ; 5 candidats) ;
+  confirmation humaine obligatoire, réversible, auditée.
+- API `/candidates` `/match` `/unmatch` `/reconciliation` + contrat + types TS ;
+  page Trésorerie : vue d'ensemble, candidats, confirmer/retirer ; i18n fr/en.
+- **698/698** pytest (12 dédiés + 12 isolation auto), contrat, 4 checks
+  transverses, ESLint/tsc, Vitest 60/60, build, **E2E 64/64** (desktop + mobile,
+  parcours complet de rapprochement). Fusionné via PR #67.
+- Suivi : `AUDIT_SUIVI_20261109.md` §25 (score 84,5/100).
