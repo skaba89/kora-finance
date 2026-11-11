@@ -850,3 +850,46 @@ vérifications staging (KF-11). **Déductions §7** : périmètre fonctionnel, p
 poursuivie (3C livrée) : +0,5. **Score : 84,5/100.** Prochaines priorités :
 revue expert (KF-15/16), 3E prévisions, KF-14 (CSP), vérifications staging
 (KF-11).
+
+## 26. Jeu de données fictif pour les tests locaux (2026-11-12)
+
+**Constat d'origine** : l'utilisateur ne peut pas tester le produit chez lui sans
+données. Kora n'expédie aucun jeu d'essai : un dossier vierge ne démontre ni la
+saisie guidée, ni le lettrage, ni l'import de relevés, ni le rapprochement.
+
+**Livré** : `kora.scripts.seed_demo` (script de démonstration, hors API — aucune
+route touchée) :
+
+- dossier fictif « Djouma Distribution SARL » (SARL guinéenne, GNF, exercice 2026),
+  3 utilisateurs aux trois rôles PME, sous-comptes clients/fournisseurs et de
+  trésorerie, 3 comptes financiers (BANQUE/CAISSE/MOBILE_MONEY ORANGE_MONEY_GN) ;
+- 74 écritures validées + 1 brouillon volontaire, 36 mouvements de trésorerie,
+  10 lettrages automatiques — **tout via les services applicatifs** (aucune
+  écriture directe, même imputation TVA que l'application) ;
+- 3 relevés fictifs générés **depuis les mouvements réels** (CSV octobre, OFX
+  novembre, CSV Orange Money) + 5 anomalies garanties sans candidat (agios,
+  commission recouvrement, commission agent, remise de chèque inconnue, alerte
+  SMS à ignorer) pour exercer l'import 3B puis le rapprochement 3C ;
+- `--reset` : purge par connexion propriétaire — les tables tenant sont sous RLS
+  forcée et le grand livre en ajout seul, donc le script désactive le temps de la
+  cascade les 4 déclencheurs d'immuabilité, fixe le tenant courant puis les
+  réactive dans une transaction unique ; `KORA_DATABASE_MIGRATION_URL` est exigé
+  explicitement (le conteneur `api` ne le porte pas : séparation runtime/DDL).
+- Guide utilisateur : `docs/DEMO.md`.
+
+**Preuve (locale, PG 16.4/Redis/Garage/Mailpit réels)** : seed exécuté puis
+re-exécuté avec `--reset` (sortie déterministe) ; les 3 relevés sont lus par le
+parseur applicatif, importés par le service (double import refusé — déduplication
+vérifiée), et le moteur de rapprochement propose un candidat pour les 17 lignes
+connues avec exactement 5 lignes sans candidat ; ruff, mypy strict,
+**698/698** pytest (aucun test modifié), contrat OpenAPI inchangé, gitleaks sans
+nouveau signalement (les 5 alertes existantes sont celles déjà connues des tests).
+
+**Limites** : les pièces jointes démontrées restent celles des tests E2E ; les
+fichiers de relevés sont générés dans le conteneur (`--out`) et doivent être
+récupérés côté poste pour l'import via l'interface. Aucune donnée réelle : tous
+les noms, RCCM et NIF sont inventés.
+
+**Score** : pas de changement fonctionnel ni de sécurité sur le produit — le
+moteur existant est simplement démontrable de bout en bout. **Score : 84,5/100**
+(inchangé).
