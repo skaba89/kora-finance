@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from openpyxl import load_workbook
 
+from kora.accounting import cashflows
 from kora.core.errors import BusinessRuleError
 from kora.exports import service
 from kora.exports.document import currency_decimals, format_amount
@@ -126,7 +127,9 @@ def test_journal_des_ecritures_equilibre(book: Ledger) -> None:
     assert not any(row[6] == 999 for row in rows)
 
 
-@pytest.mark.parametrize("path", ["trial-balance", "ledger", "entries", "financial-statements"])
+@pytest.mark.parametrize(
+    "path", ["trial-balance", "ledger", "entries", "financial-statements", "cash-flow-statement"]
+)
 def test_exports_pdf(book: Ledger, path: str) -> None:
     response = _export(book, path, "pdf")
     assert response.status_code == 200, response.text
@@ -150,6 +153,49 @@ def test_format_inconnu(book: Ledger) -> None:
     assert _export(book, "trial-balance", "csv").status_code == 422
 
 
+def test_tft_excel(book: Ledger) -> None:
+    response = _export(book, "cash-flow-statement", "xlsx")
+    assert response.status_code == 200, response.text
+    assert (
+        'filename="tft-societe-b-elegance-b-fils-sarl-20260101-20261231.xlsx"'
+        in (response.headers["content-disposition"])
+    )
+    rows = _sheet_rows(response.content)
+    # Titre du document et mention d'expertise, comme pour les autres états.
+    assert rows[0][0] == "Tableau des flux de trésorerie — SYSCOHADA révisé (méthode directe)"
+    assert any("expert-comptable" in str(row[0]) for row in rows)
+    by_ref = {row[0]: row for row in rows if isinstance(row[0], str) and len(row[0]) == 2}
+    # Sections en en-tête sans montant ; lignes et totaux en N, N-1 vide (pas d'exercice précédent).
+    assert by_ref["S1"][1] == "Flux opérationnels"
+    assert by_ref["S1"][2:] == (None, None)
+    assert by_ref["OA"][1] == "Ventes de biens et services encaissées"
+    assert by_ref["OA"][2:] == (1_180_000, None)  # encaissement client (TVA incluse)
+    assert by_ref["FA"][2:] == (5_000_000, None)  # capital encaissé
+    assert by_ref["XV"][1] == "VARIATION DE TRÉSORERIE"
+    assert by_ref["XV"][2:] == (6_180_000, None)
+    assert by_ref["TC"][2:] == (6_180_000, None)
+    # Cohérent : pas d'alerte de divergence dans les notes.
+    assert not any("ATTENTION" in str(row[0]) for row in rows)
+
+
+def test_tft_export_incoherent_signale(book: Ledger, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Une divergence de trésorerie (ou un compte sans affectation) est signalée dans
+    # le document exporté, jamais silencieuse — même convention que la page web.
+    real_compute = cashflows.compute
+
+    def divergent(session: Any, company_id: Any, year: Any, date_to: Any = None) -> Any:
+        result = real_compute(session, company_id, year, date_to)
+        result.treasury_at_end += 777  # divergence entre le recalcul et les lignes
+        result.unmapped.append("699")
+        return result
+
+    monkeypatch.setattr(cashflows, "compute", divergent)
+    rows = _sheet_rows(_export(book, "cash-flow-statement", "xlsx").content)
+    attention = next(str(row[0]) for row in rows if "ATTENTION" in str(row[0]))
+    assert "699" in attention  # comptes sans affectation cités
+    assert "≠" in attention  # divergence ouverture + variation / solde réel
+
+
 def test_pdf_trop_volumineux(book: Ledger, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(service, "MAX_PDF_ROWS", 3)
     response = _export(book, "ledger", "pdf")
@@ -166,3 +212,13 @@ def test_chaque_export_est_trace(book: Ledger) -> None:
     event = next(e for e in events if e["action"] == "export.generated")
     assert event["payload"]["type"] == "balance"
     assert event["payload"]["format"] == "pdf"
+
+
+def test_export_tft_est_trace(book: Ledger) -> None:
+    _export(book, "cash-flow-statement", "xlsx")
+    events = book.client.get(f"{book.base}/audit-events", headers=book.company.headers).json()[
+        "items"
+    ]
+    event = next(e for e in events if e["action"] == "export.generated")
+    assert event["payload"]["type"] == "tft"
+    assert event["payload"]["format"] == "xlsx"

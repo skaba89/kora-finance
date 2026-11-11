@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from kora.accounting import reports, statements
+from kora.accounting import cashflows, reports, statements
 from kora.accounting.reports import AccountFilter, Period
 from kora.exports.document import Column, Document, Section, format_date
 from kora.models.accounting import Account
@@ -249,4 +249,48 @@ def financial_statements(session: Session, company: Company, period: Period) -> 
                 line.code, line.label, amounts.net, prev, style="total" if is_total else "normal"
             )
     document.sections += [assets, liabilities, income]
+    return document
+
+
+def cash_flows(session: Session, company: Company, period: Period) -> Document:
+    """Tableau des flux de trésorerie (méthode directe, KF-15) : exercice N, N-1 en
+    comparaison s'il existe, comme la page web et la route JSON."""
+    current = cashflows.compute(session, company.id, period.fiscal_year, period.date_to)
+    before = cashflows.previous_year(session, company.id, period.fiscal_year)
+    previous = cashflows.compute(session, company.id, before) if before else None
+    document = _document(
+        company, "Tableau des flux de trésorerie — SYSCOHADA révisé (méthode directe)", period
+    )
+    document.notes.append(EXPERT_NOTICE)
+    document.notes.append(f"Référentiel : {cashflows.REFERENCE}.")
+    if not current.coherent:
+        detail = (
+            "ATTENTION : divergence de trésorerie — ouverture + variation ne rapproche pas le "
+            f"solde réel de la classe 5 ({current.treasury_at_end} ≠ {current.closing})"
+        )
+        if current.unmapped:
+            detail += f" ; comptes sans affectation TFT : {', '.join(current.unmapped)}"
+        document.notes.append(detail + " — anomalie à signaler.")
+    section = Section(
+        "Tableau des flux de trésorerie",
+        [
+            Column("Réf.", width=7),
+            Column("Poste", width=54),
+            Column("N", "amount", 14),
+            Column("N-1", "amount", 14),
+        ],
+    )
+    for line in cashflows.template():
+        prev = previous.amount(line.code) if previous else None
+        if line.kind == "section":
+            section.add(line.code, line.label, None, None, style="heading")
+        else:
+            section.add(
+                line.code,
+                line.label,
+                current.amount(line.code),
+                prev,
+                style="total" if line.kind == "total" else "normal",
+            )
+    document.sections.append(section)
     return document

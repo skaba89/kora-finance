@@ -20,7 +20,7 @@ from kora.exports.document import Document
 from kora.models.identity import Company
 
 Format = Literal["pdf", "xlsx"]
-Kind = Literal["balance", "grand-livre", "ecritures", "etats-financiers"]
+Kind = Literal["balance", "grand-livre", "ecritures", "etats-financiers", "tft"]
 
 MEDIA_TYPES = {
     "pdf": "application/pdf",
@@ -93,8 +93,10 @@ def generate(
             document = builders.ledger(snap, company, period, account_id)
         elif kind == "ecritures":
             document = builders.entries(snap, company, period)
-        else:
+        elif kind == "etats-financiers":
             document = builders.financial_statements(snap, company, period)
+        else:
+            document = builders.cash_flows(snap, company, period)
 
     rows = sum(len(section.rows) for section in document.sections)
     if file_format == "pdf" and rows > MAX_PDF_ROWS:
