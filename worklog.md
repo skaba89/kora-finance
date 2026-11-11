@@ -1040,3 +1040,23 @@ restauré (spending limit > 0 ou reset du 1er décembre). Suivi :
   transverses, ESLint/tsc, Vitest 60/60, build, **E2E 64/64** (desktop + mobile,
   parcours complet de rapprochement). Fusionné via PR #67.
 - Suivi : `AUDIT_SUIVI_20261109.md` §25 (score 84,5/100).
+
+## 2026-11-12 — Jeu de données fictif pour les tests locaux (démonstration)
+
+- `kora.scripts.seed_demo` : dossier fictif « Djouma Distribution SARL » (SARL
+  guinéenne, GNF, exercice 2026), 3 utilisateurs (directeur/comptable/lecteur),
+  sous-comptes tiers et trésorerie, 3 comptes financiers (banque, caisse,
+  Orange Money), 74 écritures validées + 1 brouillon à valider, 36 mouvements,
+  lettrage automatique de 10 factures. Tout passe par les services applicatifs.
+- Génération de 3 relevés fictifs **depuis les mouvements réels** (CSV octobre,
+  OFX novembre, CSV Orange Money) + 5 anomalies garanties sans candidat pour
+  tester l'import 3B et le rapprochement 3C (dont une ligne à ignorer).
+- `--reset` : purge via connexion propriétaire (déclencheurs d'immuabilité
+  désactivés le temps de la cascade, tenant fixé, puis réactivés) — le conteneur
+  `api` ne porte pas KORA_DATABASE_MIGRATION_URL par séparation des rôles.
+- Guide `docs/DEMO.md` (prérequis, scénario complet, réinitialisation).
+- Preuve locale : seed exécuté sur PG 16.4 réel, relevés lus par le parseur
+  applicatif, importés par le service (déduplication vérifiée), **17 propositions
+  de rapprochement** confirmées cohérentes, 5 anomalies sans candidat ; ruff,
+  mypy strict, **698/698** pytest, contrat OpenAPI inchangé, gitleaks sans
+  nouveau signalement. Suivi : `AUDIT_SUIVI_20261109.md` §26.
