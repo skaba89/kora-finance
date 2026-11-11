@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 
 import { api } from "@/lib/api/server";
 import { actionDictionary, failure, field } from "@/lib/actions/support";
+import { interpolate } from "@/lib/i18n/interpolate";
 import type { ActionState } from "./state";
 
 const KINDS = ["BANQUE", "CAISSE", "MOBILE_MONEY"] as const;
@@ -102,4 +103,81 @@ export async function recordTreasuryTransferAction(
   const t = await actionDictionary();
   refresh();
   return { status: "success", message: t.common.saved };
+}
+
+/** Import d'un relevé bancaire (OFX ou CSV) : corps brut, pas de multipart. */
+export async function importStatementAction(
+  companyId: string,
+  accountId: string,
+  _: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const t = await actionDictionary();
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { status: "error", message: t.treasury.releves.noFile };
+  }
+  const { data, error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/treasury/accounts/{account_id}/statements",
+    {
+      params: {
+        path: { company_id: companyId, account_id: accountId },
+        query: { filename: file.name || "releve" },
+      },
+      // Corps brut (pas de JSON) : le contenu du fichier.
+      body: (await file.arrayBuffer()) as unknown as string,
+      bodySerializer: (body: unknown) => body as ArrayBuffer,
+      headers: { "Content-Type": "application/octet-stream" },
+    },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  return {
+    status: "success",
+    message: interpolate(t.treasury.releves.imported, { lines: data?.line_count ?? 0 }),
+  };
+}
+
+/** Écarte une ligne de relevé du rapprochement (idempotent). */
+export async function ignoreStatementLineAction(
+  companyId: string,
+  statementId: string,
+  lineId: string,
+): Promise<ActionState> {
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines/{line_id}/ignore",
+    { params: { path: { company_id: companyId, statement_id: statementId, line_id: lineId } } },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  return { status: "success", message: (await actionDictionary()).common.saved };
+}
+
+/** Remet une ligne ignorée en attente de rapprochement (idempotent). */
+export async function restoreStatementLineAction(
+  companyId: string,
+  statementId: string,
+  lineId: string,
+): Promise<ActionState> {
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/treasury/statements/{statement_id}/lines/{line_id}/restore",
+    { params: { path: { company_id: companyId, statement_id: statementId, line_id: lineId } } },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  return { status: "success", message: (await actionDictionary()).common.saved };
+}
+
+/** Supprime un relevé non rapproché (et son fichier original conservé). */
+export async function deleteStatementAction(
+  companyId: string,
+  statementId: string,
+): Promise<ActionState> {
+  const { error, response } = await (await api()).DELETE(
+    "/api/v1/companies/{company_id}/treasury/statements/{statement_id}",
+    { params: { path: { company_id: companyId, statement_id: statementId } } },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  return { status: "success", message: (await actionDictionary()).treasury.releves.deleted };
 }
