@@ -702,3 +702,31 @@ concernés (runtime_settings, cashflows, statements), ruff + mypy strict verts.
 **Score : 82,5/100.** Reste prioritaire (§8) : la phase 3 (trésorerie/Mobile Money),
 la revue expert-comptable finale (KF-15/16), KF-14 (CSP) et la vérification en
 staging (KF-11).
+
+## 22. Phase 3A — Comptes financiers : banques, caisses, Mobile Money (2026-11-11)
+
+**Constat** (`docs/PLAN.md`) : phase 3 entièrement à livrer ; aucune notion d'opéré
+de trésorerie hors écritures libres.
+
+**Livré** (branche `feature/kora-3a-comptes-financiers`) : migration `0011`
+(`financial_accounts`, `financial_movements` : RLS, immuabilité par déclencheur,
+contraintes type ↔ sens ↔ liens en base) ; service trésorerie — chaque mouvement
+(dépôt, retrait, frais, virement interne) crée **atomiquement** une écriture validée
+du journal de trésorerie (BQ/CA/MM) et sa trace immuable, avec verrous `FOR UPDATE`
+sérialisant les mouvements concurrents (virements : ordre par identifiants,
+anti-interblocage) ; solde toujours recalculé du grand livre (jamais stocké) ;
+permissions `treasury:read`/`treasury:manage` (matrice régénérée et sondée sur les
+7 rôles) ; API `/treasury/*` (contrat 70 chemins) ; page Trésorerie complète
+(comptes, soldes, historique, formulaires), i18n fr/en.
+
+**Preuve** : 623/623 tests API hors Docker (PG 16.15, Redis 8.0.2, Garage 2.4.1,
+Mailpit réels), dont 14 trésorerie — dépôts concurrents sérialisés avec solde final
+exact, immutabilité refusée par la base, période verrouillée refusée, isolation 404,
+audit tracé ; ESLint, tsc, Vitest 60/60, build Next OK. CI GitHub en attente : quota
+Actions épuisé (dépôt privé) — validation locale documentée dans la PR.
+
+**Reste** : 3B (import relevés), 3C (rapprochement), 3D (connecteurs), 3E
+(prévisions) ; classement des portefeuilles Mobile Money (52) à confirmer en revue
+expert. **Déductions §7** : périmètre fonctionnel, phase 3 entamée (+1).
+**Score : 83,5/100.** Prochaines priorités : 3B import de relevés, revue expert
+(KF-15/16), KF-14 (CSP), vérifications staging (KF-11).

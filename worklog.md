@@ -903,3 +903,47 @@ concernés ; ruff, mypy strict. Aucune migration, aucun changement de contrat.
 **Reste** : rien. Suivi : `AUDIT_SUIVI_20261109.md` §21. **Score : 82,5/100**
 (N-B6 : −0,5 → 0). Prochaines priorités : phase 3 (trésorerie/Mobile Money), revue
 expert (KF-15/16), KF-14 (CSP).
+
+## 2026-11-11 — Phase 3A : comptes financiers (banques, caisses, Mobile Money)
+
+**Constat** (`docs/PLAN.md`, phase 3) : aucune notion de compte bancaire, de caisse ou
+de portefeuille Mobile Money ; les opérations de trésorerie ne sont saisies qu'en
+écritures comptables libres, sans suivi opérationnel ni contrôle de concurrence.
+
+**Livré** (branche `feature/kora-3a-comptes-financiers`) :
+- migration `0011` : `financial_accounts` (nom, type BANQUE/CAISSE/MOBILE_MONEY,
+  opérateur Mobile Money normalisé ORANGE_MONEY_GN / MTN_MOMO_GN, numéro masqué,
+  compte comptable lié 52x/57x) et `financial_movements` (dépôt, retrait, frais
+  bancaires, virement interne) ; RLS sur les deux tables ; mouvements en ajout seul
+  (déclencheur) ; contraintes de cohérence type ↔ sens ↔ liens portées par la base ;
+- service `treasury/` : chaque mouvement crée **dans une même transaction** une
+  écriture validée du journal de trésorerie (BQ/CA/MM selon le type de compte) et sa
+  trace immuable ; le solde n'est jamais stocké — recalculé depuis le grand livre
+  (une seule source de vérité, le TFT ne peut pas diverger) ; la contrepartie
+  comptable est toujours fournie (capital, ventes, fournisseurs, charges…) ;
+- virement interne : une écriture, deux mouvements liés (`opposite_movement_id`),
+  verrous des deux comptes dans l'ordre de leurs identifiants (anti-interblocage) ;
+- `entries.post_pending()` : validation sans commit pour la transaction atomique ;
+- permissions `treasury:read` / `treasury:manage` (dirigeant, cabinet admin,
+  comptables : gestion ; lecteur : lecture), `docs/PERMISSIONS.md` régénéré ;
+- API `/treasury/accounts`, `/treasury/accounts/{id}/movements`,
+  `/treasury/transfers` ; contrat + types TS régénérés ;
+- page Trésorerie (liste des comptes avec soldes, historique par compte, formulaires
+  compte/mouvement/virement), actions serveur, i18n fr/en, lien de navigation.
+
+**Vérifié** (environnement réel hors Docker : PG 16.15, Redis 8.0.2, Garage 2.4.1,
+Mailpit) : suite API **623/623** — dont 14 nouveaux (`tests/test_treasury.py` :
+création et validations de compte, dépôt/retrait/frais avec écriture validée et
+solde exact, virement lié, **immutabilité par déclencheur**, période verrouillée
+refusée, isolation multi-tenant 404, lecteur 200 en lecture / 403 en écriture,
+journal d'audit tracé, **deux dépôts concurrents sérialisés par le verrou de ligne
+avec solde final exact**) ; matrice des permissions sondée pour les 2 permissions
+nouvelles (7 rôles) ; ruff, mypy strict, contrat, ESLint, tsc, Vitest 60/60, build
+Next OK. CI GitHub en attente : quota de minutes Actions épuisé (dépôt privé), PR
+ouverte avec validation locale documentée.
+
+**Reste** : sous-phases 3B (import de relevés), 3C (rapprochement), 3D (connecteurs
+Mobile Money), 3E (prévisions) ; classes 52/57 portant les portefeuilles Mobile Money
+à confirmer par la revue expert (KF-15/16). Suivi : `AUDIT_SUIVI_20261109.md` §22.
+**Score : 83,5/100** (périmètre fonctionnel : phase 3 entamée, 3A livrée et testée :
++1). Prochaines priorités : 3B import de relevés, revue expert (KF-15/16), KF-14 (CSP).
