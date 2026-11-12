@@ -136,6 +136,12 @@ def upgrade() -> None:
         sa.Column("outflow_minor", sa.BigInteger(), server_default="0", nullable=False),
         sa.Column("projected_balance_minor", sa.BigInteger(), nullable=False),
         sa.ForeignKeyConstraint(
+            ["tenant_id"],
+            ["companies.id"],
+            ondelete="CASCADE",
+            name=op.f("fk_cashflow_snapshot_lines_tenant_id_companies"),
+        ),
+        sa.ForeignKeyConstraint(
             ["tenant_id", "snapshot_id"],
             ["cashflow_snapshots.tenant_id", "cashflow_snapshots.id"],
             ondelete="CASCADE",

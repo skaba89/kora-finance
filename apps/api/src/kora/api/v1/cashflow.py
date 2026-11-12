@@ -67,7 +67,11 @@ class CoefficientOut(BaseModel):
 
 
 class AssumptionsOut(BaseModel):
-    """Hypothèses sérialisées d'un calcul (identiques à celles figées dans les instantanés)."""
+    """Hypothèses sérialisées d'un calcul (identiques à celles figées dans les instantanés).
+
+    Les cinq derniers champs proviennent du payload complet du moteur (_assumptions_payload) :
+    périmètre de trésorerie, règles de projection et ventilation par catégorie de contrepartie.
+    """
 
     scenario: ScenarioLiteral
     inflow_coefficient: CoefficientOut
@@ -77,6 +81,11 @@ class AssumptionsOut(BaseModel):
     history_months_used: int
     estimation_method: str
     rounding: str
+    treasury_scope: str
+    committed_rule: str
+    estimated_rule: str
+    categories_inflow: dict[str, int]
+    categories_outflow: dict[str, int]
 
 
 class DailyProjectionOut(BaseModel):
@@ -297,6 +306,9 @@ def put_settings(payload: SettingsIn, tenant: TreasuryManage, db: DbSession) -> 
         },
         actor_user_id=tenant.user.id,
     )
+    # Une session par requête sans commit automatique : sans validation explicite,
+    # flush() seul est annulé à la fermeture (patron des autres modules d'écriture).
+    db.commit()
     return SettingsOut(
         critical_floor=row.critical_floor_minor,
         warning_floor=row.warning_floor_minor,
@@ -378,6 +390,9 @@ def create_snapshot(
         payload={"as_of": snapshot.as_of.isoformat(), "scenario": snapshot.scenario},
         actor_user_id=tenant.user.id,
     )
+    # Validation explicite : l'instantané (en-tête + lignes) et son événement d'audit
+    # partagent la transaction de la requête (patron invitations.py / treasury.py).
+    db.commit()
     return SnapshotOut(
         id=snapshot.id,
         generated_at=snapshot.generated_at.isoformat(),

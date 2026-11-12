@@ -119,9 +119,11 @@ def test_prevision_soldes_engages_estimes(client: TestClient, make_company: Make
     assert by_date["2026-07-05"]["committed_outflow"] == "800000"
     assert by_date["2026-07-10"]["committed_inflow"] == "1200000"
 
-    # ESTIME : moyenne (3 000 000 + 0 + 3 000 000) / 3 = 2 000 000 par mois, sur 31 jours.
+    # ESTIME : moyenne mensuelle sur les 3 mois complets (mars à mai) : encaissements
+    # (3 000 000 + 0 + 3 000 000) / 3 = 2 000 000 ; décaissements (0 + 1 500 000 + 0) / 3
+    # = 500 000 ; taux journalier = moyenne // jours du mois (31 en juillet).
     assert by_date["2026-07-01"]["estimated_inflow"] == str(2_000_000 // 31)
-    assert by_date["2026-07-01"]["estimated_outflow"] == str(1_500_000 // 31)
+    assert by_date["2026-07-01"]["estimated_outflow"] == str(500_000 // 31)
 
     # Le virement interne n'apparaît ni en encaissements ni en décaissements estimés.
     categories_in = body["assumptions"]["categories_inflow"]
@@ -164,9 +166,10 @@ def test_prevision_scenarios_modifient_les_estimes_seulement(
     for body in (optimiste, prudent):
         assert body["days"][4]["committed_outflow"] == neutre["days"][4]["committed_outflow"]
 
-    # OPTIMISTE : encaissements estimés ×110 //100, décaissements ×95 //100.
+    # OPTIMISTE : encaissements estimés ×110 //100, décaissements ×95 //100
+    # (moyennes mensuelles 2 000 000 / 500 000, comme dans test_prevision_soldes…).
     assert optimiste["days"][0]["estimated_inflow"] == str((2_000_000 // 31) * 110 // 100)
-    assert optimiste["days"][0]["estimated_outflow"] == str((1_500_000 // 31) * 95 // 100)
+    assert optimiste["days"][0]["estimated_outflow"] == str((500_000 // 31) * 95 // 100)
 
     # PRUDENT : encaissements ×80 //100 retardés de 15 jours (J+1 lit le 29/06, 30 jours).
     assert prudent["days"][0]["estimated_inflow"] == str((2_000_000 // 30) * 80 // 100)

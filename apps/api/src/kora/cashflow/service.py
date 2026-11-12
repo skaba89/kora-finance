@@ -294,8 +294,12 @@ def load_monthly_history(
         month_key = (flow.flow_date.year, flow.flow_date.month)
         monthly[month_key]["in"] += flow.treasury_in_minor
         monthly[month_key]["out"] += flow.treasury_out_minor
-        categories[month_key]["in"][flow.category] += flow.treasury_in_minor
-        categories[month_key]["out"][flow.category] += flow.treasury_out_minor
+        # Un flux n'alimente que son sens : sinon le defaultdict matérialiserait des
+        # buckets 0 dans l'autre sens (ex. FOURNISSEURS: 0 dans les encaissements).
+        if flow.treasury_in_minor:
+            categories[month_key]["in"][flow.category] += flow.treasury_in_minor
+        if flow.treasury_out_minor:
+            categories[month_key]["out"][flow.category] += flow.treasury_out_minor
 
     months = tuple(
         MonthTotals(

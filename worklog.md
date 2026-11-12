@@ -3,6 +3,29 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-13 — Corrections 3E après première exécution réelle de la suite
+
+Première exécution de la suite API complète sur une pile locale réelle
+(PostgreSQL 17.11 décompressé sans root, Redis réel, S3 d'essai, Mailpit) — la CI
+étant indisponible côté GitHub (runners refusés au niveau du compte, 0 step).
+Quatre défauts trouvés, corrigés, couverts :
+
+- `PUT /cashflow/settings` et `POST /cashflow/snapshots` ne commitaient pas
+  (flush annulé à la fermeture de session) → seuils ignorés, instantanés
+  invisibles ; commit explicite après l'événement d'audit (patron invitations.py).
+- Migration 0014 : FK simple `tenant_id → companies.id` manquante sur
+  `cashflow_snapshot_lines` (la convention « composite + simple » de 0005) ;
+  la garde alembic l'a détectée, corrigée dans la migration.
+- `AssumptionsOut` tronquait les hypothèses (5 champs rejetés par pydantic) :
+  modèle complété, contrat + `schema.ts` régénérés (addition pure).
+- Catégories d'historique polluées par des buckets 0 (defaultdict des deux sens) :
+  un flux n'alimente plus que son sens ; deux attentes de test rectifiées (moyenne
+  /3 sur les décaissements, comme le moteur le fait pour les deux flux).
+
+**Preuves** : pytest **770/770** (suite intégrale, 5 min 06) ; ruff check+format
+verts (183 fichiers) ; mypy strict 168 fichiers ; tsc 0 erreur ; ESLint 0 ;
+vitest 69/69. Détail : `AUDIT_SUIVI_20261109.md` §28 bis.
+
 ## 2026-11-12 — Phase 3E : prévision de trésorerie 30/60/90 jours
 
 **Livré**

@@ -310,8 +310,30 @@
         "type": "object"
       },
       "AssumptionsOut": {
-        "description": "Hypothèses sérialisées d'un calcul (identiques à celles figées dans les instantanés).",
+        "description": "Hypothèses sérialisées d'un calcul (identiques à celles figées dans les instantanés).\n\nLes cinq derniers champs proviennent du payload complet du moteur (_assumptions_payload) :\npérimètre de trésorerie, règles de projection et ventilation par catégorie de contrepartie.",
         "properties": {
+          "categories_inflow": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Categories Inflow",
+            "type": "object"
+          },
+          "categories_outflow": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Categories Outflow",
+            "type": "object"
+          },
+          "committed_rule": {
+            "title": "Committed Rule",
+            "type": "string"
+          },
+          "estimated_rule": {
+            "title": "Estimated Rule",
+            "type": "string"
+          },
           "estimation_method": {
             "title": "Estimation Method",
             "type": "string"
@@ -346,6 +368,10 @@
             ],
             "title": "Scenario",
             "type": "string"
+          },
+          "treasury_scope": {
+            "title": "Treasury Scope",
+            "type": "string"
           }
         },
         "required": [
@@ -356,7 +382,12 @@
           "outflow_advance_days",
           "history_months_used",
           "estimation_method",
-          "rounding"
+          "rounding",
+          "treasury_scope",
+          "committed_rule",
+          "estimated_rule",
+          "categories_inflow",
+          "categories_outflow"
         ],
         "title": "AssumptionsOut",
         "type": "object"

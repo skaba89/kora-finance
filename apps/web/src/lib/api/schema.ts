@@ -1769,8 +1769,23 @@ export interface components {
         /**
          * AssumptionsOut
          * @description Hypothèses sérialisées d'un calcul (identiques à celles figées dans les instantanés).
+         *
+         *     Les cinq derniers champs proviennent du payload complet du moteur (_assumptions_payload) :
+         *     périmètre de trésorerie, règles de projection et ventilation par catégorie de contrepartie.
          */
         AssumptionsOut: {
+            /** Categories Inflow */
+            categories_inflow: {
+                [key: string]: number;
+            };
+            /** Categories Outflow */
+            categories_outflow: {
+                [key: string]: number;
+            };
+            /** Committed Rule */
+            committed_rule: string;
+            /** Estimated Rule */
+            estimated_rule: string;
             /** Estimation Method */
             estimation_method: string;
             /** History Months Used */
@@ -1788,6 +1803,8 @@ export interface components {
              * @enum {string}
              */
             scenario: "OPTIMISTE" | "NEUTRE" | "PRUDENT";
+            /** Treasury Scope */
+            treasury_scope: string;
         };
         /** AttachmentOut */
         AttachmentOut: {

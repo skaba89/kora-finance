@@ -1,6 +1,6 @@
 """Tables tenant de la prévision de trésorerie : paramétrage, instantanés, lignes (Phase 3E).
 
-Garanties portées par la base (migration 20261112_0011) :
+Garanties portées par la base (migration 20261112_0014) :
 - isolation par RLS (ENABLE + FORCE + policy tenant_isolation), comme toutes les tables tenant ;
 - horizons limités à 30/60/90 jours et scénarios fermés par contraintes CHECK ;
 - les flux sont des montants positifs : le signe n'existe que sur les soldes ;
