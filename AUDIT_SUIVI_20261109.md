@@ -893,3 +893,37 @@ les noms, RCCM et NIF sont inventés.
 **Score** : pas de changement fonctionnel ni de sécurité sur le produit — le
 moteur existant est simplement démontrable de bout en bout. **Score : 84,5/100**
 (inchangé).
+
+## 27. C3 — seed_demo : repli automatique du répertoire de sortie (2026-11-12)
+
+**Constat d'origine (validé en session Windows 11 + Docker, 2026-11-12)** :
+`python -m kora.scripts.seed_demo --out demo` échoue avec
+`PermissionError: '/app/demo'` — le conteneur API est durci (utilisateur non-root
+`kora`, `/app` monté en lecture seule) et refuse toute écriture hors `/tmp`. Le
+contournement documenté (`--out /tmp/demo` puis `docker compose cp`) restait
+manuel et non guidé.
+
+**Livré** : `resolve_out_dir(requested) -> tuple[Path, str | None]` dans
+`kora.scripts.seed_demo`, appelé dès `main()` (fail fast, avant toute écriture en
+base) :
+
+1. sonde d'écriture (fichier `.kora-seed-probe` créé puis supprimé) ;
+2. répertoire demandé inscriptible → utilisé tel quel, aucun message ;
+3. sinon → repli `/tmp/kora-demo` + consigne exacte affichée sur stdout :
+   `mkdir -p ./demo-export && docker compose cp api:/tmp/kora-demo/. ./demo-export/` ;
+4. repli lui-même refusé → l'`OSError` d'origine remonte : **aucune perte
+   silencieuse** de fichiers de démonstration.
+
+`docs/DEMO.md` §4 mis à jour (comportement automatique au lieu du contournement
+manuel).
+
+**Preuve (locale, bac à sable Linux)** : fonction exécutée sur les 3 cas —
+répertoire inscriptible utilisé sans message ; répertoire chmod 0o555 → repli
+`/tmp` + consigne complète ; repli lui-même chmod 0o555 → `OSError` honnête.
+Tests unitaires `tests/test_seed_demo_out_dir.py` : 5 cas (2 marqués skipif sur
+Windows où le chmod de répertoire est sans effet ; la voie heureuse reste couverte
+partout). Syntaxe du module vérifiée ; la suite d'intégration complète reste à
+exécuter sur la pile Docker (CI à confirmer — quotas Actions).
+
+**Score** : confort d'usage de la démonstration, aucun changement de production ni
+de sécurité. **Score : 84,5/100** (inchangé).

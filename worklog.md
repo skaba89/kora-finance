@@ -15,8 +15,32 @@ vérifié, et ce qui reste.
   Git Bash + Docker Desktop/WSL 2) — voir AUDIT_SUIVI_20261109.md.
 
 **Reste**
-- Correctif `resolve_out_dir` (PR seed-outdir) : automatisera le repli `/tmp`
-  actuellement manuel — la note du §5.3 sera mise à jour à sa fusion.
+- ~~Correctif `resolve_out_dir`~~ : fait — la note du §5.3 est passée au présent
+  lors de la fusion conjointe des PR demo-docs et seed-outdir (repli désormais
+  automatique, §4).
+
+## 2026-11-12 — C3 : seed_demo tolérant aux conteneurs durcis (resolve_out_dir)
+
+**Livré**
+- `kora.scripts.seed_demo` : `resolve_out_dir()` — sonde d'écriture, repli
+  automatique `/tmp/kora-demo` + consigne `docker compose cp` affichée sur
+  stdout si le répertoire demandé est refusé (conteneur durci : `/app` en
+  lecture seule), `OSError` honnête si même le repli échoue (aucune perte
+  silencieuse). Appelé dès `main()` : fail fast avant tout travail.
+- `tests/test_seed_demo_out_dir.py` : 5 tests unitaires (sans base ; 2 skipif
+  sur Windows — chmod de répertoire sans effet —, voie heureuse couverte partout).
+- `docs/DEMO.md` §4 : comportement automatique documenté (fin du contournement
+  manuel `--out /tmp/demo`) ; `AUDIT_SUIVI_20261109.md` §27.
+
+**Preuve (locale)**
+- Fonction exécutée sur les 3 cas (répertoire OK ; chmod 0o555 → repli + consigne ;
+  repli chmod 0o555 → OSError) : 3/3 verts en session du 12/11/2026.
+- `python -m pytest tests/test_seed_demo_out_dir.py -q` : 5 passed
+  (uv, exécution du jour — voir PR).
+
+**Reste**
+- ~~Note §5.3 du guide Windows~~ : fait — mise au présent lors de la fusion
+  conjointe des PR demo-docs et seed-outdir (voir `docs/DEMO.md` §5.3/§5.4).
 
 ## 2026-10-23 — Phase 1 (socle)
 

@@ -79,7 +79,12 @@ docker compose exec -e KORA_DATABASE_MIGRATION_URL="postgresql+psycopg://kora_ow
 
 - Le script vit dans `apps/api/src/kora/scripts/seed_demo.py` ; il fonctionne aussi
   hors Docker (`uv run python -m kora.scripts.seed_demo` avec `KORA_DATABASE_URL`).
-- `--out DIR` choisit le dossier des relevés générés (défaut : `./demo`).
+- `--out DIR` choisit le dossier des relevés générés (défaut : `./demo`). Si le
+  répertoire demandé n'est pas inscriptible — cas du conteneur durci (`/app` en
+  lecture seule, utilisateur non-root), ex. `--out demo` → `PermissionError` —
+  le script bascule automatiquement sur `/tmp/kora-demo` et affiche la commande
+  `docker compose cp` à exécuter sur l'hôte ; si même le repli échoue, l'erreur
+  remonte (aucune perte silencieuse).
 - Les montants sont en GNF (unité entière) ; la TVA 18 % est appliquée sur les
   montants TTC multiples de 590 000 GNF pour des scissions HT/TVA exactes.
 - Les relevés sont construits **depuis les mouvements réellement créés** : le
@@ -136,11 +141,11 @@ mkdir -p ./demo-export
 docker compose cp api:/tmp/demo/. ./demo-export/
 ```
 
-> **Ne pas utiliser** `--out demo` (chemin relatif) : l'API durcie refuse
-> l'écriture hors `/tmp` → `PermissionError: '/app/demo'`. Le correctif
-> `resolve_out_dir` (PR seed-outdir) rendra le script tolérant : en cas de refus
-> d'écriture il basculera automatiquement sur `/tmp/kora-demo` et affichera la
-> commande `docker compose cp` à exécuter.
+> `--out demo` (chemin relatif) fonctionne désormais : le correctif
+> `resolve_out_dir` rend le script tolérant — en cas de refus d'écriture il
+> bascule automatiquement sur `/tmp/kora-demo` et affiche la commande
+> `docker compose cp` à exécuter (§4). Le `--out /tmp/demo` explicite reste
+> une option valide.
 
 ### 5.4 Diagnostic des pannes déjà rencontrées (résolues)
 
@@ -148,7 +153,7 @@ docker compose cp api:/tmp/demo/. ./demo-export/
 |---|---|---|
 | `make: command not found` | Make absent de Git Bash | §5.2 (winget) puis rouvrir le terminal |
 | `storage-1 exited (1)` + logs « kora_owner » échec d'authentification Postgres | `.env` périmé (fausses clés d'une ancienne exécution) **et** volume Postgres ancien avec mot de passe différent | `docker compose down -v` (⚠️ efface les données locales) puis re-exécuter `./scripts/init-env.sh` puis `docker compose up -d --build` |
-| `PermissionError: '/app/demo'` au seed | `/app` en lecture seule (conteneur durci, utilisateur `kora` non-root) | `--out /tmp/demo` + `docker compose cp` (§5.3) ; correctif définitif = `resolve_out_dir` |
+| `PermissionError: '/app/demo'` au seed | `/app` en lecture seule (conteneur durci, utilisateur `kora` non-root) | corrigé : repli automatique sur `/tmp/kora-demo` + consigne `docker compose cp` (`resolve_out_dir`, §4) |
 | `the input device is not a TTY` | Git Bash sans TTY compatible | ajouter `-T` à `docker compose exec` |
 | `/app/...` transformé en `C:/Program Files/Git/app/...` | MSYS réécrit les chemins POSIX | préfixer `MSYS_NO_PATHCONV=1` |
 
