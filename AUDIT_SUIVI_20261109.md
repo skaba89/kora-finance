@@ -1012,3 +1012,57 @@ check + format verts (183 fichiers) ; mypy strict 168 fichiers OK ; `tsc --noEmi
 toucher au grand livre, aucune écriture inventée, permissions cohérentes avec la
 3A. Attend la revue + CI pour créditer le score. **Score : 84,5/100** (inchangé en
 l'état, PR ouvert).
+
+## 29. Fusion des PRs 70-73 sous blocage CI de facturation (2026-11-13)
+
+**Diagnostic CI clos avec preuve officielle** (même signature que §24, cette fois
+documentée par GitHub lui-même) : re-exécution du run `43262026312` (branche
+repo-hygiene, attempt 2) → 8 jobs rejetés en ~3 s, **0 step exécuté, aucun runner
+attribué, aucun log** ; l'annotation du check-run renvoie :
+
+> « The job was not started because recent account payments have failed or your
+> spending limit needs to be increased. Please check the 'Billing & plans' section
+> in your settings »
+
+Cause racine : **paiement du compte GitHub échoué / limite de dépenses** — pas un
+défaut de code (`main` rouge depuis le 11/11, y compris sur des PR passées
+anciennes). Constat associé : l'API de protection de branche renvoie 403
+(« Upgrade to GitHub Pro or make this repository public ») : faute de paiement Pro,
+**aucune protection de branche n'est active côté GitHub** en ce moment. La
+discipline du projet (branche `feature/kora-*` → validation locale complète → PR →
+merge uniquement après vérifications) continue d'être appliquée intégralement, par
+engagement, même sans contrainte GitHub.
+
+**Fusion** : séquence **#72 (.gitattributes) → #71 (docs Windows) → #70
+(`resolve_out_dir`) → #73 (Phase 3E)** par l'API GitHub. Conflits résolus sur
+branches avant fusion (historique des PR conservé) :
+
+1. #70 : `worklog.md` (entrées C2+C3 toutes deux conservées) ; `docs/DEMO.md`
+   §5.3/§5.4 passés au présent — le repli automatique est désormais fusionné ;
+2. #73 : `worklog.md` (3E au-dessus de C2/C3, « les plus récentes en haut ») ;
+   `AUDIT_SUIVI_20261109.md` renuméroté proprement (§27 C3, §28 3E).
+
+**Revalidation du composé** : l'arbre de la branche 3E fusionnée et celui de
+`main` après les quatre merges sont **identiques bit à bit** (arbre git
+`515f3b5b` vérifié des deux côtés) — la preuve ci-dessous vaut donc pour `main` :
+
+| Contrôle | Résultat |
+|---|---|
+| pytest complet (PG 17.11 + Redis + S3 d'essai + Mailpit réels) | **775/775** (5 min 08) |
+| ruff check + format | verts (169 fichiers) |
+| mypy `--strict` | verts (169 fichiers) |
+| ESLint `--max-warnings=0` | verts |
+| `tsc --noEmit` (typegen + strict + noUncheckedIndexedAccess) | 0 erreur |
+| Vitest | **69/69** |
+| Contrat OpenAPI (`export_openapi` vs `openapi.json` committé) | **identique** (85 chemins, 140 schémas) |
+
+Reste à la CI quand la facturation sera régularisée : restauration synthétique
+(restore-drill), pip-audit/SBOM, E2E Playwright — à re-jouer sur `main`. Chaque PR
+fusionné porte un commentaire public « Statut CI : blocage facturation du compte »
+avec l'annotation officielle citée.
+
+**Score** : même politique qu'aux §24 et §25 — preuve locale complète mais CI
+encore indisponible : **84,5/100** (inchangé ; le crédit +0,5 attendu pour 3E sera
+attribué dès confirmation CI). Action utilisateur requise : GitHub Settings →
+Billing & plans (régler le paiement ou relever la limite de dépenses), puis
+re-jouer les workflows sur `main`.

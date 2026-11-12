@@ -3,6 +3,47 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-13 — Fusion des PRs 70-73, diagnostic CI définitif (facturation du compte)
+
+**Diagnostic CI clos avec preuve officielle** : re-exécution du run de la branche
+repo-hygiene (run `43262026312`, attempt 2) → **8 jobs rejetés en ~3 s, 0 step
+exécuté, aucun runner attribué, aucun log**. L'annotation du check-run GitHub :
+
+> « The job was not started because recent account payments have failed or your
+> spending limit needs to be increased. Please check the 'Billing & plans' section
+> in your settings »
+
+Ce n'est donc **pas un défaut de code** : `main` est dans le même état depuis le
+11/11. Constat associé : la lecture de la protection de branche renvoie 403
+(« Upgrade to GitHub Pro or make this repository public ») — le paiement GitHub Pro
+échouant, **la protection de branche est actuellement désactivée** côté GitHub ; la
+discipline feature → PR → merge continue d'être appliquée volontairement. Chaque PR
+(#70-73) porte en commentaire le statut CI honnête + la preuve locale. Action
+utilisateur : Settings → Billing & plans (régler le paiement ou relever la limite),
+puis re-jouer la CI sur `main`.
+
+**Fusion** : séquence **#72 (.gitattributes) → #71 (docs Windows) → #70
+(`resolve_out_dir`) → #73 (Phase 3E)** par l'API GitHub (commits de merge). Deux
+résolutions de conflit réalisées sur les branches avant fusion :
+
+- #70 : `worklog.md` (entrées C2+C3 conservées) + `docs/DEMO.md` §5.3/§5.4 passés
+  au présent (le repli `resolve_out_dir` est désormais fusionné) ;
+- #73 : `worklog.md` (3E au-dessus de C2/C3) + `AUDIT_SUIVI_20261109.md`
+  (numérotation §27 C3 puis §28 3E restaurée).
+
+**Revalidation complète du composé** (pile locale réelle : PostgreSQL 17.11,
+Redis, S3 d'essai, Mailpit) — l'arbre fusionné est **identique bit à bit à `main`**
+(arbre `515f3b5b` vérifié des deux côtés) :
+
+- **pytest 775/775** (698 sur `main` avant fusion + 40 moteur cashflow + 11
+  intégration cashflow + 5 seed-outdir + ~21 isolations/ajouts 3E) en 5 min 08 ;
+- ruff check + format verts (169 fichiers) ; mypy strict **169 fichiers** OK ;
+- ESLint `--max-warnings=0` ; `tsc --noEmit` 0 erreur ; **Vitest 69/69** ;
+- contrat OpenAPI : `openapi.json` **identique** (85 chemins, 140 schémas).
+
+Reste à la CI (quotas restaurés) : restauration synthétique, pip-audit/SBOM, E2E
+Playwright. Suivi : `AUDIT_SUIVI_20261109.md` §29.
+
 ## 2026-11-13 — Corrections 3E après première exécution réelle de la suite
 
 Première exécution de la suite API complète sur une pile locale réelle
