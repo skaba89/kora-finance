@@ -54,6 +54,10 @@ rapprochement avec score de confiance et validation manuelle, frais et retraits,
 prévisionnel 30/60/90 jours.
 - Précision/rappel du rapprochement mesurés sur des relevés réels anonymisés.
 - Réimport du même relevé = zéro doublon.
+- **3E — Prévisionnel 30/60/90 jours** ✅ (2026-11-12, branche `feature/kora-cashflow-forecast` :
+  moteur OBSERVE + ENGAGE + ESTIME à trois scénarios, détection de tension, instantanés
+  figés comparables au réalisé, exports PDF/Excel audités, page mobile-first fr/en ;
+  arithmétique 100 % entière, aucun flux futur inventé).
 
 ## Phase 4 — Ventes et achats
 Devis, factures, avoirs à numérotation sans trou, PDF avec mentions légales, envoi

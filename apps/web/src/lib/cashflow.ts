@@ -107,14 +107,18 @@ export function aggregateWeekly(days: DailyProjection[]): WeeklyPoint[] {
   return [...buckets.values()];
 }
 
-export type StatusTone = "positive" | "warning" | "destructive";
+/**
+ * Variant de Badge (union du composant `ui/badge`) selon le statut projeté.
+ * Convention du dépôt : ternaires inline ou fonction pure — jamais de couleur hors thème.
+ */
+export type ForecastBadgeVariant = "secondary" | "outline" | "destructive";
 
-export function statusTone(status: ForecastStatus): StatusTone {
+export function statusVariant(status: ForecastStatus): ForecastBadgeVariant {
   switch (status) {
     case "SAIN":
-      return "positive";
+      return "secondary";
     case "SOUS_SURVEILLANCE":
-      return "warning";
+      return "outline";
     case "CRITIQUE":
       return "destructive";
   }

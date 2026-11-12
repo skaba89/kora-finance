@@ -1,7 +1,9 @@
 """Prévision de trésorerie : seuils, instantanés et lignes (Phase 3E).
 
-Révision : 0011
-Parente  : 0010
+Révision : 0014
+Parente  : 0013 (rapprochement bancaire 3C) — renumérotée depuis 0011 : les
+révisions 0011/0012/0013 (comptes financiers 3A, relevés 3B, unicité 3C) sont
+arrivées sur `main` entre-temps.
 
 Trois tables tenant avec RLS activé, forcé et policy `tenant_isolation` (convention
 des migrations 0002/0003/0005) :
@@ -21,8 +23,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0011"
-down_revision: str | None = "0010"
+revision: str = "0014"
+down_revision: str | None = "0013"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

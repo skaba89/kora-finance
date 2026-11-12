@@ -1,8 +1,9 @@
 """Prévision de trésorerie 30/60/90 jours (Phase 3E).
 
-Consultation (moteur + instantanés + réalisé) : permission `entries:read`, comme la
-balance et le grand livre. Paramétrage des seuils et figeage d'un instantané :
-`entries:write`, chaque écriture inscrite au journal d'audit.
+Consultation (moteur + instantanés + réalisé) : permission `treasury:read` — la
+prévision prolonge les comptes de trésorerie (3A) et leurs mouvements ; visible
+pour les rôles de lecture. Paramétrage des seuils et figeage d'un instantané :
+`treasury:manage`, chaque écriture inscrite au journal d'audit.
 
 La prévision ne modifie jamais la comptabilité : toutes les routes de ce routeur
 sont des lectures, hormis le paramétrage des seuils et le figeage des instantanés.
@@ -31,7 +32,7 @@ from kora.cashflow.engine import (
 from kora.cashflow.service import ExcludedDraft
 from kora.core.errors import BusinessRuleError
 from kora.models.cashflow import CashflowSettings, CashflowSnapshot
-from kora.tenancy.deps import EntriesRead, EntriesWrite
+from kora.tenancy.deps import TreasuryManage, TreasuryRead
 
 router = APIRouter(prefix="/companies/{company_id}", tags=["trésorerie prévisionnelle"])
 
@@ -53,12 +54,37 @@ def _validate_horizon(horizon: int) -> int:
     return horizon
 
 
+# Statuts et scénarios exposés : Literal pour un contrat OpenAPI précis (unions TS).
+ForecastStatusLiteral = Literal["SAIN", "SOUS_SURVEILLANCE", "CRITIQUE"]
+ScenarioLiteral = Literal["OPTIMISTE", "NEUTRE", "PRUDENT"]
+
+
+class CoefficientOut(BaseModel):
+    """Coefficient de scénario appliqué aux flux estimés (numérateur/dénominateur entiers)."""
+
+    numerator: int
+    denominator: int
+
+
+class AssumptionsOut(BaseModel):
+    """Hypothèses sérialisées d'un calcul (identiques à celles figées dans les instantanés)."""
+
+    scenario: ScenarioLiteral
+    inflow_coefficient: CoefficientOut
+    outflow_coefficient: CoefficientOut
+    inflow_delay_days: int
+    outflow_advance_days: int
+    history_months_used: int
+    estimation_method: str
+    rounding: str
+
+
 class DailyProjectionOut(BaseModel):
     flow_date: date
     inflow: Money
     outflow: Money
     balance: SignedMoney
-    status: str
+    status: ForecastStatusLiteral
     committed_inflow: Money
     committed_outflow: Money
     estimated_inflow: Money
@@ -116,9 +142,9 @@ class ExcludedDraftOut(BaseModel):
 class ForecastOut(BaseModel):
     as_of: date
     horizon_days: int
-    scenario: str
+    scenario: ScenarioLiteral
     opening_total: SignedMoney
-    status: str
+    status: ForecastStatusLiteral
     first_critical_date: date | None
     lowest_balance: SignedMoney
     lowest_balance_date: date
@@ -126,7 +152,7 @@ class ForecastOut(BaseModel):
     beyond_horizon_outflow: Money
     insufficient_data: bool
     history_months_used: int
-    assumptions: dict[str, object]
+    assumptions: AssumptionsOut
     days: list[DailyProjectionOut]
     accounts: list[AccountProjectionOut]
     excluded_drafts: list[ExcludedDraftOut]
@@ -146,7 +172,7 @@ class ForecastOut(BaseModel):
             beyond_horizon_outflow=result.beyond_horizon_outflow_minor,
             insufficient_data=result.insufficient_data,
             history_months_used=result.history_months_used,
-            assumptions=result.assumptions,
+            assumptions=AssumptionsOut.model_validate(result.assumptions),
             days=[DailyProjectionOut.of(day) for day in result.days],
             accounts=[AccountProjectionOut.of(account) for account in result.accounts],
             excluded_drafts=[ExcludedDraftOut.of(draft) for draft in drafts],
@@ -155,7 +181,7 @@ class ForecastOut(BaseModel):
 
 @router.get("/cashflow/forecast", responses=_ERRORS)
 def forecast(
-    tenant: EntriesRead,
+    tenant: TreasuryRead,
     db: DbSession,
     horizon: HorizonQuery = 90,
     scenario: ScenarioQuery = Scenario.NEUTRE,
@@ -173,7 +199,7 @@ def forecast(
 
 @router.get("/cashflow/forecast/export", responses=_ERRORS)
 def forecast_export(
-    tenant: EntriesRead,
+    tenant: TreasuryRead,
     db: DbSession,
     ctx: Ctx,
     file_format: Annotated[Literal["pdf", "xlsx"], Query(alias="format")],
@@ -208,7 +234,7 @@ class SettingsOut(BaseModel):
     critical_floor: Money
     warning_floor: Money | None
     default_horizon_days: int
-    default_scenario: str
+    default_scenario: ScenarioLiteral
 
 
 class SettingsIn(BaseModel):
@@ -233,14 +259,14 @@ def _settings_out(row: CashflowSettings | None) -> SettingsOut:
 
 
 @router.get("/cashflow/settings", responses=_ERRORS)
-def get_settings(tenant: EntriesRead, db: DbSession) -> SettingsOut:
+def get_settings(tenant: TreasuryRead, db: DbSession) -> SettingsOut:
     """Seuils d'alerte effectifs (valeurs par défaut si jamais paramétrés)."""
     row = service.load_settings_row(db, tenant.company_id)
     return _settings_out(row)
 
 
 @router.put("/cashflow/settings", responses=_ERRORS)
-def put_settings(payload: SettingsIn, tenant: EntriesWrite, db: DbSession) -> SettingsOut:
+def put_settings(payload: SettingsIn, tenant: TreasuryManage, db: DbSession) -> SettingsOut:
     """Met à jour les seuils et défauts d'affichage de la prévision (audité)."""
     if (
         payload.warning_floor_minor is not None
@@ -284,20 +310,20 @@ class SnapshotOut(BaseModel):
     generated_at: str
     as_of: date
     horizon_days: int
-    scenario: str
+    scenario: ScenarioLiteral
     opening_total: SignedMoney
-    status: str
+    status: ForecastStatusLiteral
     first_critical_date: date | None
     lowest_balance: SignedMoney
     lowest_balance_date: date
     insufficient_data: bool
     history_months_used: int
-    assumptions: dict[str, object]
+    assumptions: AssumptionsOut
 
 
 @router.get("/cashflow/snapshots", responses=_ERRORS)
 def list_snapshots(
-    tenant: EntriesRead,
+    tenant: TreasuryRead,
     db: DbSession,
     limit: Annotated[int, Query(ge=1, le=50)] = 10,
 ) -> list[SnapshotOut]:
@@ -326,7 +352,7 @@ def list_snapshots(
             lowest_balance_date=row.lowest_balance_date,
             insufficient_data=row.insufficient_data,
             history_months_used=row.history_months_used,
-            assumptions=row.assumptions_jsonb,
+            assumptions=AssumptionsOut.model_validate(row.assumptions_jsonb),
         )
         for row in rows
     ]
@@ -334,7 +360,7 @@ def list_snapshots(
 
 @router.post("/cashflow/snapshots", responses=_ERRORS, status_code=201)
 def create_snapshot(
-    tenant: EntriesWrite, db: DbSession, scenario: ScenarioQuery = Scenario.NEUTRE
+    tenant: TreasuryManage, db: DbSession, scenario: ScenarioQuery = Scenario.NEUTRE
 ) -> SnapshotOut:
     """Fige la prévision courante en un instantané (base du prévisionnel vs réalisé)."""
     snapshot = service.create_snapshot(
@@ -365,7 +391,7 @@ def create_snapshot(
         lowest_balance_date=snapshot.lowest_balance_date,
         insufficient_data=snapshot.insufficient_data,
         history_months_used=snapshot.history_months_used,
-        assumptions=snapshot.assumptions_jsonb,
+        assumptions=AssumptionsOut.model_validate(snapshot.assumptions_jsonb),
     )
 
 
@@ -387,7 +413,7 @@ class VsActualOut(BaseModel):
 
 
 @router.get("/cashflow/snapshots/{snapshot_id}/vs-actual", responses=_ERRORS)
-def snapshot_vs_actual(snapshot_id: uuid.UUID, tenant: EntriesRead, db: DbSession) -> VsActualOut:
+def snapshot_vs_actual(snapshot_id: uuid.UUID, tenant: TreasuryRead, db: DbSession) -> VsActualOut:
     """Compare un instantané au réalisé postérieur (écritures validées)."""
     snapshot = service.get_snapshot(db, tenant.company_id, snapshot_id)
     report = service.compare_snapshot_to_actual(db, tenant.company_id, snapshot)

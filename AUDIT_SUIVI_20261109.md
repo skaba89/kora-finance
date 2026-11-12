@@ -893,3 +893,52 @@ les noms, RCCM et NIF sont inventés.
 **Score** : pas de changement fonctionnel ni de sécurité sur le produit — le
 moteur existant est simplement démontrable de bout en bout. **Score : 84,5/100**
 (inchangé).
+
+## 28. Phase 3E — Prévision de trésorerie 30/60/90 jours (2026-11-12)
+
+**Livré** (branche `feature/kora-cashflow-forecast`, un seul PR : backend + frontend +
+migration + tests + docs) :
+
+- **Moteur pur** `kora/cashflow/engine.py` : trois sources — OBSERVE (soldes réels),
+  ENGAGE (écritures validées datées dans le futur), ESTIME (moyenne des mois complets
+  passés) ; trois scénarios (optimiste/neutre/prudent, coefficients documentés dans
+  `assumptions.py` et sérialisés dans chaque sortie) ; détection de tension (première
+  date sous le seuil critique) ; agrégat `beyond_horizon` (aucun flux au-delà de
+  l'horizon n'est perdu) ; arithmétique 100 % entière (BigInt côté TS, int côté API,
+  aucune division flottante).
+- **API** 7 endpoints sous `/cashflow/*` : prévision, export PDF/XLSX **inscrit au
+  journal d'audit**, seuils (GET/PUT), instantanés (GET/POST), prévision vs réalisé.
+  Consultation `treasury:read` (rôles de lecture inclus), écritures `treasury:manage`
+  — la prévision ne modifie jamais la comptabilité.
+- **Migration 0014** (renumérotée depuis 0011 : 3A/3B/3C ont pris 0011-0013) :
+  `cashflow_settings`, `cashflow_snapshots`, `cashflow_snapshot_lines` — tables
+  tenant, RLS ENABLE+FORCE, policy `tenant_isolation`, FK composites (tenant_id, id).
+- **Frontend** : page `tresorerie/previsions` mobile-first (horizon/scénario portés
+  par l'URL), graphique hebdomadaire BigInt + détail journalier, hypothèses affichées
+  (« Comment ce chiffre est calculé »), brouillons futurs exclus listés, instantanés ;
+  exports via la liste blanche `exports.ts` (kind `previsions-tresorerie`) et le
+  proxy BFF ; navigation du dossier `treasury:read` ; i18n fr/en fusionnés.
+- **Contrat** : statuts/scénarios en `Literal`, hypothèses en modèle `AssumptionsOut`
+  (plus de `dict[str, object]`) — `schema.ts` régénéré (addition pure vérifiée).
+
+**Adaptations au `main` réel** (les 5 points du guide d'intégration) : registre des
+routeurs, registre des modèles `db/models.py`, migration renumérotée (parent 0013),
+fusion i18n fr/en, fusion DAL (4 fonctions), lien de navigation, permissions
+`treasury:*` (plus fines que `entries:*`), contrat + types TS resynchronisés.
+
+**Preuves locales (uv, Python 3.13.18, 2026-11-12)** : pytest moteur **40/40** ;
+ruff check + format : verts (183 fichiers) ; **mypy strict : 168 fichiers OK** ;
+`tsc --noEmit` strict **0 erreur** ; ESLint `--max-warnings=0` **0 problème** ;
+vitest **69/69** ; `openapi.json` + `schema.ts` régénérés, addition pure sémantique
+vérifiée hors chemins cashflow.
+
+**Limites** : tests d'intégration (`tests/test_cashflow.py`, base réelle) et E2E à
+exécuter sur la pile Docker / CI à la revue du PR ; écrans de figeage et de réglage
+des seuils prévus en PR de suivi (l'API existe) ; enrichissement du seed (chèque
+post-daté, brouillon fournisseur futur) après vérification déterministe sur base
+réelle.
+
+**Score** : première projection de trésorerie de Kora — aide à la décision sans
+toucher au grand livre, aucune écriture inventée, permissions cohérentes avec la
+3A. Attend la revue + CI pour créditer le score. **Score : 84,5/100** (inchangé en
+l'état, PR ouvert).

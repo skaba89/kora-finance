@@ -3,6 +3,57 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-12 — Phase 3E : prévision de trésorerie 30/60/90 jours
+
+**Livré**
+- Moteur pur (`kora/cashflow/engine.py`) : OBSERVE + ENGAGE + ESTIME, 3 scénarios
+  (coefficients documentés dans `assumptions.py`, sérialisés dans chaque snapshot),
+  détection de tension (seuils critique/surveillance), agrégat beyond_horizon
+  (aucun flux perdu), arithmétique 100 % entière.
+- Service + API : 7 endpoints sous `/cashflow/*` (prévision, export PDF/XLSX audité,
+  seuils, instantanés, prévision vs réalisé), migration **0014** (3 tables tenant,
+  RLS ENABLE+FORCE — renumérotée depuis 0011 : 3A/3B/3C ont pris 0011-0013 sur
+  `main` entre-temps), statuts/scénarios déclarés en `Literal` et hypothèses en
+  modèle pydantic dédié (`AssumptionsOut`) pour un contrat OpenAPI précis.
+- Frontend : page `tresorerie/previsions` mobile-first (horizon/scénario via URL),
+  graphique hebdomadaire BigInt, détail journalier, hypothèses affichées,
+  instantanés ; exports branchés sur la liste blanche `exports.ts`
+  (`previsions-tresorerie`) et le proxy BFF existant ; i18n fr/en fusionnés dans
+  `lib/i18n` ; navigation du dossier (« Prévision de trésorerie », `treasury:read`).
+- Permissions : consultation `treasury:read` (visible pour les rôles de lecture,
+  cohérent avec la section Trésorerie de la 3A), écritures (seuils, figeage)
+  `treasury:manage` — adoptées selon le guide d'intégration §2-5 (le main réel
+  expose des permissions plus fines que `entries:*`).
+- Documentation : `docs/PLAN.md` (3E cochée), `docs/DEMO.md` (étape 9),
+  `AUDIT_SUIVI_20261109.md` §28.
+
+**Adaptations au `main` réel** (guide d'intégration §2) : registre des routeurs
+(`cashflow` entre statements et exports), registre des modèles (`db/models.py`),
+migration renumérotée, fusion i18n, fusion DAL (4 fonctions dans `dal.ts`),
+lien de navigation, permissions treasury:read/manage, contrat OpenAPI + types TS
+régénérés (addition pure : 5 chemins cashflow + schémas dédiés).
+
+**Preuves locales (uv, Python 3.13.18 — 12/11/2026)**
+- pytest moteur : **40/40** ; ruff check : All checks passed ; ruff format --check :
+  183 fichiers OK ; **mypy strict : Success, 168 fichiers**.
+- Frontend : `tsc --noEmit` strict **0 erreur** (après typegen) ; ESLint
+  `--max-warnings=0` **0 problème** ; **vitest 69/69** (dont 7 cashflow + 2 exports
+  prévisions) ; contrat OpenAPI régénéré et `schema.ts` resynchronisés.
+- Corrections apportées lors de l'adaptation : signature `formatMoney` du main
+  (`number | bigint`), variants Badge du composant `ui/badge` (`statusVariant`),
+  `noUncheckedIndexedAccess` (reduce typé, accès gardés), props `ExportLinks`
+  remplacées par `previsionsExportHref` + liste blanche, import `getCompany`
+  manquant, accès `company.company.currency`.
+
+**Reste**
+- Tests d'intégration `tests/test_cashflow.py` (base réelle requise) et E2E : à
+  exécuter sur la pile Docker / CI à la revue du PR (quotas Actions — voir
+  REVUE_INITIALE_20261112.md).
+- Écrans de figeage d'instantané et de réglage des seuils (l'API est prête,
+  `POST /cashflow/snapshots` et `PUT /cashflow/settings`) : PR de suivi.
+- Enrichissement `seed_demo` (chèque post-daté +10 j, brouillon fournisseur +25 j)
+  : PR de suivi après vérification déterministe sur base réelle.
+
 ## 2026-10-23 — Phase 1 (socle)
 
 Commits : `dac9685` (1a), `070ad3d` (1b), `796c2b6` (1c), `35262c0` (1d-1e), puis 1f (frontend).

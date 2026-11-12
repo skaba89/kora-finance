@@ -47,9 +47,10 @@ export function ForecastChart({
     0n,
   );
   const balances = weeks.map((w) => w.end_balance);
-  const [minBalance, maxBalance] = balances.reduce(
+  const first = weeks[0]?.end_balance ?? 0n;
+  const [minBalance, maxBalance] = balances.reduce<[bigint, bigint]>(
     ([lo, hi], b) => [b < lo ? b : lo, b > hi ? b : hi],
-    [balances[0], balances[0]],
+    [first, first],
   );
   const span = maxBalance - minBalance || 1n;
   const BAND = BAR * 2 + GAP + 8;
@@ -138,10 +139,10 @@ export function ForecastChart({
           {labels.outflow}
         </span>
         <span>— {labels.balance}</span>
-        {active !== null && (
+        {active !== null && weeks[active] !== undefined && (
           <span className="ml-2 font-medium text-foreground">
             {weekLabel(weeks[active].week_start)} :{" "}
-            {formatMoney(weeks[active].end_balance.toString(), currency, locale)} ({labels.balance})
+            {formatMoney(weeks[active].end_balance, currency, locale)} ({labels.balance})
           </span>
         )}
       </figcaption>

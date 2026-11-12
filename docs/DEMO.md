@@ -61,6 +61,15 @@ Ouvrir l'application sur http://localhost:3100 et se connecter avec l'un des com
    - *FRAIS ALERTE SMS* (−25 000 GNF) : ligne à **ignorer** (bouton Ignorer).
 7. **Rapports et états financiers** : bilan, résultat, TFT ; exports XLSX/PDF/TFT.
 8. **Hors connexion** : saisir une écriture déconnecté puis la resynchroniser.
+9. **Prévision de trésorerie (3E)** : menu du dossier → « Prévision de trésorerie » —
+   projection 30/60/90 jours sur les sept mois d'historique du seed : soldes observés,
+   flux engagés (écritures validées datées dans le futur) et flux estimés ; changer
+   l'horizon et le scénario via les liens, lire « Comment ce chiffre est calculé »
+   (coefficients du scénario, périmètre 5xx hors 58x, brouillons futurs exclus),
+   puis exporter en PDF et Excel (chaque export est inscrit au journal d'audit).
+   Le badge de statut (sain / sous surveillance / critique) se calcule sur les seuils
+   par défaut ; « Comparer au réalisé » s'active après le figeage d'un instantané via
+   l'API (l'écran de figeage et de réglage des seuils arrive avec un PR de suivi).
 
 ## 3. Repartir de zéro (réinitialisation)
 

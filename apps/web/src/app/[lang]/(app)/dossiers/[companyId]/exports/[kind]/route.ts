@@ -15,8 +15,9 @@ export async function GET(
   { params }: RouteContext<"/[lang]/dossiers/[companyId]/exports/[kind]">,
 ) {
   const { companyId, kind } = await params;
-  const query = exportQuery(request.nextUrl.searchParams);
-  if (!isExportKind(kind) || !query) return new NextResponse("Demande d'export invalide.", { status: 400 });
+  if (!isExportKind(kind)) return new NextResponse("Demande d'export invalide.", { status: 400 });
+  const query = exportQuery(kind, request.nextUrl.searchParams);
+  if (!query) return new NextResponse("Demande d'export invalide.", { status: 400 });
   const accessToken = (await cookies()).get(ACCESS_COOKIE)?.value;
   if (!accessToken) return NextResponse.redirect(new URL("/connexion", request.url));
 

@@ -4,7 +4,7 @@ import {
   aggregateWeekly,
   barHeight,
   statusLabel,
-  statusTone,
+  statusVariant,
   weekKey,
   type DailyProjection,
 } from "./cashflow";
@@ -42,10 +42,11 @@ describe("aggregateWeekly", () => {
       day("2026-11-16", "1500", "500", "200"),
     ]);
     expect(weeks).toHaveLength(2);
-    expect(weeks[0].inflow).toBe(700n);
-    expect(weeks[0].outflow).toBe(300n);
-    expect(weeks[0].end_balance).toBe(1200n);
-    expect(weeks[1].end_balance).toBe(1500n);
+    const [semaine1, semaine2] = weeks;
+    expect(semaine1?.inflow).toBe(700n);
+    expect(semaine1?.outflow).toBe(300n);
+    expect(semaine1?.end_balance).toBe(1200n);
+    expect(semaine2?.end_balance).toBe(1500n);
   });
 
   it("reste à zéro sans journée", () => {
@@ -54,10 +55,10 @@ describe("aggregateWeekly", () => {
 });
 
 describe("statuts", () => {
-  it("associe le bon ton visuel", () => {
-    expect(statusTone("SAIN")).toBe("positive");
-    expect(statusTone("SOUS_SURVEILLANCE")).toBe("warning");
-    expect(statusTone("CRITIQUE")).toBe("destructive");
+  it("associe le bon variant de Badge", () => {
+    expect(statusVariant("SAIN")).toBe("secondary");
+    expect(statusVariant("SOUS_SURVEILLANCE")).toBe("outline");
+    expect(statusVariant("CRITIQUE")).toBe("destructive");
   });
 
   it("libellés par locale", () => {

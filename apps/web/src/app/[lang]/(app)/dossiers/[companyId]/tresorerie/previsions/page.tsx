@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Download } from "lucide-react";
 
 import { ForecastChart } from "@/components/cashflow/forecast-chart";
-import { ExportLinks } from "@/components/ledger/export-links";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -18,11 +19,12 @@ import {
   HORIZONS,
   SCENARIOS,
   statusLabel,
-  statusTone,
+  statusVariant,
   type ForecastHorizon,
   type ForecastScenario,
 } from "@/lib/cashflow";
-import { getCashflowForecast, getCashflowSettings, getCashflowSnapshots } from "@/lib/dal";
+import { getCashflowForecast, getCashflowSnapshots, getCompany } from "@/lib/dal";
+import { previsionsExportHref } from "@/lib/exports";
 import { formatMoney } from "@/lib/format";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { getDictionary } from "@/lib/i18n/server";
@@ -58,17 +60,17 @@ export default async function CashflowPage({
   const { companyId } = await params;
   const query = await searchParams;
   const [{ t, locale }, company] = await Promise.all([getDictionary(), getCompany(companyId)]);
+  const { currency } = company.company;
 
   const horizon = parseHorizon(one(query.horizon));
   const scenario = parseScenario(one(query.scenario));
 
-  const [forecast, settings, snapshots] = await Promise.all([
+  const [forecast, snapshots] = await Promise.all([
     getCashflowForecast(companyId, { horizon, scenario }),
-    getCashflowSettings(companyId),
     getCashflowSnapshots(companyId),
   ]);
 
-  const tone = statusTone(forecast.status);
+  const tone = statusVariant(forecast.status);
 
   return (
     <>
@@ -106,11 +108,11 @@ export default async function CashflowPage({
         <Badge variant={tone}>{statusLabel(forecast.status, locale)}</Badge>
         <span>
           {t.cashflow.openingTotal} :{" "}
-          <strong>{formatMoney(forecast.opening_total, company.currency, locale)}</strong>
+          <strong>{formatMoney(BigInt(forecast.opening_total), currency, locale)}</strong>
         </span>
         <span>
           {t.cashflow.lowestBalance} :{" "}
-          <strong>{formatMoney(forecast.lowest_balance, company.currency, locale)}</strong>{" "}
+          <strong>{formatMoney(BigInt(forecast.lowest_balance), currency, locale)}</strong>{" "}
           ({forecast.lowest_balance_date})
         </span>
         <span>
@@ -121,7 +123,7 @@ export default async function CashflowPage({
 
       <ForecastChart
         forecast={forecast}
-        currency={company.currency}
+        currency={currency}
         locale={locale}
         labels={{
           balance: t.cashflow.chartBalance,
@@ -132,11 +134,16 @@ export default async function CashflowPage({
         }}
       />
 
-      <ExportLinks
-        base={`/api/v1/companies/${companyId}/cashflow/forecast/export`}
-        params={{ format: ["pdf", "xlsx"], horizon: String(horizon), scenario }}
-        labels={{ pdf: t.cashflow.exportPdf, xlsx: t.cashflow.exportXlsx }}
-      />
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t.cashflow.exportPdf}>
+        {(["pdf", "xlsx"] as const).map((format) => (
+          <Button key={format} asChild variant="outline" size="sm">
+            <a href={previsionsExportHref(companyId, format, horizon, scenario)} download>
+              <Download aria-hidden className="size-4" />
+              {format === "pdf" ? t.cashflow.exportPdf : t.cashflow.exportXlsx}
+            </a>
+          </Button>
+        ))}
+      </div>
 
       <section aria-label={t.cashflow.accounts}>
         <h2 className="text-lg font-semibold">{t.cashflow.accounts}</h2>
@@ -162,17 +169,17 @@ export default async function CashflowPage({
                 <TableCell>{account.number}</TableCell>
                 <TableCell>{account.label}</TableCell>
                 <TableCell className="text-right">
-                  {formatMoney(account.opening, company.currency, locale)}
+                  {formatMoney(BigInt(account.opening), currency, locale)}
                 </TableCell>
                 <TableCell className="text-right">
-                  {formatMoney(account.committed_net, company.currency, locale)}
+                  {formatMoney(BigInt(account.committed_net), currency, locale)}
                 </TableCell>
                 {[30, 60, 90]
                   .filter((mark) => mark <= forecast.horizon_days)
                   .map((mark) => (
                     <TableCell key={mark} className="text-right">
                       {account.balances_at_marks[mark] !== undefined
-                        ? formatMoney(account.balances_at_marks[mark], company.currency, locale)
+                        ? formatMoney(BigInt(account.balances_at_marks[mark]), currency, locale)
                         : "—"}
                     </TableCell>
                   ))}
@@ -209,7 +216,7 @@ export default async function CashflowPage({
                 <TableCell className="text-right">{day.estimated_outflow}</TableCell>
                 <TableCell className="text-right">{day.balance}</TableCell>
                 <TableCell>
-                  <Badge variant={statusTone(day.status)}>{statusLabel(day.status, locale)}</Badge>
+                  <Badge variant={statusVariant(day.status)}>{statusLabel(day.status, locale)}</Badge>
                 </TableCell>
               </TableRow>
             ))}
@@ -223,10 +230,10 @@ export default async function CashflowPage({
         </summary>
         <p>
           {interpolate(t.cashflow.assumptionsScenario, {
-            inflow: String((forecast.assumptions as Record<string, any>).inflow_coefficient?.numerator ?? 100) + "/" + String((forecast.assumptions as Record<string, any>).inflow_coefficient?.denominator ?? 100),
-            outflow: String((forecast.assumptions as Record<string, any>).outflow_coefficient?.numerator ?? 100) + "/" + String((forecast.assumptions as Record<string, any>).outflow_coefficient?.denominator ?? 100),
-            delay: String((forecast.assumptions as Record<string, any>).inflow_delay_days ?? 0),
-            advance: String((forecast.assumptions as Record<string, any>).outflow_advance_days ?? 0),
+            inflow: `${forecast.assumptions.inflow_coefficient.numerator}/${forecast.assumptions.inflow_coefficient.denominator}`,
+            outflow: `${forecast.assumptions.outflow_coefficient.numerator}/${forecast.assumptions.outflow_coefficient.denominator}`,
+            delay: String(forecast.assumptions.inflow_delay_days),
+            advance: String(forecast.assumptions.outflow_advance_days),
           })}
         </p>
         <p>
@@ -271,10 +278,10 @@ export default async function CashflowPage({
                   <TableCell>{snapshot.as_of}</TableCell>
                   <TableCell>{t.cashflow[SCENARIO_KEYS[snapshot.scenario]]}</TableCell>
                   <TableCell className="text-right">
-                    {formatMoney(snapshot.opening_total, company.currency, locale)}
+                    {formatMoney(BigInt(snapshot.opening_total), currency, locale)}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={statusTone(snapshot.status)}>
+                    <Badge variant={statusVariant(snapshot.status)}>
                       {statusLabel(snapshot.status, locale)}
                     </Badge>
                   </TableCell>
