@@ -3,6 +3,29 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-12 — C3 : seed_demo tolérant aux conteneurs durcis (resolve_out_dir)
+
+**Livré**
+- `kora.scripts.seed_demo` : `resolve_out_dir()` — sonde d'écriture, repli
+  automatique `/tmp/kora-demo` + consigne `docker compose cp` affichée sur
+  stdout si le répertoire demandé est refusé (conteneur durci : `/app` en
+  lecture seule), `OSError` honnête si même le repli échoue (aucune perte
+  silencieuse). Appelé dès `main()` : fail fast avant tout travail.
+- `tests/test_seed_demo_out_dir.py` : 5 tests unitaires (sans base ; 2 skipif
+  sur Windows — chmod de répertoire sans effet —, voie heureuse couverte partout).
+- `docs/DEMO.md` §4 : comportement automatique documenté (fin du contournement
+  manuel `--out /tmp/demo`) ; `AUDIT_SUIVI_20261109.md` §27.
+
+**Preuve (locale)**
+- Fonction exécutée sur les 3 cas (répertoire OK ; chmod 0o555 → repli + consigne ;
+  repli chmod 0o555 → OSError) : 3/3 verts en session du 12/11/2026.
+- `python -m pytest tests/test_seed_demo_out_dir.py -q` : 5 passed
+  (uv, exécution du jour — voir PR).
+
+**Reste**
+- Si le guide Windows (PR demo-docs) est fusionné : la note §5.3 de
+  `docs/DEMO.md` peut passer au présent (repli désormais automatique).
+
 ## 2026-10-23 — Phase 1 (socle)
 
 Commits : `dac9685` (1a), `070ad3d` (1b), `796c2b6` (1c), `35262c0` (1d-1e), puis 1f (frontend).

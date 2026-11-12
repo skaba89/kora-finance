@@ -79,7 +79,12 @@ docker compose exec -e KORA_DATABASE_MIGRATION_URL="postgresql+psycopg://kora_ow
 
 - Le script vit dans `apps/api/src/kora/scripts/seed_demo.py` ; il fonctionne aussi
   hors Docker (`uv run python -m kora.scripts.seed_demo` avec `KORA_DATABASE_URL`).
-- `--out DIR` choisit le dossier des relevés générés (défaut : `./demo`).
+- `--out DIR` choisit le dossier des relevés générés (défaut : `./demo`). Si le
+  répertoire demandé n'est pas inscriptible — cas du conteneur durci (`/app` en
+  lecture seule, utilisateur non-root), ex. `--out demo` → `PermissionError` —
+  le script bascule automatiquement sur `/tmp/kora-demo` et affiche la commande
+  `docker compose cp` à exécuter sur l'hôte ; si même le repli échoue, l'erreur
+  remonte (aucune perte silencieuse).
 - Les montants sont en GNF (unité entière) ; la TVA 18 % est appliquée sur les
   montants TTC multiples de 590 000 GNF pour des scissions HT/TVA exactes.
 - Les relevés sont construits **depuis les mouvements réellement créés** : le

@@ -56,6 +56,44 @@ from kora.tenancy.roles import Role
 from kora.treasury import service as treasury_service
 from kora.treasury.service import AccountData, MovementData, TransferData
 
+# --- Répertoire de sortie ----------------------------------------------------
+
+_FALLBACK = Path("/tmp/kora-demo")  # noqa: S108 — démo fictive, repli volontaire du conteneur durci
+
+_CP_HINT = (
+    "Répertoire de sortie indisponible en écriture (conteneur durci : /app en "
+    "lecture seule). Fichiers de démonstration écrits dans {fallback}.\n"
+    "Pour les récupérer sur l'hôte :\n"
+    "  mkdir -p ./demo-export && docker compose cp api:{fallback}/. ./demo-export/"
+)
+
+
+def resolve_out_dir(requested: Path) -> tuple[Path, str | None]:
+    """Retourne le répertoire à utiliser et un message d'information éventuel.
+
+    - si `requested` est créable et inscriptible : (requested, None) ;
+    - sinon : repli sur `_FALLBACK` (créé au besoin) accompagné de la consigne
+      `docker compose cp` à afficher sur stdout ;
+    - si le repli échoue aussi : l'`OSError` d'origine remonte (échec honnête,
+      jamais de fichier de démonstration perdu sans message).
+    """
+    probe = requested / ".kora-seed-probe"
+    try:
+        requested.mkdir(parents=True, exist_ok=True)
+        probe.write_text("", encoding="utf-8")
+    except PermissionError as exc:
+        try:
+            _FALLBACK.mkdir(parents=True, exist_ok=True)
+            (_FALLBACK / ".kora-seed-probe").write_text("", encoding="utf-8")
+            (_FALLBACK / ".kora-seed-probe").unlink()
+        except OSError as fallback_exc:
+            raise fallback_exc from exc
+        return _FALLBACK, _CP_HINT.format(fallback=_FALLBACK)
+    finally:
+        probe.unlink(missing_ok=True)
+    return requested, None
+
+
 # --- Constantes de la démonstration -----------------------------------------
 
 DEMO_DOMAIN = "demo.kora.gn"
@@ -1118,6 +1156,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    # Fail fast : on sonde l'écriture du répertoire de sortie avant tout travail
+    # (conteneur durci : /app en lecture seule, seul /tmp est inscriptible).
+    out_dir, notice = resolve_out_dir(args.out)
+    if notice:
+        print(notice)
+
     settings = get_settings()
     # On n'affiche jamais l'URL complète : elle contient le mot de passe de la base.
     url = settings.database_url
@@ -1157,7 +1201,7 @@ def main(argv: list[str] | None = None) -> int:
         create_draft_example(session, actor, accounts_gl)
         apply_lettering(session, actor, accounts_gl)
 
-        files = write_statements(session, company.id, accounts_fin, args.out)
+        files = write_statements(session, company.id, accounts_fin, out_dir)
         print_summary(session, company, accounts_fin, files)
     finally:
         session.close()
