@@ -3,6 +3,22 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-12 — C2 : guide de démarrage Windows (Git Bash) dans docs/DEMO.md
+
+**Livré**
+- `docs/DEMO.md` §5 « Démarrage Windows (Git Bash) » : correspondances Ubuntu ↔
+  Windows (`MSYS_NO_PATHCONV=1`, `docker compose exec -T`, conteneur durci),
+  installation GNU Make (winget), démarrage complet sans Make, diagnostic des
+  cinq pannes déjà rencontrées (résolues), vérification des 3 rôles, isolation
+  de la démonstration prospects.
+- Commandes **exécutées et validées** en session du 12/11/2026 (Windows 11 +
+  Git Bash + Docker Desktop/WSL 2) — voir AUDIT_SUIVI_20261109.md.
+
+**Reste**
+- ~~Correctif `resolve_out_dir`~~ : fait — la note du §5.3 est passée au présent
+  lors de la fusion conjointe des PR demo-docs et seed-outdir (repli désormais
+  automatique, §4).
+
 ## 2026-11-12 — C3 : seed_demo tolérant aux conteneurs durcis (resolve_out_dir)
 
 **Livré**
@@ -23,8 +39,8 @@ vérifié, et ce qui reste.
   (uv, exécution du jour — voir PR).
 
 **Reste**
-- Si le guide Windows (PR demo-docs) est fusionné : la note §5.3 de
-  `docs/DEMO.md` peut passer au présent (repli désormais automatique).
+- ~~Note §5.3 du guide Windows~~ : fait — mise au présent lors de la fusion
+  conjointe des PR demo-docs et seed-outdir (voir `docs/DEMO.md` §5.3/§5.4).
 
 ## 2026-10-23 — Phase 1 (socle)
 

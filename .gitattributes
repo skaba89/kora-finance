@@ -1,0 +1,39 @@
+# Normalisation des fins de ligne (C1) — racine des faux « modified » sur Windows.
+# Tout fichier texte est normalisé en LF dans le dépôt et vérifié au commit ;
+# Git convertit au checkout selon l'OS. Met fin au bruit CRLF qui marquait des
+# centaines de fichiers comme modifiés sans différence réelle.
+* text=auto eol=lf
+
+# Manifeste des binaires : jamais de conversion, jamais de diff de contenu.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+*.xlsx binary
+*.xls binary
+*.docx binary
+*.zip binary
+*.gz binary
+*.jar binary
+*.keystore binary
+*.p12 binary
+*.mp3 binary
+*.mp4 binary
+*.ofx binary
+*.qif binary
+
+# Scripts shell : LF obligatoire même sur Windows (sinon le shebang casse).
+*.sh text eol=lf
+Makefile text eol=lf
+
+# Fichiers de configuration sensibles aux fins de ligne.
+*.env text eol=lf
+.env.example text eol=lf
+docker-compose.yml text eol=lf

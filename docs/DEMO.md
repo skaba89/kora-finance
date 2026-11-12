@@ -90,3 +90,96 @@ docker compose exec -e KORA_DATABASE_MIGRATION_URL="postgresql+psycopg://kora_ow
 - Les relevés sont construits **depuis les mouvements réellement créés** : le
   rapprochement retrouve toujours les opérations comptabilisées, et les cinq
   anomalies injectées sont garanties sans candidat.
+
+## 5. Démarrage Windows (Git Bash)
+
+Commandes **exécutées et validées** le 12/11/2026 sur Windows 11 + Git Bash
+(Git for Windows) + Docker Desktop (backend WSL 2). Cibles : Windows 10/11.
+
+### 5.1 Différences Windows ↔ Ubuntu
+
+| Besoin | Ubuntu / macOS | Windows Git Bash |
+|---|---|---|
+| Orchestration | `make up`, `make migrate`, … | `make` fonctionne si **GNU Make est installé** (§5.2) ; sinon exécuter les cibles à la main (§5.3) |
+| Chemins Docker (volumes, montages) | `/home/…` | Toujours préfixer `MSYS_NO_PATHCONV=1` : sinon Git Bash réécrit `/app/…` en `C:/Program Files/Git/app/…` |
+| `docker compose exec` interactif | `docker compose exec api sh` | Ajouter **`-T`** : `docker compose exec -T api sh` (sinon « the input device is not a TTY ») |
+| Sortie de fichiers du conteneur | `--out` direct | Le conteneur API est **durci** (utilisateur non-root `kora`, `/app` en lecture seule) : écrire dans `/tmp` du conteneur puis `docker compose cp` (§5.3) |
+| Fin de ligne | LF natif | Cloner avec `core.autocrlf=false` ; `.gitattributes` normalise le dépôt (PR repo-hygiene) |
+| Docker Desktop | démon natif | Vérifier « WSL 2 backend » actif (Settings → General) |
+
+### 5.2 Installation de GNU Make (une fois)
+
+```bash
+winget install --id GnuWin32.Make -e
+# ou : winget install ezwinports.make
+make --version   # attendu : GNU Make 4.4.1
+```
+
+Si `make` reste introuvable dans le Git Bash courant : fermer et rouvrir le
+terminal (mise à jour du PATH).
+
+### 5.3 Démarrage complet sans Make (équivalence des cibles)
+
+```bash
+# 1. Environnement local (génère .env avec des secrets réels, à la racine)
+./scripts/init-env.sh
+
+# 2. Construire et démarrer la pile
+docker compose up -d --build
+
+# 3. Attendre la santé des conteneurs
+docker compose ps                          # tous les services « healthy »
+docker compose logs -f api                 # Ctrl+C pour sortir
+
+# 4. Migrations
+MSYS_NO_PATHCONV=1 docker compose exec -T api alembic upgrade head
+
+# 5. Jeu de démonstration Djouma Distribution SARL (conteneur → /tmp, puis copie)
+MSYS_NO_PATHCONV=1 docker compose exec -T api \
+  python -m kora.scripts.seed_demo --out /tmp/demo
+mkdir -p ./demo-export
+docker compose cp api:/tmp/demo/. ./demo-export/
+```
+
+> `--out demo` (chemin relatif) fonctionne désormais : le correctif
+> `resolve_out_dir` rend le script tolérant — en cas de refus d'écriture il
+> bascule automatiquement sur `/tmp/kora-demo` et affiche la commande
+> `docker compose cp` à exécuter (§4). Le `--out /tmp/demo` explicite reste
+> une option valide.
+
+### 5.4 Diagnostic des pannes déjà rencontrées (résolues)
+
+| Symptôme | Cause racine | Remède validé |
+|---|---|---|
+| `make: command not found` | Make absent de Git Bash | §5.2 (winget) puis rouvrir le terminal |
+| `storage-1 exited (1)` + logs « kora_owner » échec d'authentification Postgres | `.env` périmé (fausses clés d'une ancienne exécution) **et** volume Postgres ancien avec mot de passe différent | `docker compose down -v` (⚠️ efface les données locales) puis re-exécuter `./scripts/init-env.sh` puis `docker compose up -d --build` |
+| `PermissionError: '/app/demo'` au seed | `/app` en lecture seule (conteneur durci, utilisateur `kora` non-root) | corrigé : repli automatique sur `/tmp/kora-demo` + consigne `docker compose cp` (`resolve_out_dir`, §4) |
+| `the input device is not a TTY` | Git Bash sans TTY compatible | ajouter `-T` à `docker compose exec` |
+| `/app/...` transformé en `C:/Program Files/Git/app/...` | MSYS réécrit les chemins POSIX | préfixer `MSYS_NO_PATHCONV=1` |
+
+### 5.5 Ubuntu — rappel des mêmes étapes
+
+Les mêmes commandes fonctionnent sans les garde-fous Windows : pas besoin de
+`MSYS_NO_PATHCONV=1`, `docker compose exec` garde son TTY, et le seed peut
+écrire directement `--out ./demo`. En cas d'écriture refusée (installations
+durcies), la même procédure `/tmp` + `docker compose cp` s'applique.
+
+### 5.6 Vérification post-démarrage (les 3 rôles)
+
+Une fois la pile saine et le seed chargé, le scénario du §2 est jouable :
+connexion `directeur` / `comptable` / `lecteur` (mot de passe commun du jeu de
+démo), vérifier en particulier :
+
+1. les trois comptes voient le tableau de bord et les états financiers (lecture) ;
+2. seuls `directeur` et `comptable` peuvent saisir une écriture et rapprocher ;
+3. `lecteur` obtient un refus propre (pas d'erreur 500) sur toute action d'écriture.
+
+### 5.7 Environnement de démonstration prospects (isolation)
+
+- Ne **jamais** exécuter le seed sur une base contenant des données réelles ;
+- La démonstration prospects se fait sur une pile locale (Docker, données
+  fictives) ou sur un environnement de démo dédié explicitement identifié
+  `DEMO=true` ;
+- Les identifiants de démo ne quittent jamais ce périmètre (jamais en
+  production) ;
+- Réinitialisation : §3 ci-dessus (`--reset`).
