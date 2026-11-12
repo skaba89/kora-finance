@@ -1,0 +1,67 @@
+/**
+ * Clés i18n de la prévision de trésorerie — à fusionner dans l'objet `en` de
+ * `apps/web/src/lib/i18n/en.ts` (Phase 3E).
+ */
+export const cashflowEn = {
+  cashflow: {
+    title: "Cash flow forecast",
+    subtitle:
+      "30/60/90-day projection: observed balances, committed flows (validated future-dated entries) and estimated flows (historical average). No future transaction is invented.",
+    horizon: "Horizon",
+    horizonDays: "{n} days",
+    scenario: "Scenario",
+    scenarioOptimiste: "Optimistic",
+    scenarioNeutre: "Neutral",
+    scenarioPrudent: "Cautious",
+    status: "Status",
+    openingTotal: "Observed cash",
+    lowestBalance: "Lowest projected balance",
+    firstCritical: "First date below critical floor",
+    noCritical: "None within horizon",
+    insufficientData:
+      "Insufficient history: the forecast is limited to observed balances and committed flows. It will improve as soon as a full month of entries is available.",
+    chartBalance: "Projected balance",
+    chartInflow: "Inflows",
+    chartOutflow: "Outflows",
+    chartWeek: "Week",
+    chartTable: "Weekly forecast of flows and projected balance",
+    dailyTable: "Daily detail",
+    dailySummary: "{n} days — expand for detail",
+    date: "Date",
+    committedInflow: "Committed in",
+    committedOutflow: "Committed out",
+    estimatedInflow: "Estimated in",
+    estimatedOutflow: "Estimated out",
+    balance: "Projected balance",
+    accounts: "By account",
+    accountNumber: "Account",
+    accountLabel: "Label",
+    accountOpening: "Observed balance",
+    accountCommitted: "Committed (net)",
+    accountProjected: "Projected at horizon end",
+    markLabel: "Projected D+{n}",
+    assumptions: "How this figure is computed",
+    assumptionsScenario:
+      "Scenario: estimated inflows ×{inflow}, estimated outflows ×{outflow}, inflow delay {delay} days, outflow advance {advance} days. Committed flows are never adjusted.",
+    assumptionsScope:
+      "Scope: class 5 accounts excluding 58x (internal transfers). History used: {months} full months.",
+    excludedDrafts: "Future drafts excluded (not validated)",
+    noExcludedDrafts: "No future draft touching treasury.",
+    exportPdf: "Export as PDF",
+    exportXlsx: "Export as Excel",
+    snapshots: "Frozen snapshots",
+    snapshotsEmpty: "No frozen snapshot yet. Freeze the forecast to track its accuracy.",
+    snapshotAt: "Frozen on",
+    snapshotVsActual: "Compare with actuals",
+    freeze: "Freeze this forecast",
+    freezeDone: "Snapshot frozen.",
+    settings: "Alert thresholds",
+    criticalFloor: "Critical floor",
+    warningFloor: "Warning floor",
+    warningFloorNone: "Disabled",
+    settingsSaved: "Thresholds saved.",
+    settingsInvalid: "The warning floor must remain greater than or equal to the critical floor.",
+    expertNotice:
+      "Decision-support tool: the accounting presentation remains to be validated by a chartered accountant.",
+  },
+} as const;
