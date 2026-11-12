@@ -927,3 +927,88 @@ exécuter sur la pile Docker (CI à confirmer — quotas Actions).
 
 **Score** : confort d'usage de la démonstration, aucun changement de production ni
 de sécurité. **Score : 84,5/100** (inchangé).
+
+## 28. Phase 3E — Prévision de trésorerie 30/60/90 jours (2026-11-12)
+
+**Livré** (branche `feature/kora-cashflow-forecast`, un seul PR : backend + frontend +
+migration + tests + docs) :
+
+- **Moteur pur** `kora/cashflow/engine.py` : trois sources — OBSERVE (soldes réels),
+  ENGAGE (écritures validées datées dans le futur), ESTIME (moyenne des mois complets
+  passés) ; trois scénarios (optimiste/neutre/prudent, coefficients documentés dans
+  `assumptions.py` et sérialisés dans chaque sortie) ; détection de tension (première
+  date sous le seuil critique) ; agrégat `beyond_horizon` (aucun flux au-delà de
+  l'horizon n'est perdu) ; arithmétique 100 % entière (BigInt côté TS, int côté API,
+  aucune division flottante).
+- **API** 7 endpoints sous `/cashflow/*` : prévision, export PDF/XLSX **inscrit au
+  journal d'audit**, seuils (GET/PUT), instantanés (GET/POST), prévision vs réalisé.
+  Consultation `treasury:read` (rôles de lecture inclus), écritures `treasury:manage`
+  — la prévision ne modifie jamais la comptabilité.
+- **Migration 0014** (renumérotée depuis 0011 : 3A/3B/3C ont pris 0011-0013) :
+  `cashflow_settings`, `cashflow_snapshots`, `cashflow_snapshot_lines` — tables
+  tenant, RLS ENABLE+FORCE, policy `tenant_isolation`, FK composites (tenant_id, id).
+- **Frontend** : page `tresorerie/previsions` mobile-first (horizon/scénario portés
+  par l'URL), graphique hebdomadaire BigInt + détail journalier, hypothèses affichées
+  (« Comment ce chiffre est calculé »), brouillons futurs exclus listés, instantanés ;
+  exports via la liste blanche `exports.ts` (kind `previsions-tresorerie`) et le
+  proxy BFF ; navigation du dossier `treasury:read` ; i18n fr/en fusionnés.
+- **Contrat** : statuts/scénarios en `Literal`, hypothèses en modèle `AssumptionsOut`
+  (plus de `dict[str, object]`) — `schema.ts` régénéré (addition pure vérifiée).
+
+**Adaptations au `main` réel** (les 5 points du guide d'intégration) : registre des
+routeurs, registre des modèles `db/models.py`, migration renumérotée (parent 0013),
+fusion i18n fr/en, fusion DAL (4 fonctions), lien de navigation, permissions
+`treasury:*` (plus fines que `entries:*`), contrat + types TS resynchronisés.
+
+**Preuves locales (uv, Python 3.13.18, 2026-11-12)** : pytest moteur **40/40** ;
+ruff check + format : verts (183 fichiers) ; **mypy strict : 168 fichiers OK** ;
+`tsc --noEmit` strict **0 erreur** ; ESLint `--max-warnings=0` **0 problème** ;
+vitest **69/69** ; `openapi.json` + `schema.ts` régénérés, addition pure sémantique
+vérifiée hors chemins cashflow.
+
+**Limites (levées le 13/11)** : les tests d'intégration et la garde alembic ont
+été exécutés sur une pile locale réelle (PostgreSQL 17.11, Redis, S3 d'essai,
+Mailpit) — voir le complément ci-dessous. Restent les écrans de figeage et de
+réglage des seuils (PR de suivi, l'API existe) et l'enrichissement du seed
+(chèque post-daté, brouillon fournisseur futur).
+
+### 28 bis. Corrections à l'ouverture du PR (2026-11-13)
+
+La première exécution **réelle** de la suite complète (jusque-là bloquée : aucun
+PostgreSQL local, CI indisponible) a révélé quatre défauts, corrigés et couverts :
+
+1. **Transactions jamais validées** : `PUT /cashflow/settings` et
+   `POST /cashflow/snapshots` ne faisaient qu'un `flush()` — annulé à la fermeture
+   de la session par requête. Les seuils paramétrés étaient ignorés par la
+   prévision et les instantanés invisibles au listing. Correction : `db.commit()`
+   explicite après l'événement d'audit (patron `invitations.py`/`treasury.py`),
+   transaction unique couvrant données + audit.
+2. **FK manquante dans la migration 0014** : la garde autogenerate
+   (`test_modeles_et_migrations_synchronises`) a détecté l'écart entre le modèle
+   `CashflowSnapshotLine` (FK simple `tenant_id → companies.id`, CASCADE) et la
+   table créée (FK composite seulement). Corrigé dans la migration — la convention
+   « les deux clés » est celle de `journal_lines` (0005). Référence docstring du
+   modèle rectifiée (0011 → 0014, renumérotation).
+3. **Hypothèses tronquées dans la réponse API** : `AssumptionsOut` déclarait 8
+   champs et pydantic rejetait silencieusement les 5 autres
+   (`categories_inflow/outflow`, `treasury_scope`, `committed_rule`,
+   `estimated_rule`). Modèle complété, contrat régénéré (`openapi.json`,
+   `schema.ts`, addition pure).
+4. **Catégories polluées par des buckets 0** : chaque flux matérialisait sa
+   catégorie dans les DEUX sens via defaultdict (ex. `FOURNISSEURS: 0` dans les
+   encaissements). Correction : un flux n'alimente que son sens.
+
+Deux attentes de test rectifiées (elles oubliaient la moyenne /3 sur les
+décaissements — le moteur applique Σ/N aux deux flux, documenté et couvert par
+les 40 tests moteur).
+
+**Preuve complète (2026-11-13, pile locale réelle : PostgreSQL 17.11 + Redis +
+S3 d'essai + Mailpit)** : **pytest 770/770** (suite intégrale, y compris 11
+intégration cashflow, garde alembic, sauvegardes, SMTP réel) en 5 min 06 ; ruff
+check + format verts (183 fichiers) ; mypy strict 168 fichiers OK ; `tsc --noEmit`
+0 erreur ; ESLint 0 ; vitest 69/69.
+
+**Score** : première projection de trésorerie de Kora — aide à la décision sans
+toucher au grand livre, aucune écriture inventée, permissions cohérentes avec la
+3A. Attend la revue + CI pour créditer le score. **Score : 84,5/100** (inchangé en
+l'état, PR ouvert).

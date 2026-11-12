@@ -118,6 +118,61 @@
         "title": "AccountOut",
         "type": "object"
       },
+      "AccountProjectionOut": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "balances_at_marks": {
+            "additionalProperties": {
+              "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+              "pattern": "^-?(0|[1-9][0-9]*)$",
+              "type": "string"
+            },
+            "title": "Balances At Marks",
+            "type": "object"
+          },
+          "committed_net": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Committed Net",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "opening": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Opening",
+            "type": "string"
+          },
+          "projected": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Projected",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "number",
+          "label",
+          "opening",
+          "committed_net",
+          "projected",
+          "balances_at_marks"
+        ],
+        "title": "AccountProjectionOut",
+        "type": "object"
+      },
       "AccountUpdate": {
         "additionalProperties": false,
         "properties": {
@@ -252,6 +307,89 @@
           "company_id"
         ],
         "title": "AssignmentOut",
+        "type": "object"
+      },
+      "AssumptionsOut": {
+        "description": "Hypothèses sérialisées d'un calcul (identiques à celles figées dans les instantanés).\n\nLes cinq derniers champs proviennent du payload complet du moteur (_assumptions_payload) :\npérimètre de trésorerie, règles de projection et ventilation par catégorie de contrepartie.",
+        "properties": {
+          "categories_inflow": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Categories Inflow",
+            "type": "object"
+          },
+          "categories_outflow": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Categories Outflow",
+            "type": "object"
+          },
+          "committed_rule": {
+            "title": "Committed Rule",
+            "type": "string"
+          },
+          "estimated_rule": {
+            "title": "Estimated Rule",
+            "type": "string"
+          },
+          "estimation_method": {
+            "title": "Estimation Method",
+            "type": "string"
+          },
+          "history_months_used": {
+            "title": "History Months Used",
+            "type": "integer"
+          },
+          "inflow_coefficient": {
+            "$ref": "#/components/schemas/CoefficientOut"
+          },
+          "inflow_delay_days": {
+            "title": "Inflow Delay Days",
+            "type": "integer"
+          },
+          "outflow_advance_days": {
+            "title": "Outflow Advance Days",
+            "type": "integer"
+          },
+          "outflow_coefficient": {
+            "$ref": "#/components/schemas/CoefficientOut"
+          },
+          "rounding": {
+            "title": "Rounding",
+            "type": "string"
+          },
+          "scenario": {
+            "enum": [
+              "OPTIMISTE",
+              "NEUTRE",
+              "PRUDENT"
+            ],
+            "title": "Scenario",
+            "type": "string"
+          },
+          "treasury_scope": {
+            "title": "Treasury Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scenario",
+          "inflow_coefficient",
+          "outflow_coefficient",
+          "inflow_delay_days",
+          "outflow_advance_days",
+          "history_months_used",
+          "estimation_method",
+          "rounding",
+          "treasury_scope",
+          "committed_rule",
+          "estimated_rule",
+          "categories_inflow",
+          "categories_outflow"
+        ],
+        "title": "AssumptionsOut",
         "type": "object"
       },
       "AttachmentOut": {
@@ -884,6 +1022,25 @@
         "title": "ClosingOut",
         "type": "object"
       },
+      "CoefficientOut": {
+        "description": "Coefficient de scénario appliqué aux flux estimés (numérateur/dénominateur entiers).",
+        "properties": {
+          "denominator": {
+            "title": "Denominator",
+            "type": "integer"
+          },
+          "numerator": {
+            "title": "Numerator",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "numerator",
+          "denominator"
+        ],
+        "title": "CoefficientOut",
+        "type": "object"
+      },
       "CompanyAccess": {
         "properties": {
           "company": {
@@ -1249,6 +1406,79 @@
           }
         },
         "title": "CompanyPatch",
+        "type": "object"
+      },
+      "DailyProjectionOut": {
+        "properties": {
+          "balance": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Balance",
+            "type": "string"
+          },
+          "committed_inflow": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Committed Inflow",
+            "type": "string"
+          },
+          "committed_outflow": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Committed Outflow",
+            "type": "string"
+          },
+          "estimated_inflow": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Estimated Inflow",
+            "type": "string"
+          },
+          "estimated_outflow": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Estimated Outflow",
+            "type": "string"
+          },
+          "flow_date": {
+            "format": "date",
+            "title": "Flow Date",
+            "type": "string"
+          },
+          "inflow": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Inflow",
+            "type": "string"
+          },
+          "outflow": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Outflow",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "SAIN",
+              "SOUS_SURVEILLANCE",
+              "CRITIQUE"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "flow_date",
+          "inflow",
+          "outflow",
+          "balance",
+          "status",
+          "committed_inflow",
+          "committed_outflow",
+          "estimated_inflow",
+          "estimated_outflow"
+        ],
+        "title": "DailyProjectionOut",
         "type": "object"
       },
       "DashboardFiscalYear": {
@@ -1755,6 +1985,32 @@
           "code"
         ],
         "title": "ErrorResponse",
+        "type": "object"
+      },
+      "ExcludedDraftOut": {
+        "properties": {
+          "entry_date": {
+            "format": "date",
+            "title": "Entry Date",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "net_treasury": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Net Treasury",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entry_date",
+          "label",
+          "net_treasury"
+        ],
+        "title": "ExcludedDraftOut",
         "type": "object"
       },
       "FiguresOut": {
@@ -2410,6 +2666,130 @@
           "locked_until"
         ],
         "title": "FiscalYearOut",
+        "type": "object"
+      },
+      "ForecastOut": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountProjectionOut"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "assumptions": {
+            "$ref": "#/components/schemas/AssumptionsOut"
+          },
+          "beyond_horizon_inflow": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Beyond Horizon Inflow",
+            "type": "string"
+          },
+          "beyond_horizon_outflow": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Beyond Horizon Outflow",
+            "type": "string"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/DailyProjectionOut"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "excluded_drafts": {
+            "items": {
+              "$ref": "#/components/schemas/ExcludedDraftOut"
+            },
+            "title": "Excluded Drafts",
+            "type": "array"
+          },
+          "first_critical_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Critical Date"
+          },
+          "history_months_used": {
+            "title": "History Months Used",
+            "type": "integer"
+          },
+          "horizon_days": {
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "insufficient_data": {
+            "title": "Insufficient Data",
+            "type": "boolean"
+          },
+          "lowest_balance": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Lowest Balance",
+            "type": "string"
+          },
+          "lowest_balance_date": {
+            "format": "date",
+            "title": "Lowest Balance Date",
+            "type": "string"
+          },
+          "opening_total": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Opening Total",
+            "type": "string"
+          },
+          "scenario": {
+            "enum": [
+              "OPTIMISTE",
+              "NEUTRE",
+              "PRUDENT"
+            ],
+            "title": "Scenario",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "SAIN",
+              "SOUS_SURVEILLANCE",
+              "CRITIQUE"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of",
+          "horizon_days",
+          "scenario",
+          "opening_total",
+          "status",
+          "first_critical_date",
+          "lowest_balance",
+          "lowest_balance_date",
+          "beyond_horizon_inflow",
+          "beyond_horizon_outflow",
+          "insufficient_data",
+          "history_months_used",
+          "assumptions",
+          "days",
+          "accounts",
+          "excluded_drafts"
+        ],
+        "title": "ForecastOut",
         "type": "object"
       },
       "ForgotPasswordRequest": {
@@ -4479,6 +4859,15 @@
         "title": "Role",
         "type": "string"
       },
+      "Scenario": {
+        "enum": [
+          "OPTIMISTE",
+          "NEUTRE",
+          "PRUDENT"
+        ],
+        "title": "Scenario",
+        "type": "string"
+      },
       "Sense": {
         "enum": [
           "PRODUIT",
@@ -4486,6 +4875,184 @@
         ],
         "title": "Sense",
         "type": "string"
+      },
+      "SettingsIn": {
+        "properties": {
+          "critical_floor_minor": {
+            "description": "Seuil critique, unités mineures",
+            "minimum": 0.0,
+            "title": "Critical Floor Minor",
+            "type": "integer"
+          },
+          "default_horizon_days": {
+            "default": 90,
+            "title": "Default Horizon Days",
+            "type": "integer"
+          },
+          "default_scenario": {
+            "$ref": "#/components/schemas/Scenario",
+            "default": "NEUTRE"
+          },
+          "warning_floor_minor": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Seuil de surveillance (>= seuil critique), NULL pour désactiver",
+            "title": "Warning Floor Minor"
+          }
+        },
+        "required": [
+          "critical_floor_minor"
+        ],
+        "title": "SettingsIn",
+        "type": "object"
+      },
+      "SettingsOut": {
+        "properties": {
+          "critical_floor": {
+            "description": "Montant entier en unités mineures, sous forme de chaîne",
+            "pattern": "^(0|[1-9][0-9]*)$",
+            "title": "Critical Floor",
+            "type": "string"
+          },
+          "default_horizon_days": {
+            "title": "Default Horizon Days",
+            "type": "integer"
+          },
+          "default_scenario": {
+            "enum": [
+              "OPTIMISTE",
+              "NEUTRE",
+              "PRUDENT"
+            ],
+            "title": "Default Scenario",
+            "type": "string"
+          },
+          "warning_floor": {
+            "anyOf": [
+              {
+                "description": "Montant entier en unités mineures, sous forme de chaîne",
+                "pattern": "^(0|[1-9][0-9]*)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warning Floor"
+          }
+        },
+        "required": [
+          "critical_floor",
+          "warning_floor",
+          "default_horizon_days",
+          "default_scenario"
+        ],
+        "title": "SettingsOut",
+        "type": "object"
+      },
+      "SnapshotOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "assumptions": {
+            "$ref": "#/components/schemas/AssumptionsOut"
+          },
+          "first_critical_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Critical Date"
+          },
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "history_months_used": {
+            "title": "History Months Used",
+            "type": "integer"
+          },
+          "horizon_days": {
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "insufficient_data": {
+            "title": "Insufficient Data",
+            "type": "boolean"
+          },
+          "lowest_balance": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Lowest Balance",
+            "type": "string"
+          },
+          "lowest_balance_date": {
+            "format": "date",
+            "title": "Lowest Balance Date",
+            "type": "string"
+          },
+          "opening_total": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Opening Total",
+            "type": "string"
+          },
+          "scenario": {
+            "enum": [
+              "OPTIMISTE",
+              "NEUTRE",
+              "PRUDENT"
+            ],
+            "title": "Scenario",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "SAIN",
+              "SOUS_SURVEILLANCE",
+              "CRITIQUE"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "generated_at",
+          "as_of",
+          "horizon_days",
+          "scenario",
+          "opening_total",
+          "status",
+          "first_critical_date",
+          "lowest_balance",
+          "lowest_balance_date",
+          "insufficient_data",
+          "history_months_used",
+          "assumptions"
+        ],
+        "title": "SnapshotOut",
+        "type": "object"
       },
       "StatementLineSet": {
         "properties": {
@@ -5028,6 +5595,98 @@
           "token"
         ],
         "title": "VerifyEmailRequest",
+        "type": "object"
+      },
+      "VsActualDayOut": {
+        "properties": {
+          "actual_net": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Actual Net",
+            "type": "string"
+          },
+          "flow_date": {
+            "format": "date",
+            "title": "Flow Date",
+            "type": "string"
+          },
+          "forecast_net": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Forecast Net",
+            "type": "string"
+          },
+          "variance": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Variance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "flow_date",
+          "forecast_net",
+          "actual_net",
+          "variance"
+        ],
+        "title": "VsActualDayOut",
+        "type": "object"
+      },
+      "VsActualOut": {
+        "properties": {
+          "actual_total_net": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Actual Total Net",
+            "type": "string"
+          },
+          "compared_through": {
+            "format": "date",
+            "title": "Compared Through",
+            "type": "string"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/VsActualDayOut"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "forecast_total_net": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Forecast Total Net",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "format": "uuid",
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "top_deviations": {
+            "items": {
+              "$ref": "#/components/schemas/VsActualDayOut"
+            },
+            "title": "Top Deviations",
+            "type": "array"
+          },
+          "variance": {
+            "description": "Solde signé en unités mineures (positif = débiteur), en chaîne",
+            "pattern": "^-?(0|[1-9][0-9]*)$",
+            "title": "Variance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_id",
+          "compared_through",
+          "forecast_total_net",
+          "actual_total_net",
+          "variance",
+          "days",
+          "top_deviations"
+        ],
+        "title": "VsActualOut",
         "type": "object"
       },
       "kora__api__v1__statements__StatementLineOut": {
@@ -7414,6 +8073,696 @@
         "summary": "Cash Flow Statement",
         "tags": [
           "états financiers"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/cashflow/forecast": {
+      "get": {
+        "description": "Prévision consolidée et par compte : soldes observés, flux engagés, flux estimés.",
+        "operationId": "forecast_api_v1_companies__company_id__cashflow_forecast_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Horizon en jours (30, 60 ou 90)",
+            "in": "query",
+            "name": "horizon",
+            "required": false,
+            "schema": {
+              "default": 90,
+              "description": "Horizon en jours (30, 60 ou 90)",
+              "maximum": 90,
+              "minimum": 30,
+              "title": "Horizon",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Scénario appliqué aux flux estimés (les flux engagés ne sont jamais ajustés)",
+            "in": "query",
+            "name": "scenario",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Scenario",
+              "default": "NEUTRE",
+              "description": "Scénario appliqué aux flux estimés (les flux engagés ne sont jamais ajustés)"
+            }
+          },
+          {
+            "description": "Date de calcul (défaut : aujourd'hui)",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Date de calcul (défaut : aujourd'hui)",
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Forecast",
+        "tags": [
+          "trésorerie prévisionnelle"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/cashflow/forecast/export": {
+      "get": {
+        "description": "Export PDF ou Excel de la prévision (inscrit au journal d'audit).",
+        "operationId": "forecast_export_api_v1_companies__company_id__cashflow_forecast_export_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "enum": [
+                "pdf",
+                "xlsx"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Horizon en jours (30, 60 ou 90)",
+            "in": "query",
+            "name": "horizon",
+            "required": false,
+            "schema": {
+              "default": 90,
+              "description": "Horizon en jours (30, 60 ou 90)",
+              "maximum": 90,
+              "minimum": 30,
+              "title": "Horizon",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Scénario appliqué aux flux estimés (les flux engagés ne sont jamais ajustés)",
+            "in": "query",
+            "name": "scenario",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Scenario",
+              "default": "NEUTRE",
+              "description": "Scénario appliqué aux flux estimés (les flux engagés ne sont jamais ajustés)"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Forecast Export",
+        "tags": [
+          "trésorerie prévisionnelle"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/cashflow/settings": {
+      "get": {
+        "description": "Seuils d'alerte effectifs (valeurs par défaut si jamais paramétrés).",
+        "operationId": "get_settings_api_v1_companies__company_id__cashflow_settings_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Settings",
+        "tags": [
+          "trésorerie prévisionnelle"
+        ]
+      },
+      "put": {
+        "description": "Met à jour les seuils et défauts d'affichage de la prévision (audité).",
+        "operationId": "put_settings_api_v1_companies__company_id__cashflow_settings_put",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Settings",
+        "tags": [
+          "trésorerie prévisionnelle"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/cashflow/snapshots": {
+      "get": {
+        "description": "Historique des instantanés figés, du plus récent au plus ancien.",
+        "operationId": "list_snapshots_api_v1_companies__company_id__cashflow_snapshots_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SnapshotOut"
+                  },
+                  "title": "Response List Snapshots Api V1 Companies  Company Id  Cashflow Snapshots Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Snapshots",
+        "tags": [
+          "trésorerie prévisionnelle"
+        ]
+      },
+      "post": {
+        "description": "Fige la prévision courante en un instantané (base du prévisionnel vs réalisé).",
+        "operationId": "create_snapshot_api_v1_companies__company_id__cashflow_snapshots_post",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Scénario appliqué aux flux estimés (les flux engagés ne sont jamais ajustés)",
+            "in": "query",
+            "name": "scenario",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Scenario",
+              "default": "NEUTRE",
+              "description": "Scénario appliqué aux flux estimés (les flux engagés ne sont jamais ajustés)"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Snapshot",
+        "tags": [
+          "trésorerie prévisionnelle"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/cashflow/snapshots/{snapshot_id}/vs-actual": {
+      "get": {
+        "description": "Compare un instantané au réalisé postérieur (écritures validées).",
+        "operationId": "snapshot_vs_actual_api_v1_companies__company_id__cashflow_snapshots__snapshot_id__vs_actual_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VsActualOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Snapshot Vs Actual",
+        "tags": [
+          "trésorerie prévisionnelle"
         ]
       }
     },

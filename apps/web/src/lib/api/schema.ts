@@ -450,6 +450,114 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/cashflow/forecast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Forecast
+         * @description Prévision consolidée et par compte : soldes observés, flux engagés, flux estimés.
+         */
+        get: operations["forecast_api_v1_companies__company_id__cashflow_forecast_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/cashflow/forecast/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Forecast Export
+         * @description Export PDF ou Excel de la prévision (inscrit au journal d'audit).
+         */
+        get: operations["forecast_export_api_v1_companies__company_id__cashflow_forecast_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/cashflow/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Settings
+         * @description Seuils d'alerte effectifs (valeurs par défaut si jamais paramétrés).
+         */
+        get: operations["get_settings_api_v1_companies__company_id__cashflow_settings_get"];
+        /**
+         * Put Settings
+         * @description Met à jour les seuils et défauts d'affichage de la prévision (audité).
+         */
+        put: operations["put_settings_api_v1_companies__company_id__cashflow_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/cashflow/snapshots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Snapshots
+         * @description Historique des instantanés figés, du plus récent au plus ancien.
+         */
+        get: operations["list_snapshots_api_v1_companies__company_id__cashflow_snapshots_get"];
+        put?: never;
+        /**
+         * Create Snapshot
+         * @description Fige la prévision courante en un instantané (base du prévisionnel vs réalisé).
+         */
+        post: operations["create_snapshot_api_v1_companies__company_id__cashflow_snapshots_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/cashflow/snapshots/{snapshot_id}/vs-actual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Snapshot Vs Actual
+         * @description Compare un instantané au réalisé postérieur (écritures validées).
+         */
+        get: operations["snapshot_vs_actual_api_v1_companies__company_id__cashflow_snapshots__snapshot_id__vs_actual_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/dashboard": {
         parameters: {
             query?: never;
@@ -1563,6 +1671,37 @@ export interface components {
             /** Reference */
             reference: string | null;
         };
+        /** AccountProjectionOut */
+        AccountProjectionOut: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Balances At Marks */
+            balances_at_marks: {
+                [key: string]: string;
+            };
+            /**
+             * Committed Net
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            committed_net: string;
+            /** Label */
+            label: string;
+            /** Number */
+            number: string;
+            /**
+             * Opening
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            opening: string;
+            /**
+             * Projected
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            projected: string;
+        };
         /** AccountUpdate */
         AccountUpdate: {
             /** Is Active */
@@ -1626,6 +1765,46 @@ export interface components {
              * Format: uuid
              */
             id: string;
+        };
+        /**
+         * AssumptionsOut
+         * @description Hypothèses sérialisées d'un calcul (identiques à celles figées dans les instantanés).
+         *
+         *     Les cinq derniers champs proviennent du payload complet du moteur (_assumptions_payload) :
+         *     périmètre de trésorerie, règles de projection et ventilation par catégorie de contrepartie.
+         */
+        AssumptionsOut: {
+            /** Categories Inflow */
+            categories_inflow: {
+                [key: string]: number;
+            };
+            /** Categories Outflow */
+            categories_outflow: {
+                [key: string]: number;
+            };
+            /** Committed Rule */
+            committed_rule: string;
+            /** Estimated Rule */
+            estimated_rule: string;
+            /** Estimation Method */
+            estimation_method: string;
+            /** History Months Used */
+            history_months_used: number;
+            inflow_coefficient: components["schemas"]["CoefficientOut"];
+            /** Inflow Delay Days */
+            inflow_delay_days: number;
+            /** Outflow Advance Days */
+            outflow_advance_days: number;
+            outflow_coefficient: components["schemas"]["CoefficientOut"];
+            /** Rounding */
+            rounding: string;
+            /**
+             * Scenario
+             * @enum {string}
+             */
+            scenario: "OPTIMISTE" | "NEUTRE" | "PRUDENT";
+            /** Treasury Scope */
+            treasury_scope: string;
         };
         /** AttachmentOut */
         AttachmentOut: {
@@ -1920,6 +2099,16 @@ export interface components {
             /** Opening Entry Id */
             opening_entry_id: string | null;
         };
+        /**
+         * CoefficientOut
+         * @description Coefficient de scénario appliqué aux flux estimés (numérateur/dénominateur entiers).
+         */
+        CoefficientOut: {
+            /** Denominator */
+            denominator: number;
+            /** Numerator */
+            numerator: number;
+        };
         /** CompanyAccess */
         CompanyAccess: {
             company: components["schemas"]["CompanyOut"];
@@ -2006,6 +2195,54 @@ export interface components {
             rccm?: string | null;
             /** Trade Name */
             trade_name?: string | null;
+        };
+        /** DailyProjectionOut */
+        DailyProjectionOut: {
+            /**
+             * Balance
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            balance: string;
+            /**
+             * Committed Inflow
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            committed_inflow: string;
+            /**
+             * Committed Outflow
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            committed_outflow: string;
+            /**
+             * Estimated Inflow
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            estimated_inflow: string;
+            /**
+             * Estimated Outflow
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            estimated_outflow: string;
+            /**
+             * Flow Date
+             * Format: date
+             */
+            flow_date: string;
+            /**
+             * Inflow
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            inflow: string;
+            /**
+             * Outflow
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            outflow: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "SAIN" | "SOUS_SURVEILLANCE" | "CRITIQUE";
         };
         /** DashboardFiscalYear */
         DashboardFiscalYear: {
@@ -2224,6 +2461,21 @@ export interface components {
              * @default []
              */
             errors: string[];
+        };
+        /** ExcludedDraftOut */
+        ExcludedDraftOut: {
+            /**
+             * Entry Date
+             * Format: date
+             */
+            entry_date: string;
+            /** Label */
+            label: string;
+            /**
+             * Net Treasury
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            net_treasury: string;
         };
         /** FiguresOut */
         FiguresOut: {
@@ -2518,6 +2770,64 @@ export interface components {
             start_date: string;
             /** Status */
             status: string;
+        };
+        /** ForecastOut */
+        ForecastOut: {
+            /** Accounts */
+            accounts: components["schemas"]["AccountProjectionOut"][];
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            assumptions: components["schemas"]["AssumptionsOut"];
+            /**
+             * Beyond Horizon Inflow
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            beyond_horizon_inflow: string;
+            /**
+             * Beyond Horizon Outflow
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            beyond_horizon_outflow: string;
+            /** Days */
+            days: components["schemas"]["DailyProjectionOut"][];
+            /** Excluded Drafts */
+            excluded_drafts: components["schemas"]["ExcludedDraftOut"][];
+            /** First Critical Date */
+            first_critical_date: string | null;
+            /** History Months Used */
+            history_months_used: number;
+            /** Horizon Days */
+            horizon_days: number;
+            /** Insufficient Data */
+            insufficient_data: boolean;
+            /**
+             * Lowest Balance
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            lowest_balance: string;
+            /**
+             * Lowest Balance Date
+             * Format: date
+             */
+            lowest_balance_date: string;
+            /**
+             * Opening Total
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            opening_total: string;
+            /**
+             * Scenario
+             * @enum {string}
+             */
+            scenario: "OPTIMISTE" | "NEUTRE" | "PRUDENT";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "SAIN" | "SOUS_SURVEILLANCE" | "CRITIQUE";
         };
         /** ForgotPasswordRequest */
         ForgotPasswordRequest: {
@@ -3403,10 +3713,101 @@ export interface components {
          */
         Role: "SUPER_ADMIN" | "CABINET_ADMIN" | "CABINET_COLLABORATEUR" | "PME_DIRIGEANT" | "PME_COMPTABLE" | "PME_LECTEUR" | "PARTENAIRE_FINANCIER";
         /**
+         * Scenario
+         * @enum {string}
+         */
+        Scenario: "OPTIMISTE" | "NEUTRE" | "PRUDENT";
+        /**
          * Sense
          * @enum {string}
          */
         Sense: "PRODUIT" | "CHARGE";
+        /** SettingsIn */
+        SettingsIn: {
+            /**
+             * Critical Floor Minor
+             * @description Seuil critique, unités mineures
+             */
+            critical_floor_minor: number;
+            /**
+             * Default Horizon Days
+             * @default 90
+             */
+            default_horizon_days: number;
+            /** @default NEUTRE */
+            default_scenario: components["schemas"]["Scenario"];
+            /**
+             * Warning Floor Minor
+             * @description Seuil de surveillance (>= seuil critique), NULL pour désactiver
+             */
+            warning_floor_minor?: number | null;
+        };
+        /** SettingsOut */
+        SettingsOut: {
+            /**
+             * Critical Floor
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            critical_floor: string;
+            /** Default Horizon Days */
+            default_horizon_days: number;
+            /**
+             * Default Scenario
+             * @enum {string}
+             */
+            default_scenario: "OPTIMISTE" | "NEUTRE" | "PRUDENT";
+            /** Warning Floor */
+            warning_floor: string | null;
+        };
+        /** SnapshotOut */
+        SnapshotOut: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            assumptions: components["schemas"]["AssumptionsOut"];
+            /** First Critical Date */
+            first_critical_date: string | null;
+            /** Generated At */
+            generated_at: string;
+            /** History Months Used */
+            history_months_used: number;
+            /** Horizon Days */
+            horizon_days: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Insufficient Data */
+            insufficient_data: boolean;
+            /**
+             * Lowest Balance
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            lowest_balance: string;
+            /**
+             * Lowest Balance Date
+             * Format: date
+             */
+            lowest_balance_date: string;
+            /**
+             * Opening Total
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            opening_total: string;
+            /**
+             * Scenario
+             * @enum {string}
+             */
+            scenario: "OPTIMISTE" | "NEUTRE" | "PRUDENT";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "SAIN" | "SOUS_SURVEILLANCE" | "CRITIQUE";
+        };
         /** StatementLineSet */
         StatementLineSet: {
             /**
@@ -3630,6 +4031,61 @@ export interface components {
         VerifyEmailRequest: {
             /** Token */
             token: string;
+        };
+        /** VsActualDayOut */
+        VsActualDayOut: {
+            /**
+             * Actual Net
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            actual_net: string;
+            /**
+             * Flow Date
+             * Format: date
+             */
+            flow_date: string;
+            /**
+             * Forecast Net
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            forecast_net: string;
+            /**
+             * Variance
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            variance: string;
+        };
+        /** VsActualOut */
+        VsActualOut: {
+            /**
+             * Actual Total Net
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            actual_total_net: string;
+            /**
+             * Compared Through
+             * Format: date
+             */
+            compared_through: string;
+            /** Days */
+            days: components["schemas"]["VsActualDayOut"][];
+            /**
+             * Forecast Total Net
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            forecast_total_net: string;
+            /**
+             * Snapshot Id
+             * Format: uuid
+             */
+            snapshot_id: string;
+            /** Top Deviations */
+            top_deviations: components["schemas"]["VsActualDayOut"][];
+            /**
+             * Variance
+             * @description Solde signé en unités mineures (positif = débiteur), en chaîne
+             */
+            variance: string;
         };
         /** StatementLineOut */
         kora__api__v1__statements__StatementLineOut: {
@@ -5301,6 +5757,442 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CashFlowStatementOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    forecast_api_v1_companies__company_id__cashflow_forecast_get: {
+        parameters: {
+            query?: {
+                /** @description Horizon en jours (30, 60 ou 90) */
+                horizon?: number;
+                /** @description Scénario appliqué aux flux estimés (les flux engagés ne sont jamais ajustés) */
+                scenario?: components["schemas"]["Scenario"];
+                /** @description Date de calcul (défaut : aujourd'hui) */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    forecast_export_api_v1_companies__company_id__cashflow_forecast_export_get: {
+        parameters: {
+            query: {
+                format: "pdf" | "xlsx";
+                /** @description Horizon en jours (30, 60 ou 90) */
+                horizon?: number;
+                /** @description Scénario appliqué aux flux estimés (les flux engagés ne sont jamais ajustés) */
+                scenario?: components["schemas"]["Scenario"];
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_settings_api_v1_companies__company_id__cashflow_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_settings_api_v1_companies__company_id__cashflow_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_snapshots_api_v1_companies__company_id__cashflow_snapshots_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnapshotOut"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_snapshot_api_v1_companies__company_id__cashflow_snapshots_post: {
+        parameters: {
+            query?: {
+                /** @description Scénario appliqué aux flux estimés (les flux engagés ne sont jamais ajustés) */
+                scenario?: components["schemas"]["Scenario"];
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnapshotOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    snapshot_vs_actual_api_v1_companies__company_id__cashflow_snapshots__snapshot_id__vs_actual_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshot_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VsActualOut"];
                 };
             };
             /** @description Unauthorized */
