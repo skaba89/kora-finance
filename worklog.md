@@ -3,6 +3,21 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-12 — C2 : guide de démarrage Windows (Git Bash) dans docs/DEMO.md
+
+**Livré**
+- `docs/DEMO.md` §5 « Démarrage Windows (Git Bash) » : correspondances Ubuntu ↔
+  Windows (`MSYS_NO_PATHCONV=1`, `docker compose exec -T`, conteneur durci),
+  installation GNU Make (winget), démarrage complet sans Make, diagnostic des
+  cinq pannes déjà rencontrées (résolues), vérification des 3 rôles, isolation
+  de la démonstration prospects.
+- Commandes **exécutées et validées** en session du 12/11/2026 (Windows 11 +
+  Git Bash + Docker Desktop/WSL 2) — voir AUDIT_SUIVI_20261109.md.
+
+**Reste**
+- Correctif `resolve_out_dir` (PR seed-outdir) : automatisera le repli `/tmp`
+  actuellement manuel — la note du §5.3 sera mise à jour à sa fusion.
+
 ## 2026-10-23 — Phase 1 (socle)
 
 Commits : `dac9685` (1a), `070ad3d` (1b), `796c2b6` (1c), `35262c0` (1d-1e), puis 1f (frontend).
