@@ -12,7 +12,7 @@ Une fois la pile démarrée (`make up`), le dossier est créé par le script de 
 qui passe par les mêmes services que l'application (aucune écriture directe en base) :
 
 ```bash
-docker compose exec api python -m kora.scripts.seed_demo
+make seed        # équivalent : docker compose exec api python -m kora.scripts.seed_demo
 ```
 
 Le script crée :
@@ -98,6 +98,7 @@ cascade exige les droits du propriétaire du schéma — le conteneur `api` ne l
 pas volontairement (séparation des rôles runtime/DDL). Passer l'URL de migration :
 
 ```bash
+make seed-reset  # équivalent : la commande détaillée ci-dessous
 docker compose exec -e KORA_DATABASE_MIGRATION_URL="postgresql+psycopg://kora_owner:${KORA_DB_OWNER_PASSWORD}@postgres:5432/kora" api python -m kora.scripts.seed_demo --reset
 ```
 

@@ -3,6 +3,37 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-13 — Cibles `make seed` / `make seed-reset` (PR #78) et contrôle statique de la pile Docker
+
+**Motivation** — lancement de la pile sur Docker Desktop : le parcours était
+documenté dans `docs/DEMO.md` mais le seed passait par une commande `docker
+compose exec` à recopier ; deux cibles Make le raccourcissent.
+
+- `make seed` : charge le jeu de démonstration Djouma Distribution SARL
+  (équivalent exact de la commande documentée en §1) ;
+- `make seed-reset` : réinitialisation complète — passe
+  `KORA_DATABASE_MIGRATION_URL` interpolée par Compose depuis le `.env` (le
+  conteneur `api` ne porte pas les droits DDL, séparation runtime/DDL
+  inchangée) — même commande que §3 ;
+- `docs/DEMO.md` §1 et §3 mentionnent les deux raccourcis (les commandes
+  détaillées restent la référence).
+
+**Contrôle statique de la pile avant lancement Docker Desktop** (aucune
+modification, tout était déjà cohérent) : YAML compose valide (13 services),
+fichiers montés présents (`init-roles.sh`, `garage.toml`, `bootstrap.py`),
+cibles Dockerfile `runtime`/`dev` présentes (api et web), les 11 variables
+obligatoires (`${VAR:?lancer make env}`) couvertes par `.env.example`,
+`scripts/check-compose-budgets.py` (KF-13) en succès.
+
+**Validation** : `make -n seed`, `make -n seed-reset`, `make help` (recettes
+sèches correctes, tabulations préservées) ; aucun code applicatif touché —
+pytest/lint/typecheck non requises (Makefile + docs seulement). Pas d'impact
+de score.
+
+**Reste** : exécution réelle sur Docker Desktop (Windows 11 / WSL 2) par le
+porteur du projet — les pannes déjà rencontrées et leurs remèdes sont dans
+`docs/DEMO.md` §5.4 ; suite du chantier Phase 3D (connecteurs Mobile Money).
+
 ## 2026-11-13 — Phase 3E finalisée : écrans de seuils/instantanés + démonstration de la tension
 
 **Écrans manquants livrés (PR #75)** — l'API des seuils et instantanés existait
