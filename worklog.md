@@ -3,6 +3,24 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-13 — Phase 3D : architecture Mobile Money documentée (PR #80)
+
+**Objet** — `docs/PHASE_3D_MOMO.md` : conditions officielles des API
+(momodeveloper.mtn.com : Collections/Disbursements/Remittances, sandbox,
+production = contrat par marché ; developer.orange.com om-webpay : contrat
+marchand OAuth2 par pays — sources consultées le 13/11/2026). Aucune
+autorisation opérateur pour ce projet : **connecteurs API non implémentés**,
+aucun écran ni statut « connecté », aucune activation simulée.
+
+**Livré** : import CSV étiqueté (colonne frais → ligne `[FRAIS]` distincte,
+PR #81), déduplications fichier + ligne inchangées, rapprochement 3C avec
+confirmation humaine obligatoire, architecture cible des connecteurs
+(config par dossier via `financial_accounts.operator`, modes IMPORT/PULL/
+WEBHOOK, identifiants chiffrés futurs, jamais d'auto-posting).
+
+**Reste** : adaptateur Excel, recollement sur export réel opérateur, journal
+d'erreurs de synchronisation, connecteur pull API uniquement après contrat.
+
 ## 2026-11-13 — Make compatible PowerShell (PR #79) : première exécution réelle de l'utilisateur
 
 **Reterrain** — première exécution sur Docker Desktop (Windows 11, PowerShell) :
