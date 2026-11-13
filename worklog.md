@@ -3,6 +3,44 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-13 — Phase 3E finalisée : écrans de seuils/instantanés + démonstration de la tension
+
+**Écrans manquants livrés (PR #75)** — l'API des seuils et instantanés existait
+depuis §28, il manquait l'interface :
+
+- `GET /cashflow/snapshots/{id}` (détail d'un instantané, isolation vérifiée) —
+  contrat pur ajout (ancien contrat identique une fois le chemin retiré), types TS
+  régénérés ;
+- écran **Seuils d'alerte** (`/previsions/reglages`) : seuil critique, seuil de
+  surveillance (GNF), horizon et scénario par défaut ; lecture dès
+  `treasury:read`, enregistrement réservé à `treasury:manage` (audité) ;
+- écran **Instantané** (`/previsions/instantanes/{id}`) : en-tête figé +
+  comparaison jour à jour **prévisionnel / réalisé / écart**, totaux et écarts
+  les plus marquants ;
+- prévision : « Figer cette prévision » (InlineAction, scénario lié — patron 3C)
+  et lien seuils ; i18n fr/en +14 clés (parité 68/68).
+
+**Démonstration enrichie (PR #76)** — `seed_demo.apply_forecast_echeances()` :
+
+- chèque postdaté **reçu** de Sahel Agro à +10 j (12 500 000 GNF, ENGAGE) ;
+- chèque postdaté **remis** à Mamaya Import-Export à +20 j (195 000 000 GNF,
+  réassort trimestriel — **tension volontaire**) ;
+- brouillon de règlement Soleil Élec à +25 j (brouillons futurs exclus) ;
+- facture fournisseur à régler FAC-F-2026-052 (14 750 000 GNF, non lettrée) ;
+- `demo_today()` : date d'exécution dans la fenêtre octobre-novembre 2026, sinon
+  date de référence documentée — échéances dans l'exercice ouvert, relevés
+  **déterministes** (deux exécutions : fichiers identiques).
+
+**Résultat du scénario vérifié sur base réelle (PG 16.2, RLS active)** :
+prévision 30 j NEUTRE = **CRITIQUE**, point bas **−6 947 387 GNF le 2026-12-03**,
+première date critique 3 décembre ; flux ENGAGE +12,5 M le 23/11 et −195 M le
+03/12 ; `docs/DEMO.md` étapes 9-11 (tension, seuils, instantanés).
+
+**Validation locale** : pytest **778/778** (nouveau test détail + isolation),
+ruff check + format, mypy strict, ESLint 0, tsc 0, Vitest 69/69, build Next OK.
+Reste à la CI (facturation) : restauration synthétique, pip-audit/SBOM, E2E.
+Suivi : `AUDIT_SUIVI_20261109.md` §30.
+
 ## 2026-11-13 — Fusion des PRs 70-73, diagnostic CI définitif (facturation du compte)
 
 **Diagnostic CI clos avec preuve officielle** : re-exécution du run de la branche
