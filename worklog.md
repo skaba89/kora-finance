@@ -1362,3 +1362,31 @@ restauré (spending limit > 0 ou reset du 1er décembre). Suivi :
 - Validation : **794/794** pytest (16 nouveaux), ruff, mypy strict, ESLint 0,
   `tsc` 0, Vitest **69/69**. CI toujours bloquée (facturation GitHub).
 - Suivi : `AUDIT_SUIVI_20261109.md` §31 ; doc `docs/PHASE_3D_MOMO.md` à jour.
+
+## 2026-11-13 — Phase 4A : référentiel des tiers (clients et fournisseurs)
+
+- Socle de la facturation : table `partners` par dossier — un tier est client et/ou
+  fournisseur (au moins un sens exigé), jamais supprimé (désactivation seule, les
+  factures et lettrages à venir restent rattachés à la fiche).
+- Mentions obligatoires des factures portées dès la fiche (ARBITRAGE_COMPTABLE.md) :
+  raison sociale (nom, unique par dossier sans tenir compte de la casse), NIU/NCC ou
+  NIF, RCCM, adresse ; coordonnées des relances (email, téléphone, contact) pour 4D.
+- Comptes de tiers par défaut (411x client, 401x fournisseur) : pré-remplissage
+  validé par le service (classe + compte actif + appartenance au dossier), jamais une
+  écriture automatique — le lettrage et les sous-comptes du dossier restent libres.
+- Migration 0016 : contraintes en base (au moins un sens, champs non vides), index
+  fonctionnel d'unicité du nom, RLS `tenant_isolation` forcée ; aller-retour complet
+  et `alembic check` (parité modèle/migrations) testés.
+- Permissions : `partners:read` (tous les rôles de dossier) et `partners:manage`
+  (dirigeant, comptable, cabinet) ; docs/PERMISSIONS.md régénéré.
+- API : GET (filtres q/kind/active + pagination), POST, GET/{id}, PATCH partiel
+  (convention du dépôt) ; audit chaîné `partner.created`/`partner.updated` ;
+  OpenAPI régénéré (**88 chemins / 144 schémas**, pur ajout) + types TS.
+- Front : page « Tiers » fr/en (recherche, filtres client/fournisseur, affichage des
+  désactivés, création, édition préremplie, désactivation/réactivation avec
+  confirmation) ; entrée de navigation visible avec `partners:read`.
+- Garde-fou testé : créer ou modifier un tier n'écrit **aucune** écriture
+  (journal des écritures vérifié vide après créations).
+- Validation : **825/825** pytest (19 nouveaux), ruff, mypy strict, ESLint 0,
+  `tsc` 0, Vitest **69/69**. CI toujours bloquée (facturation GitHub) — à rejouer.
+- Suivi : `AUDIT_SUIVI_20261109.md` §32.

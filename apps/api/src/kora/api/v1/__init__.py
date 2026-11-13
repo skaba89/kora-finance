@@ -18,6 +18,7 @@ from kora.api.v1 import (
     ledger,
     lettering,
     mfa,
+    partners,
     reports,
     statements,
     treasury,
@@ -43,4 +44,5 @@ ROUTERS: tuple[APIRouter, ...] = (
     firms.router,
     invitations.router,
     treasury.router,
+    partners.router,
 )

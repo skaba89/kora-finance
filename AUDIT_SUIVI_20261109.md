@@ -1203,3 +1203,68 @@ seront rejoués après régularisation.
 frais séparés, déduplication et rapprochement inchangés ; les connecteurs API
 restent suspendus à un contrat opérateur. Prochain chantier : **Phase 4A**
 (référentiel clients/fournisseurs).
+
+## 32. Phase 4A — référentiel des tiers : clients et fournisseurs (2026-11-13)
+
+Premier chantier de la Phase 4 (ventes et achats) : le référentiel qui portera
+factures (4B), règlements (4C), relances (4D) et intégration comptable (4E).
+Le périmètre 4A est volontairement limité à la fiche maître — aucune facture,
+aucun règle, aucun engagement comptable.
+
+### PR — implémentation
+
+- **Table `partners` (migration 0016)** : un tier est client et/ou fournisseur
+  (contrainte `at_least_one_kind`), jamais supprimé — désactivation seule
+  (`is_active`), les factures et lettrages à venir restent rattachés à la fiche.
+  Unicité du nom par dossier **insensible à la casse** (index fonctionnel
+  `uq_partners_tenant_name_lower`), champs texte jamais vides (contraintes
+  « not blank »), RLS `tenant_isolation` **forcée** comme toutes les tables tenant.
+- **Mentions obligatoires des factures portées dès la fiche**
+  (cf. `docs/ARBITRAGE_COMPTABLE.md`) : raison sociale, NIU/NCC ou NIF (`tax_id`),
+  RCCM, adresse — optionnelles à la création, elles deviendront exigées par les
+  factures de 4B le moment venu ; coordonnées des relances (email, téléphone,
+  personne de contact) préparées pour 4D.
+- **Comptes de tiers par défaut** (411x client, 401x fournisseur) : simple
+  pré-remplissage des factures. Le service valide la classe du compte, son
+  appartenance au plan du dossier et son état actif ; la base ne vérifie que
+  l'appartenance (contraintes composites `(tenant_id, account_id)`,
+  `ondelete RESTRICT`). Aucune écriture automatique : le garde-fou est testé
+  (créations de tiers → journal des écritures vide).
+- **Permissions** : `partners:read` accordée à tous les rôles de dossier,
+  `partners:manage` au dirigeant, au comptable et au cabinet ; la matrice de
+  `test_permissions.py` sonde les deux nouvelles permissions via l'API
+  (lecture et création par rôle) ; `docs/PERMISSIONS.md` régénéré.
+- **API** : liste filtrable et paginée (recherche `q` sur nom et NIU, `kind`,
+  `active`), création, lecture, **PATCH partiel** (convention du dépôt,
+  `model_fields_set`) ; audit chaîné `partner.created` / `partner.updated` ;
+  un tier d'un autre dossier renvoie 404 (testé, y compris par PATCH).
+- **Front (fr/en)** : page « Tiers » — recherche, filtres client/fournisseur,
+  affichage des tiers désactivés, création, édition préremplie,
+  désactivation/réactivation avec confirmation ; l'entrée de navigation
+  n'apparaît qu'avec `partners:read`. Contrat OpenAPI régénéré
+  (**88 chemins / 144 schémas**, pur ajout) et types TypeScript mis à jour.
+- **Hygiène du dépôt** : `.gitignore` couvre désormais la pile de test locale
+  hors Docker (`.teststack/`, `.venv-test/`, `.venv-pgtools/` — binaires, données
+  et secrets de test uniquement).
+
+### Validation
+
+| Contrôle | Résultat |
+|---|---|
+| pytest complet (PG 16.2 réel, RLS active, Redis réel, Moto S3, Mailpit SMTP) | **825/825** (19 nouveaux : CRUD, casse du nom, deux dossiers homonymes, préfixes 411/401 acceptés et refusés, sous-compte 4111 créé par le dossier, compte d'un autre dossier, isolation RLS, lecteur lecture seule, PATCH partiel et vide, sens vide refusé, désactivation + filtres, recherche nom/NIU, pagination, audit, zéro écriture) |
+| Ruff (lint + format) | 0 erreur |
+| mypy strict | 0 erreur (174 fichiers) |
+| ESLint `--max-warnings=0` / `tsc --noEmit` | 0 erreur |
+| Vitest | **69/69** |
+| Contrat OpenAPI | régénéré et committé (88 chemins), types TS à jour |
+| Migrations | aller-retour complet 0016 → base → 0016 et `alembic check` (parité modèle/migrations) vérifiés |
+
+La CI reste bloquée par la facturation du compte GitHub (annotation officielle
+citée aux §29/§30) : restauration synthétique, pip-audit/SBOM et E2E Playwright
+seront rejoués après régularisation.
+
+**Score** : politique inchangée — preuve locale complète, CI encore indisponible
+: **84,5/100**. Phase 4A livrée : le socle de facturation existe (fiches tiers
+avec mentions obligatoires), rien n'écrit en comptabilité sans validation
+humaine. Prochain chantier : **Phase 4B** — devis et factures à numérotation
+sans trou (100 créations concurrentes = 100 numéros consécutifs).

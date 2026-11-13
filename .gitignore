@@ -23,3 +23,8 @@ deploy/vps/.previous-release
 
 # Rapports synthétiques de CI (aucune archive ni clé)
 /artifacts/
+
+# Pile de test locale du sandbox (hors Docker) : binaires, données, secrets de test
+.teststack/
+.venv-test/
+.venv-pgtools/

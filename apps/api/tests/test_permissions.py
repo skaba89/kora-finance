@@ -160,6 +160,16 @@ def _probe(permission: Permission, client: TestClient, s: Scenario, make_user: M
                 },
             ).status_code
         ),
+        Permission.PARTNERS_READ: lambda: (
+            client.get(f"{base}/partners", headers=s.headers).status_code
+        ),
+        Permission.PARTNERS_MANAGE: lambda: (
+            client.post(
+                f"{base}/partners",
+                headers=s.headers,
+                json={"name": f"Tier test {uuid.uuid4().hex[:6]}", "is_client": True},
+            ).status_code
+        ),
     }
     return calls[permission]()
 
