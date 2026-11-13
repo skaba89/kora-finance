@@ -32,7 +32,7 @@ import argparse
 import os
 import sys
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -107,6 +107,12 @@ USERS: tuple[tuple[str, str, Role], ...] = (
 )
 
 FISCAL_YEAR = (date(2026, 1, 1), date(2026, 12, 31))
+
+# Jour « aujourd'hui » de la démonstration : la date réelle d'exécution quand elle
+# tombe dans la fenêtre du scénario (octobre-novembre 2026), sinon la date de
+# référence documentée — les échéances futures restent dans l'exercice ouvert.
+DEMO_TODAY_FALLBACK = date(2026, 11, 13)
+DEMO_WINDOW = (date(2026, 10, 1), date(2026, 11, 30))
 
 # Sous-comptes de tiers et de trésorerie créés sous le référentiel SYSCOHADA préchargé.
 SUB_ACCOUNTS: tuple[tuple[str, str], ...] = (
@@ -912,6 +918,142 @@ def create_draft_example(
     return entry.id
 
 
+def demo_today() -> date:
+    """« Aujourd'hui » de la démonstration : date réelle dans la fenêtre du scénario,
+    sinon la date de référence (le jeu reste reproductible hors période)."""
+    real = date.today()  # noqa: DTZ011 — scénario calé sur le jour local de démonstration
+    return real if DEMO_WINDOW[0] <= real <= DEMO_WINDOW[1] else DEMO_TODAY_FALLBACK
+
+
+def apply_forecast_echeances(
+    session: Session, actor: Actor, accounts_gl: dict[str, uuid.UUID]
+) -> None:
+    """Échéances futures pour la prévision de trésorerie (Phase 3E).
+
+    - chèque postdaté du client encaissé à +10 j (écriture validée MANUELLE :
+      flux ENGAGE encaissement) ;
+    - chèque postdaté remis au fournisseur à +20 j (flux ENGAGE décaissement
+      volontairement supérieur : la prévision plonge sous le seuil critique —
+      exemple de tension de trésorerie à traiter en séance) ;
+    - brouillon de règlement fournisseur à +25 j (à valider au paiement) ;
+    - facture fournisseur récente à régler (restée non lettrée).
+
+    Les dates sont relatives au jour de démonstration et restent dans
+    l'exercice ouvert : la prévision a de la matière à 30/60/90 jours.
+    """
+    today = demo_today()
+    horizon = FISCAL_YEAR[1]
+
+    def day(offset: int) -> date:
+        return min(today + timedelta(days=offset), horizon)
+
+    bq = _journal_by_code(session, actor.company_id, "BQ")
+
+    # Chèque postdaté reçu du client (encaissement à date, +10 j) : ENGAGE.
+    cheque_recu, _ = create_draft(
+        session,
+        actor,
+        EntryData(
+            journal_id=bq.id,
+            entry_date=day(10),
+            label="Chèque postdaté Sahel Agro — encaissement à date",
+            reference="CHQ-REC-0118",
+            lines=[
+                LineData(
+                    account_id=accounts_gl["5211"],
+                    debit=12_500_000,
+                    credit=0,
+                    label="Chèque postdaté Sahel Agro",
+                ),
+                LineData(
+                    account_id=accounts_gl["4111"],
+                    debit=0,
+                    credit=12_500_000,
+                    label="Chèque postdaté Sahel Agro",
+                ),
+            ],
+        ),
+    )
+    post_entry(session, actor, cheque_recu.id)
+
+    # Chèque postdaté remis au fournisseur (règlement à date, +20 j) : ENGAGE,
+    # décaissement fort qui crée la tension de trésorerie du scénario.
+    cheque_remis, _ = create_draft(
+        session,
+        actor,
+        EntryData(
+            journal_id=bq.id,
+            entry_date=day(20),
+            label="Chèque postdaté remis Mamaya Import-Export — réassort trimestriel",
+            reference="CHQ-REM-0042",
+            lines=[
+                LineData(
+                    account_id=accounts_gl["4011"],
+                    debit=195_000_000,
+                    credit=0,
+                    label="Chèque postdaté remis Mamaya Import-Export",
+                ),
+                LineData(
+                    account_id=accounts_gl["5211"],
+                    debit=0,
+                    credit=195_000_000,
+                    label="Chèque postdaté remis Mamaya Import-Export",
+                ),
+            ],
+        ),
+    )
+    post_entry(session, actor, cheque_remis.id)
+
+    # Brouillon de règlement fournisseur à +25 j : apparaît dans les brouillons
+    # futurs exclus de la prévision ; à valider le jour du paiement réel.
+    create_draft(
+        session,
+        actor,
+        EntryData(
+            journal_id=bq.id,
+            entry_date=day(25),
+            label="Règlement Soleil Élec prévu (brouillon — à valider au paiement)",
+            reference="REG-F-2026-051",
+            lines=[
+                LineData(
+                    account_id=accounts_gl["4013"],
+                    debit=4_130_000,
+                    credit=0,
+                    label="Règlement Soleil Élec prévu",
+                ),
+                LineData(
+                    account_id=accounts_gl["5211"],
+                    debit=0,
+                    credit=4_130_000,
+                    label="Règlement Soleil Élec prévu",
+                ),
+            ],
+        ),
+    )
+
+    # Facture fournisseur récente à régler (TTC multiple de 590 000 GNF :
+    # scission HT/TVA exacte). Reste non lettrée : aucune contrepartie.
+    _guided_create(
+        session,
+        actor,
+        guided.GuidedData(
+            guided.Operation.FACTURE_FOURNISSEUR,
+            day(-5),
+            14_750_000,
+            "Réassort fin de saison — Mamaya",
+            reference="FAC-F-2026-052",
+            nature_account_id=_account_number(session, actor.company_id, "601").id,
+            party_account_id=accounts_gl["4011"],
+            vat_included=True,
+        ),
+    )
+    print(
+        "Échéances de prévision créées : chèque postdaté reçu +10 j (ENGAGE),"
+        " chèque remis au fournisseur +20 j (tension), brouillon de règlement"
+        " +25 j, facture à régler (FAC-F-2026-052)."
+    )
+
+
 def apply_lettering(session: Session, actor: Actor, accounts_gl: dict[str, uuid.UUID]) -> int:
     """Lettrage automatique des factures entièrement réglées (références identiques)."""
     total = 0
@@ -1199,6 +1341,7 @@ def main(argv: list[str] | None = None) -> int:
         apply_guided_operations(session, actor, accounts_gl)
         apply_treasury_operations(session, actor, accounts_fin)
         create_draft_example(session, actor, accounts_gl)
+        apply_forecast_echeances(session, actor, accounts_gl)
         apply_lettering(session, actor, accounts_gl)
 
         files = write_statements(session, company.id, accounts_fin, out_dir)
