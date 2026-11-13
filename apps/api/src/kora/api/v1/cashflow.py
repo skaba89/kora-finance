@@ -427,6 +427,27 @@ class VsActualOut(BaseModel):
     top_deviations: list[VsActualDayOut]
 
 
+@router.get("/cashflow/snapshots/{snapshot_id}", responses=_ERRORS)
+def get_snapshot_detail(snapshot_id: uuid.UUID, tenant: TreasuryRead, db: DbSession) -> SnapshotOut:
+    """Détail d'un instantané figé (écran de consultation et base du comparatif)."""
+    snapshot = service.get_snapshot(db, tenant.company_id, snapshot_id)
+    return SnapshotOut(
+        id=snapshot.id,
+        generated_at=snapshot.generated_at.isoformat(),
+        as_of=snapshot.as_of,
+        horizon_days=snapshot.horizon_days,
+        scenario=snapshot.scenario,
+        opening_total=snapshot.opening_total_minor,
+        status=snapshot.status,
+        first_critical_date=snapshot.first_critical_date,
+        lowest_balance=snapshot.lowest_balance_minor,
+        lowest_balance_date=snapshot.lowest_balance_date,
+        insufficient_data=snapshot.insufficient_data,
+        history_months_used=snapshot.history_months_used,
+        assumptions=AssumptionsOut.model_validate(snapshot.assumptions_jsonb),
+    )
+
+
 @router.get("/cashflow/snapshots/{snapshot_id}/vs-actual", responses=_ERRORS)
 def snapshot_vs_actual(snapshot_id: uuid.UUID, tenant: TreasuryRead, db: DbSession) -> VsActualOut:
     """Compare un instantané au réalisé postérieur (écritures validées)."""

@@ -825,6 +825,24 @@ export const fr = {
     settingsSaved: "Seuils enregistrés.",
     settingsInvalid:
       "Le seuil de surveillance doit rester supérieur ou égal au seuil critique.",
+    settingsSubtitle:
+      "Les seuils déterminent le statut de chaque jour de prévision : sous le seuil critique, la journée est CRITIQUE ; sous le seuil de surveillance, elle est SOUS SURVEILLANCE.",
+    settingsHorizon: "Horizon par défaut",
+    settingsScenario: "Scénario par défaut",
+    settingsHint:
+      "Montants en GNF (unité entière). Laissez le seuil de surveillance vide pour désactiver l'alerte intermédiaire.",
+    settingsInvalidAmounts:
+      "Les seuils doivent être des entiers non négatifs (GNF).",
+    backToForecast: "Retour à la prévision",
+    vsForecast: "Prévision (net)",
+    vsActualCol: "Réalisé (net)",
+    vsVariance: "Écart",
+    vsComparedThrough: "Comparé jusqu'au {date} (écritures validées).",
+    vsNoActual:
+      "Aucune écriture validée après cet instantané : le comparatif apparaîtra dès que le réalisé existe.",
+    vsTopDeviations: "Écarts les plus marquants",
+    vsTotals: "Totaux",
+    vsSnapshotOf: "Instantané du {date} ({scenario})",
     expertNotice:
       "Outil d'aide à la décision : la présentation comptable reste à valider par un expert-comptable.",
   },

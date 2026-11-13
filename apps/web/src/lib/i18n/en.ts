@@ -822,6 +822,24 @@ export const en: typeof fr = {
     warningFloorNone: "Disabled",
     settingsSaved: "Thresholds saved.",
     settingsInvalid: "The warning floor must remain greater than or equal to the critical floor.",
+    settingsSubtitle:
+      "Thresholds determine the status of each forecast day: below the critical floor, the day is CRITICAL; below the warning floor, it is UNDER WATCH.",
+    settingsHorizon: "Default horizon",
+    settingsScenario: "Default scenario",
+    settingsHint:
+      "Amounts in GNF (whole units). Leave the warning floor empty to disable the intermediate alert.",
+    settingsInvalidAmounts:
+      "Thresholds must be non-negative integers (GNF).",
+    backToForecast: "Back to the forecast",
+    vsForecast: "Forecast (net)",
+    vsActualCol: "Actual (net)",
+    vsVariance: "Variance",
+    vsComparedThrough: "Compared through {date} (validated entries).",
+    vsNoActual:
+      "No validated entries after this snapshot yet: the comparison will appear as soon as actuals exist.",
+    vsTopDeviations: "Largest deviations",
+    vsTotals: "Totals",
+    vsSnapshotOf: "Snapshot of {date} ({scenario})",
     expertNotice:
       "Decision-support tool: the accounting presentation remains to be validated by a chartered accountant.",
   },
