@@ -499,11 +499,11 @@ export const en: typeof fr = {
     releves: {
       title: "Imported statements",
       subtitle:
-        "OFX or CSV files exported from your bank. Lines await reconciliation: nothing is posted at import time.",
-      importTitle: "Import a statement (OFX or CSV)",
+        "OFX, CSV or Excel (.xlsx) files exported from your bank or your Mobile Money operator. Lines await reconciliation: nothing is posted at import time.",
+      importTitle: "Import a statement (OFX, CSV or Excel)",
       file: "Statement file",
-      fileHint: "Content is parsed as-is; importing the same file twice is rejected.",
-      noFile: "Choose an OFX or CSV file.",
+      fileHint: "Content is parsed as-is; importing the same file twice is rejected. An operator fee found in the export becomes a separate “fee” line.",
+      noFile: "Choose an OFX, CSV or Excel (.xlsx) file.",
       import: "Import",
       importing: "Importing…",
       imported: "Statement imported: {lines} lines awaiting reconciliation.",

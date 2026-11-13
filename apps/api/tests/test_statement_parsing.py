@@ -6,13 +6,16 @@ décimale, débit/crédit en colonnes séparées, dates JJ/MM/AAAA. Chaque cas d
 corruption est refusé avec un message exploitable, jamais interprété à l'aveugle.
 """
 
+import io
+import zipfile
 from datetime import date
 
+import openpyxl
 import pytest
 
 from kora.core.errors import BusinessRuleError
 from kora.treasury import parsing
-from kora.treasury.parsing import ParsedLine, parse_csv, parse_statement
+from kora.treasury.parsing import ParsedLine, parse_csv, parse_statement, parse_xlsx
 
 # OFX 1.x SGML : balises non fermées, en-tête à deux-points, fuseau sur DTPOSTED.
 OFX_1 = b"""OFXHEADER:100
@@ -199,3 +202,183 @@ def test_libelle_controle_purifie() -> None:
     # L'empreinte est stable et insensible à la casse du libellé.
     autre = ParsedLine(value_date=date(2026, 1, 5), amount=100, label="a\x00b\n  c  d\te")
     assert parsing.line_content_hash(line) == parsing.line_content_hash(autre)
+
+
+# --- Frais Mobile Money (3D) : la commission devient une ligne distincte [FRAIS]
+
+
+CSV_MOMO = (
+    "Date;Libellé;Montant;Frais;Référence\r\n"
+    "01/04/2026;Transfert reçu de Mariama S.;300000;0;OM-GN-25040101\r\n"
+    "02/04/2026;Paiement boutique Kaloum;-45000;250;OM-GN-25040202\r\n"
+    "03/04/2026;Retrait agent Matam;-200000;500;OM-GN-25040303\r\n"
+).encode()
+
+
+def test_csv_momo_frais_ligne_distincte() -> None:
+    lines = parse_csv(CSV_MOMO)
+    # Chaque opération à frais non nuls est suivie de sa ligne [FRAIS].
+    assert [(line.label, line.amount) for line in lines] == [
+        ("Transfert reçu de Mariama S.", 300000),
+        ("Paiement boutique Kaloum", -45000),
+        ("[FRAIS] Paiement boutique Kaloum", -250),
+        ("Retrait agent Matam", -200000),
+        ("[FRAIS] Retrait agent Matam", -500),
+    ]
+    # La ligne de frais partage la date et la référence de son opération :
+    # le rapprochement peut ainsi les lier, la commission reste comptabilisable
+    # séparément (nature « frais bancaires et Mobile Money » de la saisie guidée).
+    frais = lines[2]
+    assert frais.value_date == date(2026, 4, 2)
+    assert frais.reference == "OM-GN-25040202"
+    # Aucune ligne de frais n'invente un solde : la colonne n'existe pas pour elle.
+    assert frais.balance_after is None
+
+
+def test_csv_frais_zero_ou_vide_sans_ligne() -> None:
+    contenu = (
+        "Date;Libellé;Montant;Frais\n"
+        "10/04/2026;Transfert reçu;100000;0\n"
+        "11/04/2026;Transfert reçu;200000;\n"
+    ).encode()
+    lines = parse_csv(contenu)
+    assert [line.amount for line in lines] == [100000, 200000]
+    assert all(not line.label.startswith("[FRAIS]") for line in lines)
+
+
+def test_csv_frais_signes_variants_toujours_negatifs() -> None:
+    # Commission écrite négative, parenthétique ou avec signe à droite : une
+    # commission est une sortie du point de vue du titulaire, quel que soit
+    # l'export. Le sens n'est jamais inversé à l'aveugle.
+    contenu = (
+        "Date;Libellé;Montant;Frais\n"
+        "10/04/2026;Paiement A;50000;-100\n"
+        "11/04/2026;Paiement B;60000;(200)\n"
+        "12/04/2026;Paiement C;70000;300-\n"
+    ).encode()
+    lines = parse_csv(contenu)
+    assert [line.amount for line in lines if line.label.startswith("[FRAIS]")] == [-100, -200, -300]
+
+
+def test_csv_frais_avant_debit_et_montant() -> None:
+    # « Frais débités » ne doit pas être pris pour la colonne débit, ni
+    # « Montant des frais » pour la colonne montant : le rôle frais passe avant.
+    contenu = (
+        "Date;Libellé;Montant;Frais débités\n05/04/2026;Retrait agent;200000;250\n"
+        "Date;Libellé;Montant;Montant des frais\n06/04/2026;Paiement;100000;300\n"
+    ).encode()
+    lines = parse_csv(contenu)
+    assert [(line.label, line.amount) for line in lines] == [
+        ("Retrait agent", 200000),
+        ("[FRAIS] Retrait agent", -250),
+        ("Paiement", 100000),
+        ("[FRAIS] Paiement", -300),
+    ]
+
+
+def test_csv_bancaire_classique_sans_ligne_frais() -> None:
+    # Le format bancaire (3B) ne porte pas de colonne frais : aucun changement
+    # de comportement, aucune ligne [FRAIS] inventée.
+    lines = parse_csv(CSV_HEADER_FR)
+    assert [line.amount for line in lines] == [2500000, -75000, -250000]
+
+
+# --- Excel (.xlsx) : le même contrat de lecture que le CSV
+
+
+def _xlsx(rows: list[list[object]]) -> bytes:
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    assert sheet is not None
+    for row in rows:
+        sheet.append(row)
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    return buffer.getvalue()
+
+
+XLSX_MOMO = _xlsx(
+    [
+        ["Date", "Libellé", "Montant", "Frais", "Référence"],
+        [date(2026, 4, 1), "Transfert reçu de Mariama S.", 300000, 0, "OM-GN-25040101"],
+        [date(2026, 4, 2), "Paiement boutique Kaloum", -45000, 250, "OM-GN-25040202"],
+        [date(2026, 4, 3), "Retrait agent Matam", -200000, 500, "OM-GN-25040303"],
+    ]
+)
+
+
+def test_xlsx_momo_entetes_fr() -> None:
+    lines = parse_xlsx(XLSX_MOMO)
+    assert [(line.label, line.amount) for line in lines] == [
+        ("Transfert reçu de Mariama S.", 300000),
+        ("Paiement boutique Kaloum", -45000),
+        ("[FRAIS] Paiement boutique Kaloum", -250),
+        ("Retrait agent Matam", -200000),
+        ("[FRAIS] Retrait agent Matam", -500),
+    ]
+    # Les cellules date réelles d'Excel (datetime interne) donnent la bonne journée.
+    assert lines[0].value_date == date(2026, 4, 1)
+    assert lines[3].reference == "OM-GN-25040303"
+
+
+def test_xlsx_inference_sans_entete() -> None:
+    classeur = _xlsx(
+        [
+            [date(2026, 5, 2), "Dépôt espèces", 850000],
+            [date(2026, 5, 9), "Achat carburant", -45000],
+        ]
+    )
+    lines = parse_xlsx(classeur)
+    assert [line.amount for line in lines] == [850000, -45000]
+    assert lines[0].label == "Dépôt espèces"
+
+
+def test_xlsx_debit_credit_separes() -> None:
+    classeur = _xlsx(
+        [
+            ["Date", "Libellé", "Débit", "Crédit", "Solde"],
+            ["01/06/2026", "Virement salaire", "", 2500000, 2500000],
+            ["05/06/2026", "Loyer boutique", 450000, "", 2050000],
+        ]
+    )
+    lines = parse_xlsx(classeur)
+    assert [line.amount for line in lines] == [2500000, -450000]
+    assert lines[1].balance_after == 2050000
+
+
+def test_xlsx_detection_et_format() -> None:
+    assert parsing.detect_format(XLSX_MOMO) == "XLSX"
+    statement = parse_statement(XLSX_MOMO)
+    assert statement.format == "XLSX"
+    assert len(statement.lines) == 5
+
+
+def test_xlsx_macros_refusees() -> None:
+    # Un classeur à macros (xlsm) contient aussi xl/workbook.xml : il est reconnu
+    # comme Excel mais refusé explicitement — l'application ne lit jamais du code.
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("xl/workbook.xml", "<workbook/>")
+        archive.writestr("xl/vbaProject.bin", b"\x00\x01vba")
+    buffer.seek(0)
+    with pytest.raises(BusinessRuleError, match="macros"):
+        parse_statement(buffer.getvalue())
+
+
+def test_xlsx_corrompu_ou_zip_etranger_refuse() -> None:
+    # Archive invalide : ni OFX ni CSV ni Excel — refus net et exploitable.
+    with pytest.raises(BusinessRuleError, match="Format non reconnu"):
+        parse_statement(b"PK\x03\x04" + b"garbage" * 10)
+    # ZIP valide mais sans classeur (docx, odt…) : ce n'est pas un relevé.
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("word/document.xml", "<doc/>")
+    buffer.seek(0)
+    with pytest.raises(BusinessRuleError, match="Format non reconnu"):
+        parse_statement(buffer.getvalue())
+
+
+def test_xlsx_classeur_vide_refuse() -> None:
+    classeur = _xlsx([["Date", "Libellé", "Montant"]])
+    with pytest.raises(BusinessRuleError, match="Aucune opération lue dans ce fichier Excel"):
+        parse_statement(classeur)

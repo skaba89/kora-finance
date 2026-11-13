@@ -105,7 +105,7 @@ export async function recordTreasuryTransferAction(
   return { status: "success", message: t.common.saved };
 }
 
-/** Import d'un relevé bancaire (OFX ou CSV) : corps brut, pas de multipart. */
+/** Import d'un relevé bancaire (OFX, CSV ou Excel .xlsx) : corps brut, pas de multipart. */
 export async function importStatementAction(
   companyId: string,
   accountId: string,

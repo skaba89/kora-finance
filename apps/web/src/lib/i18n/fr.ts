@@ -499,11 +499,11 @@ export const fr = {
     releves: {
       title: "Relevés importés",
       subtitle:
-        "Fichiers OFX ou CSV exportés de votre banque. Les lignes attendent le rapprochement : rien n'est comptabilisé à l'import.",
-      importTitle: "Importer un relevé (OFX ou CSV)",
+        "Fichiers OFX, CSV ou Excel (.xlsx) exportés de votre banque ou de votre opérateur Mobile Money. Les lignes attendent le rapprochement : rien n'est comptabilisé à l'import.",
+      importTitle: "Importer un relevé (OFX, CSV ou Excel)",
       file: "Fichier du relevé",
-      fileHint: "Le contenu est analysé tel quel ; le réimport du même fichier est refusé.",
-      noFile: "Choisissez un fichier OFX ou CSV.",
+      fileHint: "Le contenu est analysé tel quel ; le réimport du même fichier est refusé. Une commission opérateur lue dans l'export devient une ligne distincte « [FRAIS] ».",
+      noFile: "Choisissez un fichier OFX, CSV ou Excel (.xlsx).",
       import: "Importer",
       importing: "Import en cours…",
       imported: "Relevé importé : {lines} lignes en attente de rapprochement.",

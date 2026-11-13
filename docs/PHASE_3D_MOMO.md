@@ -14,13 +14,13 @@ l'opérateur ; aucune écriture comptable n'est postée automatiquement.
 |---|---|---|
 | Relevés OFX 1.x/2.x (banques) | **Livré (3B)** | Parseur sur mesure, montants signés, GNF entier |
 | Relevés CSV génériques (banques et opérateurs) | **Livré (3B)** | Colonnes détectées par rôles, encodages UTF-8/cp1252 |
-| **Colonne « Frais » des exports Mobile Money → ligne `[FRAIS]` distincte** | **Livré (3D)** | CSV, toute colonne frais/commission reconnue |
+| **Colonne « Frais » des exports Mobile Money → ligne `[FRAIS]` distincte** | **Livré (3D)** | CSV et Excel, toute colonne frais/commission reconnue ; commission toujours négative (sortie), référence et date partagées avec l'opération accompagnée |
 | Déduplication fichier (SHA-256 par compte) | **Livré (3B)** | Réimport refusé, jamais de double comptage |
 | Déduplication métier par ligne (empreinte date/montant/libellé/référence) | **Livré (3B)** | Doublons signalés entre relevés recouvrants |
 | Rapprochement assisté des lignes importées (3C) | **Livré** | Confirmation toujours manuelle |
+| **Import Excel (.xlsx)** | **Livré (3D)** | Détection par le contenu (archive ZIP + classeur), même contrat de lecture que le CSV (en-têtes par rôle, sinon inférence) ; `.xlsm` (macros) refusé explicitement ; lecture `read_only`/`data_only` — les formules ne sont jamais évaluées |
 | Connecteurs API opérateurs (Collections/Disbursements) | **Non implémenté — désactivé** | Voir §2 et §3 |
 | Webhooks opérateurs | **Non implémenté — désactivé** | Requiert un contrat et une exposition signée |
-| Import Excel (.xlsx) | **Non implémenté** | Prochaine étape du même chantier |
 
 ## 2. Conditions officielles des API opérateurs (sources consultées le 13/11/2026)
 
@@ -40,7 +40,7 @@ Conformément à la mission (§3D) : *« Si les API ne sont pas accessibles,
 développer des adaptateurs d'import CSV/Excel explicitement étiquetés comme
 tels »*. Le périmètre livré est donc :
 
-1. **Import CSV étiqueté** — un export de relevé Orange Money / MTN MoMo
+1. **Import CSV/Excel étiqueté** — un export de relevé Orange Money / MTN MoMo
    déposé par le comptable est lu par le même pipeline que les relevés
    bancaires (3B) : lignes en attente de rapprochement, fichier original
    conservé chiffré, déduplication identique. La colonne frais de l'export
@@ -84,11 +84,9 @@ Le socle est préparé sans activer quoi que ce soit :
 
 ## 5. Prochaines étapes du chantier 3D
 
-1. Adaptateur **Excel** (.xlsx) sur le même contrat de lecture
-   (openpyxl déjà présent pour les exports) ;
-2. Recollement du parseur CSV sur un **export réel** dès qu'un opérateur
+1. Recollement du parseur CSV sur un **export réel** dès qu'un opérateur
    en fournit un (les colonnes cibles resteront ajustables sans rupture) ;
-3. Journal de suivi des erreurs de synchronisation (avec le premier
+2. Journal de suivi des erreurs de synchronisation (avec le premier
    connecteur `PULL`) ;
-4. Connecteurs API — **uniquement** après signature d'un contrat marchand et
+3. Connecteurs API — **uniquement** après signature d'un contrat marchand et
    validation du périmètre par le porteur du projet.

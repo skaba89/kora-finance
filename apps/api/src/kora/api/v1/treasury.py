@@ -121,7 +121,7 @@ class BankStatementOut(BaseModel):
     id: uuid.UUID
     account_id: uuid.UUID
     filename: str
-    format: Literal["OFX", "CSV"]
+    format: Literal["OFX", "CSV", "XLSX"]
     size_bytes: int
     sha256: str
     line_count: int

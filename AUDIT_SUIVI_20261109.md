@@ -1131,3 +1131,75 @@ Politique inchangée — preuve locale complète, CI encore bloquée :
 `main`. Prochain chantier : Phase 3D (architecture des connecteurs Mobile
 Money, adaptateurs d'import identifiés, sans activation simulée), puis Phase
 4A (référentiel clients/fournisseurs).
+
+## 31. Phase 3D — import Mobile Money étiqueté : frais `[FRAIS]` et classeurs Excel (2026-11-13)
+
+Le PR #80 (§ de même jour) fixait l'architecture 3D et l'état des lieux des API
+opérateurs : aucune autorisation marchande n'existe, le périmètre livré est
+l'**import de fichiers** étiqueté. La présente section couvre le chantier
+d'implémentation (PR #81) : reconnaître réellement la colonne frais des exports
+opérateurs et accepter les classeurs Excel.
+
+### Point d'honnêteté corrigé
+
+Le document d'architecture (PR #80) décrivait la ligne `[FRAIS]` comme « livré »
+alors qu'aucune colonne frais n'était reconnue par le parseur (aucun rôle dédié,
+aucun libellé `[FRAIS]` produit). Ce décalage doc/code est corrigé **par
+l'implémentation** : la capacité annoncée existe désormais, testée de bout en
+bout ; la table d'état (§1 du document d'architecture) reflète le code.
+
+### PR #81 — implémentation
+
+- **Frais Mobile Money** : nouvelle colonne d'en-tête `fee` (mots-clés « frais »,
+  « commission », « fee »), **prioritaire** sur débit/crédit/montant (« Frais
+  débités » n'est plus pris pour la colonne débit). Toute commission non nulle
+  devient une **ligne distincte `[FRAIS] …`** immédiatement après son opération :
+  montant toujours négatif (sortie du titulaire, quel que soit le signe écrit),
+  date et référence partagées avec l'opération, jamais de solde inventé. La
+  ligne suit le même cycle que les autres : `PENDING`, rapprochement confirmé
+  par un humain, **aucune écriture automatique**.
+- **Import Excel (.xlsx)** : détection par le **contenu** (archive ZIP portant
+  `xl/workbook.xml`), jamais par l'extension. Un `.xlsm` (classeur à macros) est
+  **refusé explicitement** (« l'application ne lit que des données, jamais du
+  code ») ; un ZIP étranger (docx, odt) n'est pas un relevé. Lecture
+  `read_only`/`data_only` via openpyxl (dépendance déjà présente pour les
+  exports) : les formules ne sont jamais évaluées. Cellules date (calendrier
+  Excel) et nombres normalisées, puis **lecture partagée avec le CSV** :
+  la fonction commune `_lines_from_rows` applique les mêmes rôles d'en-tête,
+  la même inférence sans en-tête et la même ligne `[FRAIS]` aux deux formats.
+- **Migration 0015** : contrainte `format` élargie à `XLSX` (drop + recréation,
+  convention de nommage identique). La **descente** purge explicitement les
+  relevés Excel (ils seraient illisibles pour le lecteur 0014) en levant la RLS
+  forcée le temps de la purge, dans la même transaction, puis rétablie à
+  l'identique — préambule testé par l'aller-retour complet des migrations.
+- **API** : `BankStatementOut.format` étendu à `XLSX` ; contrat OpenAPI
+  régénéré (**86 chemins / 141 schémas**, pur ajout) et types TypeScript mis à
+  jour.
+- **Front** : l'écran d'import accepte `.xlsx` (mime Classeur OOXML) ; i18n
+  fr/en précise « OFX, CSV ou Excel » et annonce que « une commission opérateur
+  lue dans l'export devient une ligne distincte [FRAIS] ».
+
+**Toujours exclu** : aucun connecteur API activé ni simulé, aucun écran
+« connecté », aucun webhook — inchangé (cf. document d'architecture §3/§4).
+
+### Validation
+
+| Contrôle | Résultat |
+|---|---|
+| pytest complet (PG 16.2 réel, RLS active, Redis réel, Moto S3, Mailpit SMTP) | **794/794** (16 nouveaux tests : frais CSV/Excel, variantes de signe, priorité des rôles, xlsx en-têtes/inférence/débit-crédit, macros refusées, ZIP étranger, classeur vide, imports de bout en bout, réimport refusé) |
+| Ruff (lint + format) | 0 erreur |
+| mypy strict | 0 erreur (169 fichiers) |
+| ESLint `--max-warnings=0` / `tsc --noEmit` | 0 erreur |
+| Vitest | **69/69** |
+| Contrat OpenAPI | régénéré et committé (86 chemins) |
+| Migrations | aller-retour complet 0015 → base → 0015 vérifié |
+
+La CI reste bloquée par la facturation du compte GitHub (annotation officielle
+citée aux §29/§30) : restauration synthétique, pip-audit/SBOM et E2E Playwright
+seront rejoués après régularisation.
+
+**Score** : politique inchangée — preuve locale complète, CI encore indisponible
+: **84,5/100**. Phase 3D progresse : import étiqueté CSV **et** Excel livré,
+frais séparés, déduplication et rapprochement inchangés ; les connecteurs API
+restent suspendus à un contrat opérateur. Prochain chantier : **Phase 4A**
+(référentiel clients/fournisseurs).

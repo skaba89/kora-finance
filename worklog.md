@@ -1338,3 +1338,27 @@ restauré (spending limit > 0 ou reset du 1er décembre). Suivi :
   de rapprochement** confirmées cohérentes, 5 anomalies sans candidat ; ruff,
   mypy strict, **698/698** pytest, contrat OpenAPI inchangé, gitleaks sans
   nouveau signalement. Suivi : `AUDIT_SUIVI_20261109.md` §26.
+
+## 2026-11-13 — Phase 3D : import Mobile Money étiqueté (frais [FRAIS] + Excel)
+
+- Point d'honnêteté : le document d'architecture (PR #80) décrivait la ligne
+  `[FRAIS]` comme « livré » sans qu'aucune colonne frais ne soit reconnue —
+  corrigé par implémentation réelle et testée (doc remise au niveau du code).
+- Parseur : rôle d'en-tête `fee` (« frais », « commission », « fee ») prioritaire
+  sur débit/crédit/montant ; commission non nulle → ligne distincte `[FRAIS] …`
+  (montant toujours négatif, date/référence partagées, jamais de solde inventé) ;
+  même cycle que toute ligne : `PENDING`, rapprochement humain, zéro écriture auto.
+- Excel `.xlsx` : détection par contenu (ZIP + `xl/workbook.xml`), `.xlsm` refusé
+  explicitement, lecture openpyxl `read_only`/`data_only` (formules jamais
+  évaluées), lecture tabulaire partagée avec le CSV (`_lines_from_rows`).
+- Migration 0015 : contrainte `format` élargie à `XLSX` ; descente purge
+  explicitement les relevés Excel (RLS forcée levée le temps de la purge,
+  rétablie dans la même transaction) ; aller-retour complet testé.
+- API : `format: XLSX` dans la réponse ; OpenAPI régénéré (86 chemins/141
+  schémas) + types TS. Front : accept `.xlsx`, i18n fr/en (commission → ligne
+  distincte `[FRAIS]`).
+- Aucun connecteur activé ni simulé : la CI opérateur reste suspendue à un
+  contrat marchand (cf. `docs/PHASE_3D_MOMO.md` §2/§4).
+- Validation : **794/794** pytest (16 nouveaux), ruff, mypy strict, ESLint 0,
+  `tsc` 0, Vitest **69/69**. CI toujours bloquée (facturation GitHub).
+- Suivi : `AUDIT_SUIVI_20261109.md` §31 ; doc `docs/PHASE_3D_MOMO.md` à jour.
