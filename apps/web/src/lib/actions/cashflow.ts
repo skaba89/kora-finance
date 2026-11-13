@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 
 import { api } from "@/lib/api/server";
-import { actionDictionary, failure, field } from "@/lib/actions/support";
+import { actionDictionary, failure } from "@/lib/actions/support";
 import { SCENARIOS, type ForecastScenario } from "@/lib/cashflow";
 import type { ActionState } from "./state";
 
@@ -20,11 +20,16 @@ export async function updateCashflowSettingsAction(
   _: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const critical = Number(field(formData, "critical_floor_minor"));
-  const warningRaw = field(formData, "warning_floor_minor");
-  const warning = warningRaw === "" ? null : Number(warningRaw);
-  const horizon = Number(field(formData, "default_horizon_days"));
-  const scenario = field(formData, "default_scenario") as ForecastScenario;
+  const critical = Number(formData.get("critical_floor_minor"));
+  const warningRaw = formData.get("warning_floor_minor");
+  const warning =
+    typeof warningRaw === "string" && warningRaw.trim() !== "" ? Number(warningRaw) : null;
+  const horizon = Number(formData.get("default_horizon_days"));
+  const scenarioRaw = formData.get("default_scenario");
+  const scenario =
+    typeof scenarioRaw === "string" && SCENARIOS.includes(scenarioRaw as ForecastScenario)
+      ? (scenarioRaw as ForecastScenario)
+      : null;
 
   // Garde-fous locaux (l'API revalide tout) : entiers non négatifs, horizon
   // borné, scénario connu, surveillance >= critique — sinon messages clairs.
@@ -44,7 +49,7 @@ export async function updateCashflowSettingsAction(
     const t = await actionDictionary();
     return { status: "error", message: t.common.unexpectedError };
   }
-  if (!SCENARIOS.includes(scenario)) {
+  if (scenario === null) {
     const t = await actionDictionary();
     return { status: "error", message: t.common.unexpectedError };
   }
@@ -67,18 +72,20 @@ export async function updateCashflowSettingsAction(
   return { status: "success", message: t.cashflow.settingsSaved };
 }
 
-/** Fige la prévision courante en un instantané (base du prévisionnel vs réalisé). */
+/** Fige la prévision courante en un instantané (base du prévisionnel vs réalisé).
+ * Le scénario est celui de l'écran au moment du clic : passé en argument lié,
+ * jamais par le formulaire. */
 export async function createCashflowSnapshotAction(
   companyId: string,
-  _: ActionState,
-  formData: FormData,
+  scenario: ForecastScenario,
 ): Promise<ActionState> {
-  const scenarioRaw = field(formData, "scenario") as ForecastScenario;
-  const scenario = SCENARIOS.includes(scenarioRaw) ? scenarioRaw : "NEUTRE";
   const { error, response } = await (await api()).POST(
     "/api/v1/companies/{company_id}/cashflow/snapshots",
     {
-      params: { path: { company_id: companyId }, query: { scenario } },
+      params: {
+        path: { company_id: companyId },
+        query: { scenario: SCENARIOS.includes(scenario) ? scenario : "NEUTRE" },
+      },
     },
   );
   if (!response.ok) return failure(error);

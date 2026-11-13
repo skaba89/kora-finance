@@ -151,7 +151,7 @@ export default async function CashflowPage({
         {manage ? (
           <>
             <InlineAction
-              action={createCashflowSnapshotAction.bind(null, companyId)}
+              action={createCashflowSnapshotAction.bind(null, companyId, scenario)}
               label={t.cashflow.freeze}
               pendingLabel={t.common.pending}
               showSuccess
