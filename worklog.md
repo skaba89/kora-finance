@@ -3,6 +3,43 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-13 — Make compatible PowerShell (PR #79) : première exécution réelle de l'utilisateur
+
+**Reterrain** — première exécution sur Docker Desktop (Windows 11, PowerShell) :
+`make seed` a bien atteint le conteneur api et le seed a répondu « La
+démonstration existe déjà ; utilisez --reset » (pile en marche, données
+prêtes) ; en revanche `make env` et `make up` échouaient car PowerShell n'a
+ni `bash` ni les coreutils (`id`) sur le PATH — erreurs CreateProcess sur
+`id -u`/`id -g` et « Le fichier spécifié est introuvable » sur
+`./scripts/init-env.sh`.
+
+**Corrections (Makefile)** :
+
+- `KORA_UID`/`KORA_GID` : détection `OS=Windows_NT` + `MSYSTEM` — Git Bash
+  garde `id -u`/`id -g` (comportement inchangé), PowerShell/cmd prennent 1000
+  (Compose applique déjà `${KORA_UID:-1000}`) sans plus de bruit CreateProcess ;
+  Linux/macOS inchangés ;
+- `env` : appel explicite `bash ./scripts/init-env.sh` avec message d'action
+  clair si bash manque (".env présent → passer à make up" / "Git Bash §5")
+  au lieu d'une erreur Windows illisible ;
+- `up` : le prérequis `env` n'est déclenché que si `.env` est absent
+  (`$(wildcard .env)`) — Compose lit `.env` lui-même, donc `make up` marche
+  depuis PowerShell une fois l'environnement créé.
+
+**Documentation (`docs/DEMO.md`)** : tableau §5.1 étendu à 4 colonnes
+(Windows PowerShell), nouvelle §5.8 « PowerShell (sans Git Bash) » — cibles
+fonctionnelles, exception `make env`, et précision explicite : le message
+« La démonstration existe déjà » n'est **pas une panne** (garde anti-doublon
+volontaire du seed, pile saine).
+
+**Validation** : `make -n up` sans `.env` (prérequis env + message), avec
+`.env` touché puis supprimé (compose direct), `make help` (libellés) ;
+cohérence du tableau markdown vérifiée (5 pipes par ligne). Aucun code
+applicatif — pas d'impact pytest/score.
+
+**Reste** : confirmation utilisateur sur PowerShell après pull ; suite
+Phase 3D.
+
 ## 2026-11-13 — Cibles `make seed` / `make seed-reset` (PR #78) et contrôle statique de la pile Docker
 
 **Motivation** — lancement de la pile sur Docker Desktop : le parcours était

@@ -127,14 +127,14 @@ Commandes **exécutées et validées** le 12/11/2026 sur Windows 11 + Git Bash
 
 ### 5.1 Différences Windows ↔ Ubuntu
 
-| Besoin | Ubuntu / macOS | Windows Git Bash |
-|---|---|---|
-| Orchestration | `make up`, `make migrate`, … | `make` fonctionne si **GNU Make est installé** (§5.2) ; sinon exécuter les cibles à la main (§5.3) |
-| Chemins Docker (volumes, montages) | `/home/…` | Toujours préfixer `MSYS_NO_PATHCONV=1` : sinon Git Bash réécrit `/app/…` en `C:/Program Files/Git/app/…` |
-| `docker compose exec` interactif | `docker compose exec api sh` | Ajouter **`-T`** : `docker compose exec -T api sh` (sinon « the input device is not a TTY ») |
-| Sortie de fichiers du conteneur | `--out` direct | Le conteneur API est **durci** (utilisateur non-root `kora`, `/app` en lecture seule) : écrire dans `/tmp` du conteneur puis `docker compose cp` (§5.3) |
-| Fin de ligne | LF natif | Cloner avec `core.autocrlf=false` ; `.gitattributes` normalise le dépôt (PR repo-hygiene) |
-| Docker Desktop | démon natif | Vérifier « WSL 2 backend » actif (Settings → General) |
+| Besoin | Ubuntu / macOS | Windows Git Bash | Windows PowerShell |
+|---|---|---|---|
+| Orchestration | `make up`, `make migrate`, … | `make` fonctionne si **GNU Make est installé** (§5.2) ; sinon exécuter les cibles à la main (§5.3) | `make up/seed/seed-reset/down/logs/ps` fonctionnent sans bash (PR #79) ; **`make env` exige Git Bash** la première fois (§5.2) |
+| Chemins Docker (volumes, montages) | `/home/…` | Toujours préfixer `MSYS_NO_PATHCONV=1` : sinon Git Bash réécrit `/app/…` en `C:/Program Files/Git/app/…` | Aucune réécriture MSYS : préfixer inutile |
+| `docker compose exec` interactif | `docker compose exec api sh` | Ajouter **`-T`** : `docker compose exec -T api sh` (sinon « the input device is not a TTY ») | Idem Git Bash : ajouter `-T` si besoin |
+| Sortie de fichiers du conteneur | `--out` direct | Le conteneur API est **durci** (utilisateur non-root `kora`, `/app` en lecture seule) : écrire dans `/tmp` du conteneur puis `docker compose cp` (§5.3) | Idem Git Bash (§5.3) |
+| Fin de ligne | LF natif | Cloner avec `core.autocrlf=false` ; `.gitattributes` normalise le dépôt (PR repo-hygiene) | Idem Git Bash |
+| Docker Desktop | démon natif | Vérifier « WSL 2 backend » actif (Settings → General) | Idem Git Bash |
 
 ### 5.2 Installation de GNU Make (une fois)
 
@@ -212,3 +212,18 @@ démo), vérifier en particulier :
 - Les identifiants de démo ne quittent jamais ce périmètre (jamais en
   production) ;
 - Réinitialisation : §3 ci-dessus (`--reset`).
+
+### 5.8 PowerShell (sans Git Bash)
+
+Le Makefile détecte l'absence de coreutils (PR #79) : `make up`, `make seed`,
+`make seed-reset`, `make down`, `make logs`, `make ps` et les cibles docker
+compose pures fonctionnent directement depuis PowerShell.
+
+- **`make env` reste l'exception** : le script `scripts/init-env.sh` est bash —
+  la première création de `.env` se fait depuis Git Bash (§5.2), ou à la main
+  (§5.3, étape 1). Une fois `.env` présent, `make up` ne l'appelle plus :
+  Compose lit `.env` lui-même.
+- `make seed` qui répond « La démonstration existe déjà ; utilisez --reset »
+  n'est **pas une panne** : exit volontaire du script pour éviter un doublon —
+  la pile tourne et les données sont prêtes (se connecter, §5.6), ou lancer
+  `make seed-reset` pour repartir de zéro.
