@@ -2,8 +2,23 @@
 # seuls Docker et make sont nécessaires sur le poste.
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-export KORA_UID := $(shell id -u)
-export KORA_GID := $(shell id -g)
+# Sous Windows, Git Bash (MSYSTEM défini) fournit id et bash ; PowerShell et cmd
+# non. Dans ce cas on évite d'appeler id (erreurs CreateProcess bruyantes) et
+# Compose applique ses valeurs par défaut ${KORA_UID:-1000}:${KORA_GID:-1000}.
+ifeq ($(OS),Windows_NT)
+ifeq ($(MSYSTEM),)
+KORA_UID := 1000
+KORA_GID := 1000
+else
+KORA_UID := $(shell id -u)
+KORA_GID := $(shell id -g)
+endif
+else
+KORA_UID := $(shell id -u)
+KORA_GID := $(shell id -g)
+endif
+export KORA_UID
+export KORA_GID
 
 COMPOSE := docker compose
 API := $(COMPOSE) run --rm api-tools
@@ -18,10 +33,17 @@ WEB := $(COMPOSE) run --rm --no-deps web-tools
 help: ## Affiche cette aide
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*?## ' '{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
-env: ## Crée .env avec des secrets aléatoires (une seule fois)
-	@./scripts/init-env.sh
+env: ## Crée .env avec des secrets aléatoires (une seule fois ; bash requis sous Windows -> Git Bash)
+	@bash ./scripts/init-env.sh || { \
+		echo "bash introuvable sur le PATH." ; \
+		echo "  - Si .env existe déjà à la racine du dépôt : rien à faire, passez à make up." ; \
+		echo "  - Sinon, sous Windows : ouvrir Git Bash et relancer make env (docs/DEMO.md §5)." ; \
+		exit 1 ; }
 
-up: env ## Construit et démarre la pile complète (postgres, redis, migrations, api, worker, web)
+up: ## Construit et démarre la pile complète (postgres, redis, migrations, api, worker, web)
+ifeq ($(wildcard .env),)
+up: env
+endif
 	$(COMPOSE) up -d --build --wait
 
 down: ## Arrête la pile (conserve les données)
