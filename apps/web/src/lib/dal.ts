@@ -299,6 +299,14 @@ export async function getCashflowSnapshots(companyId: string, limit = 10) {
   );
 }
 
+export async function getCashflowSnapshot(companyId: string, snapshotId: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/cashflow/snapshots/{snapshot_id}", {
+      params: { path: { company_id: companyId, snapshot_id: snapshotId } },
+    }),
+  );
+}
+
 export async function getCashflowVsActual(companyId: string, snapshotId: string) {
   return read(
     (await api()).GET("/api/v1/companies/{company_id}/cashflow/snapshots/{snapshot_id}/vs-actual", {

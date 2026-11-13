@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Download } from "lucide-react";
+import { Download, Lock } from "lucide-react";
 
 import { ForecastChart } from "@/components/cashflow/forecast-chart";
+import { InlineAction } from "@/components/forms/inline-action";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { createCashflowSnapshotAction } from "@/lib/actions/cashflow";
 import {
   HORIZONS,
   SCENARIOS,
@@ -23,7 +25,7 @@ import {
   type ForecastHorizon,
   type ForecastScenario,
 } from "@/lib/cashflow";
-import { getCashflowForecast, getCashflowSnapshots, getCompany } from "@/lib/dal";
+import { can, getCashflowForecast, getCashflowSnapshots, getCompany } from "@/lib/dal";
 import { previsionsExportHref } from "@/lib/exports";
 import { formatMoney } from "@/lib/format";
 import { interpolate } from "@/lib/i18n/interpolate";
@@ -69,6 +71,9 @@ export default async function CashflowPage({
     getCashflowForecast(companyId, { horizon, scenario }),
     getCashflowSnapshots(companyId),
   ]);
+  // Figer un instantané exige treasury:manage (API) ; le bouton n'est rendu
+  // que pour ce rôle — la consultation reste ouverte dès treasury:read.
+  const manage = can(company, "treasury:manage");
 
   const tone = statusVariant(forecast.status);
 
@@ -143,6 +148,22 @@ export default async function CashflowPage({
             </a>
           </Button>
         ))}
+        {manage ? (
+          <>
+            <InlineAction
+              action={createCashflowSnapshotAction.bind(null, companyId, scenario)}
+              label={t.cashflow.freeze}
+              pendingLabel={t.common.pending}
+              showSuccess
+            />
+            <Button asChild variant="outline" size="sm">
+              <Link href="./previsions/reglages">
+                <Lock aria-hidden className="size-4" />
+                {t.cashflow.settings}
+              </Link>
+            </Button>
+          </>
+        ) : null}
       </div>
 
       <section aria-label={t.cashflow.accounts}>
@@ -269,6 +290,7 @@ export default async function CashflowPage({
                 <TableHead>{t.cashflow.scenario}</TableHead>
                 <TableHead className="text-right">{t.cashflow.balance}</TableHead>
                 <TableHead>{t.cashflow.status}</TableHead>
+                <TableHead>{t.cashflow.snapshotVsActual}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -284,6 +306,14 @@ export default async function CashflowPage({
                     <Badge variant={statusVariant(snapshot.status)}>
                       {statusLabel(snapshot.status, locale)}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Link
+                      href={`./previsions/instantanes/${snapshot.id}`}
+                      className="text-sm underline underline-offset-4"
+                    >
+                      {t.cashflow.snapshotVsActual}
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))}

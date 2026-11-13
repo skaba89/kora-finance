@@ -300,6 +300,15 @@ def test_instantane_fige_et_isole_par_dossier(
         == 404
     )
 
+    # Détail d'un instantané : même contenu que la liste, isolé par dossier.
+    detail = client.get(f"{ledger.base}/cashflow/snapshots/{snapshot['id']}", headers=headers)
+    assert detail.status_code == 200, detail.text
+    assert detail.json() == snapshot
+    assert (
+        client.get(f"{other_base}/cashflow/snapshots/{snapshot['id']}", headers=headers).status_code
+        == 404
+    )
+
 
 def test_instantane_d_un_autre_dossier_introuvable(
     client: TestClient, make_company: MakeCompany, make_user: MakeUser
