@@ -74,6 +74,32 @@ export async function getJournals(companyId: string) {
   );
 }
 
+/** Référentiel des tiers (4A) : clients et fournisseurs, filtrable et paginé. */
+export async function getPartners(
+  companyId: string,
+  query: {
+    q?: string;
+    kind?: "CLIENT" | "FOURNISSEUR";
+    active?: boolean;
+    limit: number;
+    offset: number;
+  },
+) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/partners", {
+      params: { path: { company_id: companyId }, query },
+    }),
+  );
+}
+
+export async function getPartner(companyId: string, partnerId: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/partners/{partner_id}", {
+      params: { path: { company_id: companyId, partner_id: partnerId } },
+    }),
+  );
+}
+
 /** Comptes financiers du dossier (banques, caisses, Mobile Money) et leurs soldes. */
 export async function getTreasuryAccounts(companyId: string) {
   return read(

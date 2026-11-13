@@ -72,3 +72,5 @@ EntriesPost = Annotated[TenantContext, Depends(require(Permission.ENTRIES_POST))
 LetteringManage = Annotated[TenantContext, Depends(require(Permission.LETTERING_MANAGE))]
 TreasuryRead = Annotated[TenantContext, Depends(require(Permission.TREASURY_READ))]
 TreasuryManage = Annotated[TenantContext, Depends(require(Permission.TREASURY_MANAGE))]
+PartnersRead = Annotated[TenantContext, Depends(require(Permission.PARTNERS_READ))]
+PartnersManage = Annotated[TenantContext, Depends(require(Permission.PARTNERS_MANAGE))]

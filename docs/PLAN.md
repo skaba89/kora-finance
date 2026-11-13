@@ -63,6 +63,12 @@ prévisionnel 30/60/90 jours.
 Devis, factures, avoirs à numérotation sans trou, PDF avec mentions légales, envoi
 email/WhatsApp, relances, balance âgée.
 - 100 créations concurrentes = 100 numéros consécutifs.
+- **4A — Référentiel des tiers** ✅ (2026-11-13, branche `feature/kora-4a-referentiel` :
+  table `partners` (client et/ou fournisseur, jamais supprimé, nom unique insensible à la
+  casse), mentions obligatoires des factures dès la fiche (NIU/NCC ou NIF, RCCM, adresse),
+  comptes de tiers par défaut 411x/401x validés par le service, RLS par dossier,
+  permissions `partners:read`/`partners:manage`, page fr/en avec recherche, filtres et
+  désactivation ; créer ou modifier un tier n'écrit rien en comptabilité).
 
 ## Phase 5 — Import et migration
 FEC, Excel, balance d'ouverture en tâche de fond, rapport de contrôle.

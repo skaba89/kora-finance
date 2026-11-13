@@ -23,5 +23,7 @@
 | `lettering:manage` | Lettrer et délettrer les comptes de tiers | — | ✅ | ✅ | ✅ | ✅ | — | — |
 | `treasury:read` | Consulter les comptes de trésorerie (banques, caisses, Mobile Money) et leurs mouvements | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | `treasury:manage` | Créer des comptes de trésorerie et enregistrer dépôts, retraits, frais et virements internes | — | ✅ | ✅ | ✅ | ✅ | — | — |
+| `partners:read` | Consulter le référentiel des tiers (clients, fournisseurs) | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| `partners:manage` | Créer, modifier et désactiver des tiers | — | ✅ | ✅ | ✅ | ✅ | — | — |
 
 SUPER_ADMIN : aucune permission sur les dossiers (administration de la plateforme uniquement). PARTENAIRE_FINANCIER : accès limité aux dossiers de financement partagés (phase 6).

@@ -35,6 +35,8 @@ class Permission(StrEnum):
     LETTERING_MANAGE = "lettering:manage"
     TREASURY_READ = "treasury:read"
     TREASURY_MANAGE = "treasury:manage"
+    PARTNERS_READ = "partners:read"
+    PARTNERS_MANAGE = "partners:manage"
 
 
 DESCRIPTIONS: dict[Permission, str] = {
@@ -62,6 +64,8 @@ DESCRIPTIONS: dict[Permission, str] = {
         "Créer des comptes de trésorerie et enregistrer dépôts, retraits, "
         "frais et virements internes"
     ),
+    Permission.PARTNERS_READ: "Consulter le référentiel des tiers (clients, fournisseurs)",
+    Permission.PARTNERS_MANAGE: "Créer, modifier et désactiver des tiers",
 }
 
 _READ = frozenset(
@@ -72,6 +76,7 @@ _READ = frozenset(
         Permission.TAXES_READ,
         Permission.ENTRIES_READ,
         Permission.TREASURY_READ,
+        Permission.PARTNERS_READ,
     }
 )
 _ACCOUNTING = _READ | {
@@ -84,6 +89,7 @@ _ACCOUNTING = _READ | {
     Permission.ENTRIES_POST,
     Permission.LETTERING_MANAGE,
     Permission.TREASURY_MANAGE,
+    Permission.PARTNERS_MANAGE,
 }
 _FULL = frozenset(Permission)
 
