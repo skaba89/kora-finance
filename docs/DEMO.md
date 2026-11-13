@@ -67,9 +67,28 @@ Ouvrir l'application sur http://localhost:3100 et se connecter avec l'un des com
    l'horizon et le scénario via les liens, lire « Comment ce chiffre est calculé »
    (coefficients du scénario, périmètre 5xx hors 58x, brouillons futurs exclus),
    puis exporter en PDF et Excel (chaque export est inscrit au journal d'audit).
-   Le badge de statut (sain / sous surveillance / critique) se calcule sur les seuils
-   par défaut ; « Comparer au réalisé » s'active après le figeage d'un instantané via
-   l'API (l'écran de figeage et de réglage des seuils arrive avec un PR de suivi).
+   **Tension de trésorerie prévue par le scénario** : le chèque postdaté remis à
+   Mamaya Import-Export (réassort trimestriel, 195 000 000 GNF, encaissé le
+   3 décembre) fait plonger la prévision sous zéro — statut **CRITIQUE**,
+   première date critique = 3 décembre, point bas ≈ −6 900 000 GNF. La séance
+   démontre la lecture de la tension et les leviers (encaisser FAC-F-2026-052,
+   reporter ou échelonner le chèque). Flux engagés fournis : chèque postdaté
+   reçu de Sahel Agro +12 500 000 GNF à +10 j ; brouillon de règlement Soleil
+   Élec à +25 j (visible dans « Brouillons futurs exclus ») ; facture fournisseur
+   à régler FAC-F-2026-052 (14 750 000 GNF, non lettrée).
+10. **Seuils d'alerte (3E)** : sur l'écran Prévision (rôle dirigeant), bouton
+    « Seuils d'alerte » → régler le seuil critique (ex. 10 000 000 GNF) et le
+    seuil de surveillance (ex. 25 000 000 GNF), l'horizon et le scénario par
+    défaut → « Enregistrer » : les statuts des journées et le badge global se
+    recalculent immédiatement (le lecteur voit les seuils sans pouvoir les
+    modifier).
+11. **Instantanés figés (3E)** : bouton « Figer cette prévision » (rôle
+    dirigeant, inscrit au journal d'audit) → l'instantané apparaît dans
+    « Instantanés figés » → « Comparer au réalisé » ouvre le détail : en-tête
+    figé (statut, solde initial, point bas, première date critique) puis la
+    comparaison jour à jour prévisionnel / réalisé / écart, les totaux et les
+    écarts les plus marquants dès que des écritures validées suivent le
+    figeage.
 
 ## 3. Repartir de zéro (réinitialisation)
 
