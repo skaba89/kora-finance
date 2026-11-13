@@ -1066,3 +1066,68 @@ encore indisponible : **84,5/100** (inchangé ; le crédit +0,5 attendu pour 3E 
 attribué dès confirmation CI). Action utilisateur requise : GitHub Settings →
 Billing & plans (régler le paiement ou relever la limite de dépenses), puis
 re-jouer les workflows sur `main`.
+
+## 30. Phase 3E finalisée — écrans de seuils/instantanés et démonstration de la tension (2026-11-13)
+
+La Phase 3E (§28) livrait le moteur, l'API et la page de prévision ; les deux PRs
+ci-dessous complètent le paramétrage, le figeage et la démonstration. Aucune
+reprise des phases 3A/3B/3C déjà livrées.
+
+### PR #75 — écrans de réglage des seuils, figeage et comparaison au réalisé
+
+- API : `GET /cashflow/snapshots/{id}` (détail isolé par dossier) — contrat
+  **pur ajout** vérifié mécaniquement (ancien contrat identique une fois le
+  nouveau chemin retiré), 86 chemins / 140 schémas ; types TS régénérés.
+- Écran **Seuils** (`/tresorerie/previsions/reglages`) : seuil critique et seuil
+  de surveillance (GNF, surveillance >= critique contrôlée côté action ET API),
+  horizon et scénario par défaut. Valeurs effectives visibles dès
+  `treasury:read` ; formulaire réservé à `treasury:manage`.
+- Écran **Instantané** (`/tresorerie/previsions/instantanes/{id}`) : en-tête
+  figé (statut, solde initial, point bas, première date critique) puis
+  comparaison jour à jour **prévisionnel / réalisé / écart**, totaux et écarts
+  les plus marquants ; état « vide » explicite tant que le réalisé n'existe pas.
+- Prévision : « Figer cette prévision » (audité côté API, scénario passé en
+  argument lié — jamais par un champ de formulaire) et lien « Seuils d'alerte » ;
+  i18n fr/en +14 clés (parité 68/68 vérifiée).
+- Rôles : consultation dès `treasury:read` (lecteur inclus), écriture réservée à
+  `treasury:manage` — l'API revalide.
+
+### PR #76 — échéances futures dans le jeu de démonstration
+
+`seed_demo.apply_forecast_echeances()` ajoute au scénario Djouma Distribution :
+
+1. chèque postdaté **reçu** de Sahel Agro à +10 j — 12 500 000 GNF, écriture
+   validée MANUELLE (journal BQ) : flux **ENGAGE** ;
+2. chèque postdaté **remis** à Mamaya Import-Export à +20 j — 195 000 000 GNF
+   (réassort trimestriel) : flux ENGAGE volontairement supérieur, **tension de
+   trésorerie** de la démonstration ;
+3. brouillon de règlement Soleil Élec à +25 j — apparaît dans « Brouillons
+   futurs exclus » (à valider au paiement réel) ;
+4. facture fournisseur à régler FAC-F-2026-052 — 14 750 000 GNF (TTC multiple
+   de 590 000 GNF : scission HT/TVA exacte), restée non lettrée.
+
+`demo_today()` : la date d'exécution est retenue quand elle tombe dans la
+fenêtre du scénario (octobre-novembre 2026), sinon la date de référence
+documentée (13 novembre 2026) — les échéances restent dans l'exercice ouvert et
+les relevés générés restent déterministes.
+
+**Preuve (base réelle PG 16.2, RLS active, seed exécuté deux fois)** :
+prévision 30 j NEUTRE = **CRITIQUE**, point bas **−6 947 387 GNF le
+2026-12-03**, première date critique 2026-12-03 ; ENGAGE +12 500 000 le 23/11,
+−195 000 000 le 03/12 ; brouillon exclu le 08/12 ; les trois fichiers de
+relevés (CSV octobre, OFX novembre, CSV Orange Money) **identiques** entre les
+deux exécutions ; `docs/DEMO.md` étapes 9-11 mises à jour (tension, seuils,
+instantanés figés).
+
+**Validation complète** : pytest **778/778** (nouveau test détail d'instantané
++ isolation 404), ruff check + format, mypy strict, ESLint 0, `tsc` 0, Vitest
+**69/69**, build Next OK. Reste à la CI quand la facturation sera régularisée :
+restauration synthétique, pip-audit/SBOM, E2E Playwright (parcours prévision :
+seuils → figer → comparer).
+
+**Score** : Phase 3E **complète** (moteur + API + écrans + démonstration).
+Politique inchangée — preuve locale complète, CI encore bloquée :
+**84,5/100** ; le crédit +0,5 (3E) sera attribué à la première CI verte sur
+`main`. Prochain chantier : Phase 3D (architecture des connecteurs Mobile
+Money, adaptateurs d'import identifiés, sans activation simulée), puis Phase
+4A (référentiel clients/fournisseurs).
