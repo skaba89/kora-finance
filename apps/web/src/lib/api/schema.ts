@@ -1994,7 +1994,7 @@ export interface components {
              * Format
              * @enum {string}
              */
-            format: "OFX" | "CSV";
+            format: "OFX" | "CSV" | "XLSX";
             /**
              * Id
              * Format: uuid
@@ -9719,7 +9719,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        /** @description Contenu brut du relevé (OFX ou CSV) */
+        /** @description Contenu brut du relevé (OFX, CSV ou Excel (.xlsx)) */
         requestBody: {
             content: {
                 "application/octet-stream": string;

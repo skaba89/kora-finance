@@ -11,9 +11,9 @@ import type { ActionState } from "@/lib/actions/state";
 const IDLE: ActionState = { status: "idle" };
 
 /**
- * Import d'un relevé bancaire (OFX ou CSV). Pas de réduction d'image ici : le
- * fichier est un texte lisible par le parseur, envoyé brut tel qu'exporté par la
- * banque (un fichier remanié perdrait sa valeur de traçabilité).
+ * Import d'un relevé bancaire (OFX, CSV ou Excel .xlsx). Pas de réduction ici :
+ * le fichier est envoyé brut tel qu'exporté par la banque ou l'opérateur Mobile
+ * Money (un fichier remanié perdrait sa valeur de traçabilité).
  */
 export function StatementUploadForm({
   action,
@@ -45,7 +45,7 @@ export function StatementUploadForm({
           id="statement-file"
           name="file"
           type="file"
-          accept=".ofx,.csv,.txt,application/octet-stream,text/csv,text/plain"
+          accept=".ofx,.csv,.txt,.xlsx,application/octet-stream,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           required
         />
         <p className="text-muted-foreground text-xs">{labels.hint}</p>

@@ -245,7 +245,7 @@ class BankStatement(Base):
         # comptage). Un même fichier sur deux comptes distincts n'est pas impossible
         # (export multi-comptes) : la contrainte porte donc sur le couple.
         UniqueConstraint("tenant_id", "financial_account_id", "sha256"),
-        CheckConstraint("format IN ('OFX', 'CSV')", name="format_valid"),
+        CheckConstraint("format IN ('OFX', 'CSV', 'XLSX')", name="format_valid"),
         CheckConstraint("length(trim(filename)) > 0", name="filename_not_blank"),
         CheckConstraint("line_count > 0", name="line_count_positive"),
         CheckConstraint("period_start <= period_end", name="period_ordered"),

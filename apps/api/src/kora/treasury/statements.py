@@ -52,7 +52,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-ACCEPTED_FORMATS = "OFX ou CSV"
+ACCEPTED_FORMATS = "OFX, CSV ou Excel (.xlsx)"
 
 
 def too_large() -> PayloadTooLargeError:

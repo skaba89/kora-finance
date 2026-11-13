@@ -716,7 +716,8 @@
           "format": {
             "enum": [
               "OFX",
-              "CSV"
+              "CSV",
+              "XLSX"
             ],
             "title": "Format",
             "type": "string"
@@ -14340,7 +14341,7 @@
               }
             }
           },
-          "description": "Contenu brut du relevé (OFX ou CSV)",
+          "description": "Contenu brut du relevé (OFX, CSV ou Excel (.xlsx))",
           "required": true
         },
         "responses": {

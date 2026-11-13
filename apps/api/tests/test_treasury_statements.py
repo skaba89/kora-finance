@@ -7,7 +7,10 @@ remettre), la suppression d'un relevé non rapproché, l'isolation par dossier e
 permissions (lecture sans écriture).
 """
 
+import io
+import zipfile
 from collections.abc import Callable
+from datetime import date
 
 import pytest
 from fastapi.testclient import TestClient
@@ -15,7 +18,8 @@ from httpx2 import Response
 
 from kora.core.config import get_settings
 from tests.conftest import CompanyFixture
-from tests.test_treasury import _banque_body
+from tests.test_statement_parsing import _xlsx
+from tests.test_treasury import _banque_body, _mm_body
 
 MakeCompany = Callable[..., CompanyFixture]
 
@@ -170,6 +174,96 @@ def test_meme_fichier_sur_deux_comptes_accepte(
     secondaire = _banque_id(client, company, name="Ecobank seconde")
     assert api.import_file(principal, OFX).status_code == 201
     assert api.import_file(secondaire, OFX).status_code == 201
+
+
+def _mm_id(client: TestClient, company: CompanyFixture, name: str = "Orange Money ventes") -> str:
+    response = client.post(
+        f"/api/v1/companies/{company.id}/treasury/accounts",
+        headers=company.headers,
+        json=_mm_body(client, company, name=name),
+    )
+    assert response.status_code == 201, response.text
+    return str(response.json()["id"])
+
+
+# Export Mobile Money en classeur Excel : la structure typique des opérateurs
+# (une ligne par transaction, commission dans une colonne dédiée).
+XLSX_MOMO = _xlsx(
+    [
+        ["Date", "Libellé", "Montant", "Frais", "Référence"],
+        [date(2026, 4, 1), "Transfert reçu de Mariama S.", 300000, 0, "OM-GN-25040101"],
+        [date(2026, 4, 2), "Paiement boutique Kaloum", -45000, 250, "OM-GN-25040202"],
+        [date(2026, 4, 3), "Retrait agent Matam", -200000, 500, "OM-GN-25040303"],
+    ]
+)
+
+CSV_MOMO = (
+    "Date;Libellé;Montant;Frais;Référence\r\n"
+    "01/04/2026;Transfert reçu de Mariama S.;300000;0;OM-GN-25040101\r\n"
+    "02/04/2026;Paiement boutique Kaloum;-45000;250;OM-GN-25040202\r\n"
+).encode()
+
+
+def test_import_xlsx_momo_lignes_frais_distinctes(
+    client: TestClient, make_company: MakeCompany
+) -> None:
+    company = make_company()
+    api = Statements(client, company)
+    account_id = _mm_id(client, company)
+    response = api.import_file(account_id, XLSX_MOMO, filename="orange_money_avril.xlsx")
+    assert response.status_code == 201, response.text
+    statement = response.json()
+    assert statement["format"] == "XLSX"
+    assert statement["line_count"] == 5
+
+    lines = api.lines(statement["id"]).json()
+    assert [line["label"] for line in lines["items"]] == [
+        "Transfert reçu de Mariama S.",
+        "Paiement boutique Kaloum",
+        "[FRAIS] Paiement boutique Kaloum",
+        "Retrait agent Matam",
+        "[FRAIS] Retrait agent Matam",
+    ]
+    frais = lines["items"][2]
+    assert frais["amount"] == "-250"
+    assert frais["status"] == "PENDING"
+    # La commission suit le même cycle que toute ligne de relevé : en attente de
+    # rapprochement confirmé par un humain — jamais de comptabilisation automatique.
+
+
+def test_import_csv_momo_frais_lignes(client: TestClient, make_company: MakeCompany) -> None:
+    company = make_company()
+    api = Statements(client, company)
+    account_id = _mm_id(client, company)
+    response = api.import_file(account_id, CSV_MOMO, filename="momo_avril.csv")
+    assert response.status_code == 201, response.text
+    assert response.json()["format"] == "CSV"
+    lines = api.lines(response.json()["id"]).json()
+    assert [line["amount"] for line in lines["items"]] == ["300000", "-45000", "-250"]
+
+
+def test_reimport_xlsx_refuse(client: TestClient, make_company: MakeCompany) -> None:
+    company = make_company()
+    api = Statements(client, company)
+    account_id = _mm_id(client, company)
+    assert api.import_file(account_id, XLSX_MOMO).status_code == 201
+    again = api.import_file(account_id, XLSX_MOMO)
+    assert again.status_code == 409
+    assert "déjà été importé" in again.json()["detail"]
+
+
+def test_classeur_macros_refuse(client: TestClient, make_company: MakeCompany) -> None:
+    company = make_company()
+    api = Statements(client, company)
+    account_id = _mm_id(client, company)
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("xl/workbook.xml", "<workbook/>")
+        archive.writestr("xl/vbaProject.bin", b"\x00\x01vba")
+    response = api.import_file(account_id, buffer.getvalue(), filename="releve.xlsm")
+    assert response.status_code == 422
+    assert "macros" in response.json()["detail"]
+    assert api.list(account_id).json()["total"] == 0
 
 
 def test_import_csv_debit_credit(client: TestClient, make_company: MakeCompany) -> None:

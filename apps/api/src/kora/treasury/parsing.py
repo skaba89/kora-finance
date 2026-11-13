@@ -1,10 +1,11 @@
-"""Lecture des relevés bancaires : formats OFX et CSV.
+"""Lecture des relevés bancaires : formats OFX, CSV et Excel (.xlsx).
 
-Le parseur est écrit sur mesure, sans dépendance nouvelle : les banques de la
-sous-région exportent des OFX 1.x (SGML aux balises souvent non fermées), parfois
-des OFX 2.x (XML), et des CSV aux colonnes variées (dates JJ/MM/AAAA, montants
-« 1 234 567 » avec espaces insécables et virgule décimale, débit et crédit en deux
-colonnes). Un parseur tiers ne suivrait pas ces variations.
+Le parseur est écrit sur mesure, sans dépendance nouvelle : les banques et les
+opérateurs Mobile Money de la sous-région exportent des OFX 1.x (SGML aux balises
+souvent non fermées), parfois des OFX 2.x (XML), des CSV aux colonnes variées
+(dates JJ/MM/AAAA, montants « 1 234 567 » avec espaces insécables et virgule
+décimale, débit et crédit en deux colonnes) et des classeurs Excel. Un parseur
+tiers ne suivrait pas ces variations.
 
 Le montant d'une ligne est **signé, du point de vue du titulaire du compte** :
 positif = entrée de fonds (la banque crédite), négatif = sortie. C'est la convention
@@ -22,15 +23,24 @@ import hashlib
 import io
 import re
 import unicodedata
+import zipfile
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+
+import openpyxl
 
 from kora.core.errors import BusinessRuleError
 
 # Longueurs maximales d'une ligne de relevé (alignées sur la migration 0012).
 LABEL_MAX = 200
 REFERENCE_MAX = 60
+
+# Étiquette de la ligne de frais opérateur (3D) : la commission d'un export Mobile
+# Money devient une ligne distincte, visible à l'écran d'import, au rapprochement
+# et dans les exports — jamais fondue dans le montant de l'opération.
+FEE_LABEL_PREFIX = "[FRAIS]"
+FEE_FALLBACK_LABEL = "frais opérateur"
 
 _LABEL_CLEAN = re.compile(r"\s+")
 
@@ -57,13 +67,29 @@ class ParsedStatement:
     lines: list[ParsedLine]
 
 
+def _detect_zip(content: bytes) -> str | None:
+    """Un fichier ZIP n'est un relevé que s'il porte un classeur Excel ; tout
+    autre ZIP (docx, odt, archive quelconque) n'en est pas un."""
+    try:
+        with zipfile.ZipFile(io.BytesIO(content)) as archive:
+            names = archive.namelist()
+    except (zipfile.BadZipFile, OSError):
+        return None
+    if "xl/workbook.xml" in names:
+        return "XLSX"
+    return None
+
+
 def detect_format(content: bytes) -> str | None:
     """Format du relevé d'après le contenu (jamais l'extension fournie par le client).
 
-    Reconnu : OFX (en-tête OFXHEADER ou document XML) et CSV (texte à délimiteur).
-    Renvoie None pour tout le reste (PDF, image, binaire) : le service précise alors
-    les formats acceptés.
+    Reconnu : OFX (en-tête OFXHEADER ou document XML), CSV (texte à délimiteur) et
+    Excel (.xlsx : archive ZIP contenant le classeur). Renvoie None pour tout le
+    reste (PDF, image, autre binaire) : le service précise alors les formats
+    acceptés.
     """
+    if content[:4] == b"PK\x03\x04":
+        return _detect_zip(content)
     head = content[:2048].lstrip()
     if re.match(rb"(OFXHEADER\s*:|<\?xml|OFX)", head, re.IGNORECASE):
         return "OFX"
@@ -80,7 +106,8 @@ def detect_format(content: bytes) -> str | None:
 
 
 def parse_statement(content: bytes) -> ParsedStatement:
-    """Lit un relevé OFX ou CSV. Lève BusinessRuleError si rien n'est exploitable."""
+    """Lit un relevé OFX, CSV ou Excel (.xlsx). Lève BusinessRuleError si rien
+    n'est exploitable."""
     fmt = detect_format(content)
     if fmt == "OFX":
         lines = parse_ofx(content)
@@ -97,7 +124,17 @@ def parse_statement(content: bytes) -> ParsedStatement:
             "Aucune opération lue dans ce fichier CSV : colonnes date et montant "
             "introuvables ou vides."
         )
-    raise BusinessRuleError("Format non reconnu : exportez le relevé au format OFX ou CSV.")
+    if fmt == "XLSX":
+        lines = parse_xlsx(content)
+        if lines:
+            return ParsedStatement("XLSX", lines)
+        raise BusinessRuleError(
+            "Aucune opération lue dans ce fichier Excel : colonnes date et montant "
+            "introuvables ou vides."
+        )
+    raise BusinessRuleError(
+        "Format non reconnu : exportez le relevé au format OFX, CSV ou Excel (.xlsx)."
+    )
 
 
 # --- OFX
@@ -185,10 +222,13 @@ def parse_ofx(content: bytes) -> list[ParsedLine]:
 # --- CSV
 
 # Mots-clés d'en-tête par rôle, par priorité de reconnaissance : une colonne « Date
-# d'opération » ne doit pas être prise pour un libellé (« opération »).
+# d'opération » ne doit pas être prise pour un libellé (« opération »), et une colonne
+# « Frais » ne doit pas être prise pour un débit (« frais débités ») ni un montant
+# (« montant des frais ») : le rôle frais passe donc avant debit/credit/amount.
 _ROLE_HINTS: list[tuple[str, tuple[str, ...]]] = [
     ("date", ("date", "valeur")),
     ("balance", ("solde",)),
+    ("fee", ("frais", "commission", "fee")),
     ("debit", ("débit", "debit")),
     ("credit", ("crédit", "credit")),
     ("amount", ("montant", "amount")),
@@ -378,16 +418,27 @@ def _row_amount(row: list[str], columns: dict[str, int]) -> int | None:
     return None
 
 
-def parse_csv(content: bytes) -> list[ParsedLine]:
-    """Opérations d'un CSV d'export bancaire. Colonnes détectées par en-tête si
-    possible, sinon par la nature des données (dates lisibles, montants numériques)."""
-    text = _decode_csv(content)
-    delimiter = _sniff_delimiter(text[:4096])
-    rows = [
-        row
-        for row in csv.reader(io.StringIO(text), delimiter=delimiter)
-        if any(cell.strip() for cell in row)
-    ]
+def _row_fee(row: list[str], columns: dict[str, int]) -> int | None:
+    """Commission opérateur de la ligne (3D), lue dans la colonne frais/commission
+    des exports Mobile Money. Renvoie None sans colonne frais ou à montant nul.
+    La commission est une sortie du point de vue du titulaire : toujours négative,
+    quel que soit le signe écrit dans l'export (250, -250, (250), 250-)."""
+    if "fee" not in columns:
+        return None
+    index = columns["fee"]
+    if index >= len(row):
+        return None
+    value = _parse_number(row[index])
+    if value is None or value == 0:
+        return None
+    return -abs(value)
+
+
+def _lines_from_rows(rows: list[list[str]]) -> list[ParsedLine]:
+    """Lecture partagée des formats tabulaires (CSV et Excel) : en-têtes reconnus
+    par rôle si possible, sinon inférence par la nature des données (dates lisibles,
+    montants numériques). Chaque ligne d'opération peut être suivie de sa ligne de
+    frais (3D) quand une colonne frais/commission est reconnue."""
     if len(rows) < 2:
         return []
     header_columns = _header_columns(rows[0])
@@ -438,7 +489,110 @@ def parse_csv(content: bytes) -> list[ParsedLine]:
                 balance_after=balance_after,
             )
         )
+        # 3D — frais Mobile Money : la commission de l'export devient une ligne
+        # distincte, immédiatement après l'opération qu'elle accompagne. Elle suit
+        # le même cycle que les autres lignes : PENDING, rapprochement confirmé par
+        # un humain, jamais de comptabilisation automatique.
+        fee = _row_fee(row, columns)
+        if fee is not None:
+            fee_label = (
+                f"{FEE_LABEL_PREFIX} {label}"
+                if label != "opération de relevé"
+                else f"{FEE_LABEL_PREFIX} {FEE_FALLBACK_LABEL}"
+            )
+            lines.append(
+                ParsedLine(
+                    value_date=value_date,
+                    amount=fee,
+                    label=fee_label[:LABEL_MAX],
+                    reference=reference,
+                )
+            )
     return lines
+
+
+def parse_csv(content: bytes) -> list[ParsedLine]:
+    """Opérations d'un CSV d'export bancaire. Colonnes détectées par en-tête si
+    possible, sinon par la nature des données (dates lisibles, montants numériques)."""
+    text = _decode_csv(content)
+    delimiter = _sniff_delimiter(text[:4096])
+    rows = [
+        row
+        for row in csv.reader(io.StringIO(text), delimiter=delimiter)
+        if any(cell.strip() for cell in row)
+    ]
+    return _lines_from_rows(rows)
+
+
+# --- Excel (.xlsx)
+
+# Un classeur à macros (xlsm) ou un classeur chiffré n'est pas un relevé accepté :
+# l'application ne lit que des données, jamais du code.
+_XLSX_MACRO_SIGNS = ("vbaProject.bin", "xl/macrosheets/")
+
+
+def _xlsx_cell(value: object) -> str:
+    """Cellule lue en texte : les dates Excel arrivent en date/datetime (calendrier
+    1900), les nombres en int/float — normalisées pour les mêmes lecteurs que le CSV
+    (dates AAAA-MM-JJ, montants décimaux)."""
+    if value is None:
+        return ""
+    if isinstance(value, datetime):
+        return value.strftime("%Y-%m-%d")
+    if isinstance(value, date):
+        return value.strftime("%Y-%m-%d")
+    if isinstance(value, bool):
+        return ""
+    if isinstance(value, float):
+        # Évite la notation scientifique des grands montants (1.2e+06).
+        return format(value, "f").rstrip("0").rstrip(".") or "0"
+    return str(value).strip()
+
+
+def _xlsx_rows(content: bytes) -> list[list[str]]:
+    """Lignes du classeur (première feuille), cellules normalisées en texte.
+    Lecture en mode read_only et data_only : les formules ne sont jamais évaluées
+    ni exécutées, seules les valeurs mises en cache par Excel sont lues."""
+    try:
+        workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+    except Exception as exc:
+        raise BusinessRuleError("Fichier Excel illisible ou corrompu.") from exc
+
+    rows: list[list[str]] = []
+    try:
+        sheet = workbook[workbook.sheetnames[0]]
+        for row in sheet.iter_rows(values_only=True):
+            cells = [_xlsx_cell(cell) for cell in row]
+            if any(cell for cell in cells):
+                rows.append(cells)
+    except Exception as exc:
+        raise BusinessRuleError("Fichier Excel illisible ou corrompu.") from exc
+    finally:
+        workbook.close()
+    return rows
+
+
+def _reject_macros(content: bytes) -> None:
+    """Un classeur à macros (xlsm) n'est pas un relevé accepté : l'application ne
+    lit que des données, jamais du code."""
+    try:
+        with zipfile.ZipFile(io.BytesIO(content)) as archive:
+            names = archive.namelist()
+    except zipfile.BadZipFile as exc:
+        raise BusinessRuleError("Fichier Excel illisible ou corrompu.") from exc
+    if any(sign in name for name in names for sign in _XLSX_MACRO_SIGNS):
+        raise BusinessRuleError(
+            "Les classeurs Excel à macros (.xlsm) ne sont pas acceptés : "
+            "enregistrez le relevé au format .xlsx."
+        )
+
+
+def parse_xlsx(content: bytes) -> list[ParsedLine]:
+    """Opérations d'un classeur Excel .xlsx : première feuille, mêmes conventions
+    que le CSV (en-têtes reconnus par rôle, sinon inférence par la nature des
+    données)."""
+    _reject_macros(content)
+    return _lines_from_rows(_xlsx_rows(content))
 
 
 # Empreinte métier d'une ligne : utilisée par le service pour signaler les doublons
