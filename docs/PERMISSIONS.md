@@ -25,5 +25,7 @@
 | `treasury:manage` | Créer des comptes de trésorerie et enregistrer dépôts, retraits, frais et virements internes | — | ✅ | ✅ | ✅ | ✅ | — | — |
 | `partners:read` | Consulter le référentiel des tiers (clients, fournisseurs) | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | `partners:manage` | Créer, modifier et désactiver des tiers | — | ✅ | ✅ | ✅ | ✅ | — | — |
+| `sales:read` | Consulter les devis, factures et avoirs | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| `sales:manage` | Créer, émettre (numérotation définitive), convertir et annuler devis, factures et avoirs | — | ✅ | ✅ | ✅ | ✅ | — | — |
 
 SUPER_ADMIN : aucune permission sur les dossiers (administration de la plateforme uniquement). PARTENAIRE_FINANCIER : accès limité aux dossiers de financement partagés (phase 6).

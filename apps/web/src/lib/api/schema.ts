@@ -1227,6 +1227,143 @@ export interface paths {
         patch: operations["update_partner_api_v1_companies__company_id__partners__partner_id__patch"];
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/sales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Documents
+         * @description Devis, factures et avoirs du dossier, filtrables et paginés.
+         */
+        get: operations["list_documents_api_v1_companies__company_id__sales_get"];
+        put?: never;
+        /** Create Document */
+        post: operations["create_document_api_v1_companies__company_id__sales_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/sales/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Document */
+        get: operations["get_document_api_v1_companies__company_id__sales__document_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Document */
+        delete: operations["delete_document_api_v1_companies__company_id__sales__document_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Document */
+        patch: operations["update_document_api_v1_companies__company_id__sales__document_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/sales/{document_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Invoice
+         * @description Annulation d'une facture émise sans avoir : le numéro est conservé.
+         */
+        post: operations["cancel_invoice_api_v1_companies__company_id__sales__document_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/sales/{document_id}/convert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Convert Quote
+         * @description Convertit un devis accepté en facture brouillon (numérotée à son émission).
+         */
+        post: operations["convert_quote_api_v1_companies__company_id__sales__document_id__convert_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/sales/{document_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Quote */
+        post: operations["decide_quote_api_v1_companies__company_id__sales__document_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/sales/{document_id}/issue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue Document
+         * @description Numérotation définitive d'une facture ou d'un avoir : irréversible, sans trou.
+         */
+        post: operations["issue_document_api_v1_companies__company_id__sales__document_id__issue_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/sales/{document_id}/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Quote
+         * @description Envoi d'un devis : numérotation définitive (chronologie sans trou).
+         */
+        post: operations["send_quote_api_v1_companies__company_id__sales__document_id__send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/tax-rates": {
         parameters: {
             query?: never;
@@ -2355,6 +2492,172 @@ export interface components {
             treasury_total: string;
             year_to_date: components["schemas"]["FiguresOut"];
         };
+        /** DecisionIn */
+        DecisionIn: {
+            /** Accepted */
+            accepted: boolean;
+        };
+        /** DocumentCreate */
+        DocumentCreate: {
+            /**
+             * Doc Kind
+             * @enum {string}
+             */
+            doc_kind: "quote" | "invoice" | "credit_note";
+            /** Due On */
+            due_on?: string | null;
+            /** Lines */
+            lines: components["schemas"]["kora__api__v1__sales__LineIn"][];
+            /** Notes */
+            notes?: string | null;
+            /** Origin Document Id */
+            origin_document_id?: string | null;
+            /**
+             * Partner Id
+             * Format: uuid
+             */
+            partner_id: string;
+            /** Reverses Document Id */
+            reverses_document_id?: string | null;
+            /** Valid Until */
+            valid_until?: string | null;
+        };
+        /** DocumentDetailOut */
+        DocumentDetailOut: {
+            /** Created At */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Doc Kind
+             * @enum {string}
+             */
+            doc_kind: "quote" | "invoice" | "credit_note";
+            /** Due On */
+            due_on: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issued On */
+            issued_on: string | null;
+            /** Issuer Snapshot */
+            issuer_snapshot: {
+                [key: string]: unknown;
+            } | null;
+            /** Lines */
+            lines: components["schemas"]["kora__api__v1__sales__LineOut"][];
+            /** Notes */
+            notes: string | null;
+            /** Number */
+            number: number | null;
+            /** Origin Document Id */
+            origin_document_id: string | null;
+            /**
+             * Partner Id
+             * Format: uuid
+             */
+            partner_id: string;
+            /** Partner Snapshot */
+            partner_snapshot: {
+                [key: string]: unknown;
+            } | null;
+            /** Reverses Document Id */
+            reverses_document_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "DRAFT" | "SENT" | "ACCEPTED" | "REJECTED" | "ISSUED" | "CANCELLED";
+            /** Total Ht */
+            total_ht: number;
+            /** Total Tax */
+            total_tax: number;
+            /** Total Ttc */
+            total_ttc: number;
+            /** Valid Until */
+            valid_until: string | null;
+        };
+        /**
+         * DocumentIssuedOut
+         * @description Résultat d'une numérotation définitive : document émis et mentions légales
+         *     manquantes signalées (non bloquant en 4B, règle dure avec le PDF en 4B-bis).
+         */
+        DocumentIssuedOut: {
+            document: components["schemas"]["DocumentDetailOut"];
+            /** Warnings */
+            warnings: string[];
+        };
+        /** DocumentOut */
+        DocumentOut: {
+            /** Created At */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Doc Kind
+             * @enum {string}
+             */
+            doc_kind: "quote" | "invoice" | "credit_note";
+            /** Due On */
+            due_on: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issued On */
+            issued_on: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Number */
+            number: number | null;
+            /** Origin Document Id */
+            origin_document_id: string | null;
+            /**
+             * Partner Id
+             * Format: uuid
+             */
+            partner_id: string;
+            /** Reverses Document Id */
+            reverses_document_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "DRAFT" | "SENT" | "ACCEPTED" | "REJECTED" | "ISSUED" | "CANCELLED";
+            /** Total Ht */
+            total_ht: number;
+            /** Total Tax */
+            total_tax: number;
+            /** Total Ttc */
+            total_ttc: number;
+            /** Valid Until */
+            valid_until: string | null;
+        };
+        /**
+         * DocumentUpdate
+         * @description PATCH partiel d'un brouillon : seuls les champs fournis sont modifiés ;
+         *     « lines » remplace intégralement les lignes.
+         */
+        DocumentUpdate: {
+            /** Due On */
+            due_on?: string | null;
+            /** Lines */
+            lines?: components["schemas"]["kora__api__v1__sales__LineIn"][] | null;
+            /** Notes */
+            notes?: string | null;
+            /** Valid Until */
+            valid_until?: string | null;
+        };
+        /** DocumentsOut */
+        DocumentsOut: {
+            /** Items */
+            items: components["schemas"]["DocumentOut"][];
+            /** Total */
+            total: number;
+        };
         /** EntryCreate */
         EntryCreate: {
             /**
@@ -2375,7 +2678,7 @@ export interface components {
             /** Label */
             label: string;
             /** Lines */
-            lines: components["schemas"]["LineIn"][];
+            lines: components["schemas"]["kora__api__v1__ledger__LineIn"][];
             /** Reference */
             reference?: string | null;
         };
@@ -2394,7 +2697,7 @@ export interface components {
             /** Label */
             label: string;
             /** Lines */
-            lines: components["schemas"]["LineIn"][];
+            lines: components["schemas"]["kora__api__v1__ledger__LineIn"][];
             /** Reference */
             reference?: string | null;
         };
@@ -2430,7 +2733,7 @@ export interface components {
             /** Label */
             label: string;
             /** Lines */
-            lines: components["schemas"]["LineOut"][];
+            lines: components["schemas"]["kora__api__v1__ledger__LineOut"][];
             /** Number */
             number: number | null;
             /** Posted At */
@@ -3094,6 +3397,15 @@ export interface components {
             /** Token */
             token: string;
         };
+        /**
+         * IssueIn
+         * @description Émission avec date explicite facultative (rattrapage de saisie) : la date
+         *     doit tomber dans un exercice ouvert, hors période verrouillée.
+         */
+        IssueIn: {
+            /** Issued On */
+            issued_on?: string | null;
+        };
         /** JoinedCompany */
         JoinedCompany: {
             /**
@@ -3310,54 +3622,6 @@ export interface components {
              * Format: uuid
              */
             id: string;
-        };
-        /** LineIn */
-        LineIn: {
-            /**
-             * Account Id
-             * Format: uuid
-             */
-            account_id: string;
-            /**
-             * Credit
-             * @description Montant entier en unités mineures, sous forme de chaîne
-             * @default 0
-             */
-            credit: string;
-            /**
-             * Debit
-             * @description Montant entier en unités mineures, sous forme de chaîne
-             * @default 0
-             */
-            debit: string;
-            /** Label */
-            label?: string | null;
-        };
-        /** LineOut */
-        LineOut: {
-            /**
-             * Account Id
-             * Format: uuid
-             */
-            account_id: string;
-            /** Account Label */
-            account_label: string;
-            /** Account Number */
-            account_number: string;
-            /**
-             * Credit
-             * @description Montant entier en unités mineures, sous forme de chaîne
-             */
-            credit: string;
-            /**
-             * Debit
-             * @description Montant entier en unités mineures, sous forme de chaîne
-             */
-            debit: string;
-            /** Label */
-            label: string | null;
-            /** Line No */
-            line_no: number;
         };
         /** LiveResponse */
         LiveResponse: {
@@ -4258,6 +4522,97 @@ export interface components {
              * @description Solde signé en unités mineures (positif = débiteur), en chaîne
              */
             variance: string;
+        };
+        /** LineIn */
+        kora__api__v1__ledger__LineIn: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /**
+             * Credit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             * @default 0
+             */
+            credit: string;
+            /**
+             * Debit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             * @default 0
+             */
+            debit: string;
+            /** Label */
+            label?: string | null;
+        };
+        /** LineOut */
+        kora__api__v1__ledger__LineOut: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Account Label */
+            account_label: string;
+            /** Account Number */
+            account_number: string;
+            /**
+             * Credit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            credit: string;
+            /**
+             * Debit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            debit: string;
+            /** Label */
+            label: string | null;
+            /** Line No */
+            line_no: number;
+        };
+        /** LineIn */
+        kora__api__v1__sales__LineIn: {
+            /**
+             * Discount Bp
+             * @default 0
+             */
+            discount_bp: number;
+            /** Label */
+            label: string;
+            /** Quantity */
+            quantity: number;
+            /** Tax Exempt Reason */
+            tax_exempt_reason?: string | null;
+            /** Tax Rate Id */
+            tax_rate_id?: string | null;
+            /** Unit Price Ht */
+            unit_price_ht: number;
+        };
+        /** LineOut */
+        kora__api__v1__sales__LineOut: {
+            /** Discount Bp */
+            discount_bp: number;
+            /** Label */
+            label: string;
+            /** Line Ht */
+            line_ht: number;
+            /** Line No */
+            line_no: number;
+            /** Line Tax */
+            line_tax: number;
+            /** Line Ttc */
+            line_ttc: number;
+            /** Quantity */
+            quantity: number;
+            /** Tax Bp Snapshot */
+            tax_bp_snapshot: number | null;
+            /** Tax Exempt Reason */
+            tax_exempt_reason: string | null;
+            /** Tax Rate Id */
+            tax_rate_id: string | null;
+            /** Unit Price Ht */
+            unit_price_ht: number;
         };
         /** StatementLineOut */
         kora__api__v1__statements__StatementLineOut: {
@@ -9451,6 +9806,663 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PartnerOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_documents_api_v1_companies__company_id__sales_get: {
+        parameters: {
+            query?: {
+                kind?: ("quote" | "invoice" | "credit_note") | null;
+                status?: ("DRAFT" | "SENT" | "ACCEPTED" | "REJECTED" | "ISSUED" | "CANCELLED") | null;
+                partner_id?: string | null;
+                q?: string | null;
+                /** @description Taille de page */
+                limit?: number;
+                /** @description Décalage */
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentsOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_document_api_v1_companies__company_id__sales_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentDetailOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_document_api_v1_companies__company_id__sales__document_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentDetailOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_document_api_v1_companies__company_id__sales__document_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_document_api_v1_companies__company_id__sales__document_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentDetailOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel_invoice_api_v1_companies__company_id__sales__document_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentDetailOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    convert_quote_api_v1_companies__company_id__sales__document_id__convert_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentDetailOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    decide_quote_api_v1_companies__company_id__sales__document_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentDetailOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    issue_document_api_v1_companies__company_id__sales__document_id__issue_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["IssueIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentIssuedOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    send_quote_api_v1_companies__company_id__sales__document_id__send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentIssuedOut"];
                 };
             };
             /** @description Unauthorized */
