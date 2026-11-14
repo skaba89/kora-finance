@@ -1390,3 +1390,56 @@ restauré (spending limit > 0 ou reset du 1er décembre). Suivi :
 - Validation : **825/825** pytest (19 nouveaux), ruff, mypy strict, ESLint 0,
   `tsc` 0, Vitest **69/69**. CI toujours bloquée (facturation GitHub) — à rejouer.
 - Suivi : `AUDIT_SUIVI_20261109.md` §32.
+
+## 2026-11-14 — Phase 4B : devis, factures et avoirs à numérotation sans trou
+
+- Socle du cycle ventes (PR #83) : migration 0017 — `document_sequences` (dernier
+  numéro par type de document et par exercice), `sales_documents` (en-tête unique
+  devis/facture/avoir), `sales_document_lines` (quantités en millièmes, remise en
+  points de base, taux de TVA daté figé à l'émission) ; RLS `tenant_isolation`
+  forcée sur les trois tables.
+- Numérotation sans trou : réplique du protocole des journaux comptables
+  (`JournalSequence`) — upsert inoffensif, verrou FOR UPDATE, incrément dans la
+  même transaction que l'émission. Un brouillon n'est jamais numéroté (modifiable
+  et supprimable sans consommer de numéro) ; une annulation conserve le numéro
+  (jamais de réutilisation) ; un échec après l'incrément est un ROLLBACK qui
+  restaure le compteur — propriété prouvée par test.
+- Critère du PLAN vérifié : **100 émissions concurrentes = 100 numéros consécutifs**
+  (connexions PostgreSQL réelles, fils concurrents, ensemble exact 1..100 vérifié,
+  compteur final = 100).
+- Cycles de vie : devis numéroté à l'envoi (accepté/refusé garde son numéro,
+  conversion en facture brouillon), facture émise irréversible (annulation par
+  avoir de contrepassation → CANCELLED dans la même transaction, ou annulation
+  directe), avoir partiel ou annulateur (unicité du lien de contrepassation,
+  second refus propre 409 dès la création).
+- Mentions légales des factures guinéennes figées à l'émission dans des
+  instantanés JSONB (tier : nom/NIU/RCCM/adresse ; émetteur : dossier) ;
+  avertissements non bloquants si mentions manquantes (règle dure avec le PDF
+  en 4B-bis).
+- Montants HT/TVA/TTC toujours recalculés par le service à partir des lignes
+  (jamais saisis) ; taux datés re-résolus à la date du document ; arrondis
+  comptables demi-point vers +∞, cas tabulés testés.
+- Permissions `sales:read` (tous les rôles de dossier) et `sales:manage`
+  (dirigeant, comptable, cabinet) ; matrice sondée via l'API,
+  docs/PERMISSIONS.md régénéré.
+- API `/companies/{id}/sales` : liste filtrable (type, statut), création,
+  PATCH partiel du brouillon, émission, envoi, décision, conversion, annulation,
+  suppression de brouillon ; audit chaîné (`sales_document.created/.updated/
+  .issued/.sent/.decided/.cancelled/.deleted`) ; OpenAPI régénéré
+  (**95 chemins / 154 schémas**, pur ajout) + types TypeScript.
+- Front fr/en : page « Ventes » (filtres type/statut, création en 3 lignes avec
+  taux ou exonération motivée, émission/envoi avec confirmation explicite que le
+  numéro est définitif, décision, conversion, annulation, suppression) ;
+  navigation visible avec `sales:read`.
+- Garde-fou testé : aucun chemin du module ventes n'écrit en comptabilité
+  (journal des écritures vérifié vide après le cycle complet) — l'intégration
+  comptable reste la Phase 4E avec validation humaine.
+- Validation : **878/878** pytest sur la pile réelle hors Docker (PostgreSQL 16.2
+  + btree_gist compilé, fakeredis serveur, Moto S3, Mailpit v1.31.3 — procédure
+  reconstruite après recyclage du bac à sable) = 825 existants + **23 nouveaux**
+  (ventes) + 30 sondes d'isolation automatiques pour les 10 nouvelles routes ;
+  ruff, mypy strict (179 fichiers), ESLint 0, `tsc` 0, Vitest **69/69** ;
+  migrations aller-retour + `alembic check`. Dérive de format préexistante sur
+  la migration 0016 corrigée au passage (ruff format, CI jamais passée).
+- CI toujours bloquée (facturation GitHub) — à rejouer après régularisation.
+- Suivi : `AUDIT_SUIVI_20261109.md` §33.

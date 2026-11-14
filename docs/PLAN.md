@@ -69,6 +69,15 @@ email/WhatsApp, relances, balance âgée.
   comptes de tiers par défaut 411x/401x validés par le service, RLS par dossier,
   permissions `partners:read`/`partners:manage`, page fr/en avec recherche, filtres et
   désactivation ; créer ou modifier un tier n'écrit rien en comptabilité).
+- **4B — Devis, factures et avoirs à numérotation sans trou** ✅ (2026-11-14, branche
+  `feature/kora-4b-factures` : migration 0017 `document_sequences`/`sales_documents`/
+  `sales_document_lines`, compteur verrouillé FOR UPDATE et incrément dans la même
+  transaction que l'émission — 100 émissions concurrentes = 100 numéros consécutifs
+  testés sur PostgreSQL réel, ROLLBACK après échec post-incrément = compteur restauré ;
+  brouillons jamais numérotés, annulation numéro conservé, avoir annulateur ;
+  mentions légales figées dans des instantanés JSONB à l'émission ; permissions
+  `sales:read`/`sales:manage`, page Ventes fr/en ; aucun chemin n'écrit en
+  comptabilité — l'intégration est la Phase 4E).
 
 ## Phase 5 — Import et migration
 FEC, Excel, balance d'ouverture en tâche de fond, rapport de contrôle.

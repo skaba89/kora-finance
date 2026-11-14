@@ -1268,3 +1268,100 @@ seront rejoués après régularisation.
 avec mentions obligatoires), rien n'écrit en comptabilité sans validation
 humaine. Prochain chantier : **Phase 4B** — devis et factures à numérotation
 sans trou (100 créations concurrentes = 100 numéros consécutifs).
+
+## 33. Phase 4B — devis, factures et avoirs à numérotation sans trou (2026-11-14)
+
+Deuxième chantier de la Phase 4, construit sur le référentiel des tiers (4A, §32) :
+le socle qui portera les règlements (4C), les relances (4D) et l'intégration
+comptable (4E). Le critère d'acceptation du PLAN — **100 créations concurrentes =
+100 numéros consécutifs** — est testé sur PostgreSQL réel.
+
+### PR — implémentation
+
+- **Tables (migration 0017)** : `document_sequences` (dernier numéro par type de
+  document et par exercice), `sales_documents` (en-tête unique des trois types,
+  numéro NULL en brouillon, index partiel unique sur les numéros émis, instantanés
+  JSONB des mentions légales du tier et de l'émetteur), `sales_document_lines`
+  (quantités en millièmes, prix unitaire en unités mineures, remise en points de
+  base, taux de TVA daté figé à l'émission). RLS `tenant_isolation` **forcée** sur
+  les trois tables, contraintes « not blank » et états valides par type en base.
+- **Numérotation sans trou — mécanisme** : réplique du protocole éprouvé des
+  journaux comptables (`JournalSequence`, §4) — upsert `on_conflict_do_nothing`,
+  verrou `FOR UPDATE` du compteur, incrément **dans la même transaction** que
+  l'émission. Contrairement à un `SEQUENCE` PostgreSQL (non transactionnel), un
+  ROLLBACK restaure le compteur : un échec survenant **après** l'incrément ne
+  consomme pas de numéro. Ordre de verrous « document → exercice → compteur »,
+  aligné sur le grand livre (« écriture → exercice → numérotation ») : aucun
+  interblocage possible entre les deux modules.
+- **Points de numérotation** : une facture ou un avoir est numéroté à son
+  émission, un devis à son envoi. Un brouillon n'est jamais numéroté — il reste
+  modifiable et supprimable sans consommer de numéro (condition structurelle du
+  sans-trou). Une annulation (facture annulée, devis refusé) conserve le numéro ;
+  jamais de réutilisation (index partiel unique en deuxième barrière derrière le
+  verrou).
+- **Cycles de vie** : devis `draft → sent → accepted|rejected` puis conversion en
+  facture brouillon (lignes copiées, devis référencé) ; facture
+  `draft → issued → cancelled` ; avoir partiel (lignes sous-ensemble) ou
+  annulateur (`reverses_document_id`, unicité garantie en base et refus propre
+  409 dès la création d'un second) — l'avoir annulateur fait passer la facture
+  CANCELLED **dans la même transaction** que sa propre numérotation.
+- **Montants** : HT, TVA et TTC toujours recalculés par le service à partir des
+  lignes (jamais saisis) ; quantités en millièmes, remises en points de base,
+  arithmétique Decimal avec arrondi comptable (demi-point vers +∞) ; les taux
+  datés sont re-résolus à la date du document à l'émission (le taux actif ce
+  jour-là fait foi) ; cas d'arrondis tabulés testés exactement.
+- **Mentions légales** : figées à l'émission dans les instantanés JSONB
+  (tier : nom, NIU/NCC ou NIF, RCCM, adresse — depuis la fiche 4A ; émetteur :
+  raison sociale, RCCM, NIF, adresse du dossier). Mentions manquantes signalées
+  en avertissements non bloquants dans la réponse d'émission et le payload d'audit
+  (la règle dure sera posée avec le PDF conforme en 4B-bis).
+- **Permissions** : `sales:read` accordée à tous les rôles de dossier,
+  `sales:manage` au dirigeant, au comptable et au cabinet ; la matrice de
+  `test_permissions.py` sonde les deux permissions via l'API (la sonde
+  `sales:manage` crée son tier par l'API — mêmes rôles que `partners:manage`) ;
+  `docs/PERMISSIONS.md` régénéré.
+- **API** : liste filtrable et paginée (type, statut), création, lecture, PATCH
+  partiel du brouillon (lignes remplaçables intégralement), émission (date
+  explicite facultative, avertissements), envoi, décision, conversion, annulation
+  directe, suppression de brouillon ; audit chaîné `sales_document.created /
+  .updated / .issued / .sent / .decided / .cancelled / .deleted` ; un document
+  d'un autre dossier renvoie 404 (testé, y compris par PATCH).
+- **Front (fr/en)** : page « Ventes » — filtres type et statut, création en
+  brouillon (tier actif du dossier, jusqu'à trois lignes, taux de TVA actif ou
+  exonération motivée), émission et envoi avec confirmation explicite (« un
+  numéro chronologique sera attribué et ne sera jamais réutilisé »), décision
+  accepter/refuser, conversion en facture, annulation confirmée, suppression de
+  brouillon ; l'entrée de navigation n'apparaît qu'avec `sales:read`. Contrat
+  OpenAPI régénéré (**95 chemins / 154 schémas**, pur ajout) et types TypeScript
+  mis à jour.
+- **Garde-fou testé** : après le cycle complet (devis envoyé, accepté, converti,
+  facture émise, avoir émis), le journal des écritures du dossier est **vide** —
+  aucun chemin du module ventes n'écrit en comptabilité ; l'intégration comptable
+  reste la Phase 4E avec validation humaine.
+- **Hygiène** : `ruff format` sur `0016_partenaires.py` — dérive de format
+  préexistante sur `main` (ce fichier n'a jamais passé de CI verte) ; aucun
+  changement fonctionnel sur 0016.
+
+### Validation
+
+| Contrôle | Résultat |
+|---|---|
+| pytest complet (PG 16.2 réel, RLS active, Redis réel, Moto S3, Mailpit SMTP) | **878/878** = 825 existants + **23 nouveaux** (ventes) + 30 sondes d'isolation automatiques pour les 10 nouvelles routes |
+| Sans-trou en concurrence | **100 émissions concurrentes = 100 numéros consécutifs** (ensemble exact 1..100 vérifié, compteur final = 100, aucune erreur) ; échec post-incrément → ROLLBACK → compteur restauré (numéro suivant = 2 et non 3) |
+| Ruff (lint + format) | 0 erreur (197 fichiers) |
+| mypy strict | 0 erreur (179 fichiers) |
+| ESLint `--max-warnings=0` / `tsc --noEmit` | 0 erreur |
+| Vitest | **69/69** |
+| Contrat OpenAPI | régénéré et committé (95 chemins), types TS à jour |
+| Migrations | aller-retour complet 0017 → base → 0017 et `alembic check` (parité modèle/migrations) vérifiés |
+
+La CI reste bloquée par la facturation du compte GitHub (annotation officielle
+citée aux §29/§30) : restauration synthétique, pip-audit/SBOM et E2E Playwright
+seront rejoués après régularisation.
+
+**Score** : politique inchangée — preuve locale complète, CI encore indisponible
+: **84,5/100**. Phase 4B livrée : la numérotation chronologique sans trou exigée
+par le cahier des charges est prouvée en concurrence réelle, rien n'écrit en
+comptabilité sans validation humaine. Prochain chantier : **4B-bis** (PDF conforme
+consommant les instantanés figés) puis **Phase 4C** — règlements et lettrage des
+factures émises.
