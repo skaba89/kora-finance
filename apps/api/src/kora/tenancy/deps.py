@@ -74,3 +74,5 @@ TreasuryRead = Annotated[TenantContext, Depends(require(Permission.TREASURY_READ
 TreasuryManage = Annotated[TenantContext, Depends(require(Permission.TREASURY_MANAGE))]
 PartnersRead = Annotated[TenantContext, Depends(require(Permission.PARTNERS_READ))]
 PartnersManage = Annotated[TenantContext, Depends(require(Permission.PARTNERS_MANAGE))]
+SalesRead = Annotated[TenantContext, Depends(require(Permission.SALES_READ))]
+SalesManage = Annotated[TenantContext, Depends(require(Permission.SALES_MANAGE))]

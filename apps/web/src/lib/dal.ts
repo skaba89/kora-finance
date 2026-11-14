@@ -100,6 +100,23 @@ export async function getPartner(companyId: string, partnerId: string) {
   );
 }
 
+/** Devis, factures et avoirs du dossier (Phase 4B), filtrables et paginés. */
+export async function getSalesDocuments(
+  companyId: string,
+  query: {
+    kind?: "quote" | "invoice" | "credit_note";
+    status?: "DRAFT" | "SENT" | "ACCEPTED" | "REJECTED" | "ISSUED" | "CANCELLED";
+    limit: number;
+    offset: number;
+  },
+) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/sales", {
+      params: { path: { company_id: companyId }, query },
+    }),
+  );
+}
+
 /** Comptes financiers du dossier (banques, caisses, Mobile Money) et leurs soldes. */
 export async function getTreasuryAccounts(companyId: string) {
   return read(

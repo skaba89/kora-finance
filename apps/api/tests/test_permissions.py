@@ -170,8 +170,39 @@ def _probe(permission: Permission, client: TestClient, s: Scenario, make_user: M
                 json={"name": f"Tier test {uuid.uuid4().hex[:6]}", "is_client": True},
             ).status_code
         ),
+        Permission.SALES_READ: lambda: client.get(f"{base}/sales", headers=s.headers).status_code,
+        Permission.SALES_MANAGE: lambda: _sales_manage_probe(client, base, s),
     }
     return calls[permission]()
+
+
+def _sales_manage_probe(client: TestClient, base: str, s: Scenario) -> int:
+    """Sonde de création d'une facture brouillon. Le tier est créé d'abord via l'API :
+    dans la matrice, partners:manage et sales:manage sont accordées aux mêmes rôles,
+    donc un 403 sur le tier est bien le 403 attendu pour sales:manage."""
+    tier = client.post(
+        f"{base}/partners",
+        headers=s.headers,
+        json={"name": f"Tier vente {uuid.uuid4().hex[:6]}", "is_client": True},
+    )
+    if tier.status_code != 201:
+        return tier.status_code
+    return client.post(
+        f"{base}/sales",
+        headers=s.headers,
+        json={
+            "doc_kind": "invoice",
+            "partner_id": tier.json()["id"],
+            "lines": [
+                {
+                    "label": "Sonde de matrice",
+                    "quantity": 1000,
+                    "unit_price_ht": 100,
+                    "tax_exempt_reason": "Sonde hors champ de la TVA",
+                }
+            ],
+        },
+    ).status_code
 
 
 def _close_probe(client: TestClient, base: str, s: Scenario) -> int:

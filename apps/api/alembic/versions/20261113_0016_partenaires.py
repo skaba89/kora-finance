@@ -61,13 +61,16 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint("is_client OR is_supplier", name=op.f("ck_partners_at_least_one_kind")),
         sa.CheckConstraint(
-            "address IS NULL OR length(trim(address)) > 0", name=op.f("ck_partners_address_not_blank")
+            "address IS NULL OR length(trim(address)) > 0",
+            name=op.f("ck_partners_address_not_blank"),
         ),
         sa.CheckConstraint("length(trim(name)) > 0", name=op.f("ck_partners_name_not_blank")),
         sa.CheckConstraint(
             "notes IS NULL OR length(trim(notes)) > 0", name=op.f("ck_partners_notes_not_blank")
         ),
-        sa.CheckConstraint("rccm IS NULL OR length(trim(rccm)) > 0", name=op.f("ck_partners_rccm_not_blank")),
+        sa.CheckConstraint(
+            "rccm IS NULL OR length(trim(rccm)) > 0", name=op.f("ck_partners_rccm_not_blank")
+        ),
         sa.CheckConstraint(
             "tax_id IS NULL OR length(trim(tax_id)) > 0", name=op.f("ck_partners_tax_id_not_blank")
         ),
@@ -103,7 +106,9 @@ def upgrade() -> None:
     )
     # Unicité du nom insensible à la casse dans un dossier.
     op.create_index(
-        "uq_partners_tenant_name_lower", "partners", ["tenant_id", sa_text("lower(name)")],
+        "uq_partners_tenant_name_lower",
+        "partners",
+        ["tenant_id", sa_text("lower(name)")],
         unique=True,
     )
     op.create_index(
