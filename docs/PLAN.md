@@ -78,6 +78,17 @@ email/WhatsApp, relances, balance âgée.
   mentions légales figées dans des instantanés JSONB à l'émission ; permissions
   `sales:read`/`sales:manage`, page Ventes fr/en ; aucun chemin n'écrit en
   comptabilité — l'intégration est la Phase 4E).
+- **4B-bis — PDF conforme des documents de vente** ✅ (2026-11-15, branche
+  `feature/kora-4b-bis-pdf` : PDF des documents numérotés rendu exclusivement depuis
+  les instantanés figés (émetteur, tier, taux datés, montants) — raison sociale,
+  NIU/NCC, RCCM, adresses, HT / TVA / TTC décomposés par taux, référence de
+  l'exercice, timbre des documents annulés/refusés, mention « Annule et remplace »,
+  numéro d'affichage FAC/DEV/AV-année-00042 ; route API `sales:read` avec quota
+  d'exports et audit `sales_document.exported`, bouton PDF fr/en via BFF ;
+  **règle dure à l'émission** : facture et avoir refusent de naître sans NIU/NCC et
+  adresse du client, NIF et adresse de l'émetteur — le devis reste averti ;
+  corrections d'hygiène : registre Alembic complet (`alembic check` rétabli) et
+  `uv.lock` réaligné).
 
 ## Phase 5 — Import et migration
 FEC, Excel, balance d'ouverture en tâche de fond, rapport de contrôle.

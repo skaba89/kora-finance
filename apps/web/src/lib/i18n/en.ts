@@ -622,6 +622,11 @@ export const en: typeof fr = {
     converted: "Quote converted to a draft invoice.",
     cancelled: "Invoice cancelled: the number is kept.",
     deleted: "Draft deleted (no number had been consumed).",
+    pdf: "PDF",
+    pdfHint:
+      "The compliant PDF (legal mentions frozen at numbering) is available for numbered documents.",
+    mentionsNotice:
+      "Issuing an invoice or credit note requires complete legal mentions: the client's NIU/NCC and address, the issuer's NIF and address (complete the partner record and the company if needed).",
   },
   partners: {
     title: "Third-party directory",

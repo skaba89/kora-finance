@@ -622,6 +622,11 @@ export const fr = {
     converted: "Devis converti en facture brouillon.",
     cancelled: "Facture annulée : le numéro est conservé.",
     deleted: "Brouillon supprimé (aucun numéro n'avait été consommé).",
+    pdf: "PDF",
+    pdfHint:
+      "Le PDF conforme (mentions légales figées à la numérotation) est disponible pour les documents numérotés.",
+    mentionsNotice:
+      "L'émission d'une facture ou d'un avoir exige les mentions fiscales complètes : NIU/NCC et adresse du client, NIF et adresse de l'émetteur (complétez la fiche tier et le dossier si besoin).",
   },
   partners: {
     title: "Référentiel des tiers",

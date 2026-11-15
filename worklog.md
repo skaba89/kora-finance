@@ -1443,3 +1443,46 @@ restauré (spending limit > 0 ou reset du 1er décembre). Suivi :
   la migration 0016 corrigée au passage (ruff format, CI jamais passée).
 - CI toujours bloquée (facturation GitHub) — à rejouer après régularisation.
 - Suivi : `AUDIT_SUIVI_20261109.md` §33.
+
+## 2026-11-15 — Phase 4B-bis : PDF conforme des ventes et règle dure des mentions
+
+**Objet** — rendre le produit vendable : les documents de vente numérotés (4B)
+deviennent des documents remis au client — PDF conforme avec les mentions légales
+exigées (ARBITRAGE_COMPTABLE.md, KF-16 : raison sociale, NIU/NCC ou NIF, adresse,
+montants HT / TVA / TTC, référence de l'exercice), et règle dure à l'émission.
+
+**Livré** :
+- `kora/sales/pdf.py` : rendu PDF consommant exclusivement les données figées à la
+  numérotation (instantanés JSONB émetteur/tier, numéro, dates, lignes, taux datés) —
+  jamais les fiches vivantes ; blocs émetteur/client, timbre des documents hors usage
+  (« FACTURE ANNULÉE », « DEVIS REFUSÉ »), mentions d'origine (« Devis d'origine »,
+  « Annule et remplace la facture »), tableau des lignes (millièmes et points de base
+  convertis sans flottant, motif d'exonération), totaux décomposés par taux, notes,
+  référence de l'exercice ; numéro d'affichage « FAC-2026-00042 » (l'entier sans trou
+  reste stocké) ; polices et conventions partagées avec les exports comptables.
+- Route `GET /api/v1/companies/{id}/sales/{doc}/pdf` : `sales:read`, brouillon refusé,
+  quota d'exports KF-13 (compteurs partagés), audit `sales_document.exported` ; nom de
+  fichier commercial (`facture-FAC-2026-00042-acme.pdf`) ; contrat régénéré
+  (**96 chemins**, pur ajout), types TS à jour.
+- Front fr/en : bouton PDF sur les documents numérotés via BFF
+  `/dossiers/{id}/ventes/{doc}/pdf` (le navigateur n'appelle jamais l'API), avis sur
+  la règle dure dans le formulaire de création.
+- **Règle dure à l'émission** : facture et avoir refusent de naître sans NIU/NCC et
+  adresse du client, NIF et adresse de l'émetteur (422 AVANT le compteur : aucun
+  numéro consommé) ; le devis, document commercial, reste averti sans être bloqué.
+- **Corrections d'hygiène héritées de main** : registre Alembic sans `kora.models.sales`
+  (`alembic check` échouait depuis le merge 4B — tables 4B vues comme « à supprimer »)
+  corrigé ; `uv.lock` désynchronisé de `pyproject.toml` réaligné (`make api-lock`) ;
+  pypdf ajouté au groupe dev pour l'extraction du texte des PDF dans les tests.
+
+**Validation** : pytest **891/891** sur la pile réelle hors Docker (PG 16.2 + btree_gist,
+fakeredis, Moto S3 + buckets, Mailpit AUTH — pile reconstruite après recyclage) =
+878 existants + **10 nouveaux** (PDF et règle dure) + 3 sondes d'isolation de la
+nouvelle route ; ruff 0 ; mypy strict 0 (181 fichiers) ; ESLint 0 ; tsc 0 ;
+Vitest **69/69** ; migrations aller-retour 0017 → base → 0017 + `alembic check` ;
+aperçus visuels relus (facture complète, facture annulée, devis refusé, avoir
+annulateur).
+
+**Reste** : CI toujours bloquée (facturation GitHub) — à rejouer après régularisation ;
+envoi du PDF par email/WhatsApp, règlements et lettrage (4C), balance âgée (4C/4D).
+- Suivi : `AUDIT_SUIVI_20261109.md` §34.

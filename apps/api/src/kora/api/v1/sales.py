@@ -1,14 +1,18 @@
-"""Routes des devis, factures et avoirs : cycle de vie et numérotation sans trou (4B)."""
+"""Routes des devis, factures et avoirs : cycle de vie et numérotation sans trou (4B).
+
+Le PDF conforme d'un document numéroté (4B-bis) est servi en fichier binaire avec
+les mentions légales figées à la numérotation."""
 
 import uuid
 from datetime import date
 from typing import Annotated, Any, Literal
+from urllib.parse import quote
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Response, status
 from pydantic import BaseModel, Field, model_validator
 
 from kora.accounting.entries import Actor
-from kora.api.v1.common import WRITE_ERRORS, Limit, Offset, RequestBody
+from kora.api.v1.common import TENANT_ERRORS, WRITE_ERRORS, Limit, Offset, RequestBody
 from kora.auth.deps import Ctx, DbSession
 from kora.core.errors import ErrorResponse
 from kora.models.sales import SalesDocument, SalesDocumentLine
@@ -327,3 +331,35 @@ def cancel_invoice(
     cancelled = service.cancel_invoice(db, _actor(tenant, ctx), document_id)
     document, lines = service.get_document(db, tenant.company_id, cancelled.id)
     return _detail_out(document, lines)
+
+
+_PDF_FILE: dict[int | str, dict[str, Any]] = {
+    200: {
+        "content": {"application/pdf": {"schema": {"type": "string", "format": "binary"}}},
+        "description": "PDF conforme du document de vente",
+    },
+    **TENANT_ERRORS,
+    422: {"model": ErrorResponse},  # brouillon jamais numéroté : pas de PDF
+    # KF-13 : quota d'exports (compteurs partagés avec les exports comptables).
+    429: {"model": ErrorResponse},
+}
+
+
+@router.get("/sales/{document_id}/pdf", response_class=Response, responses=_PDF_FILE)
+def export_document_pdf(
+    document_id: uuid.UUID, tenant: SalesRead, db: DbSession, ctx: Ctx
+) -> Response:
+    """PDF conforme du document numéroté (facture, devis envoyé, avoir) : mentions
+    légales figées à la numérotation, montants et exercice. Un brouillon est refusé."""
+    exported = service.export_document_pdf(db, tenant.company_id, document_id, _actor(tenant, ctx))
+    return Response(
+        content=exported.content,
+        media_type=exported.media_type,
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="{exported.filename}"; '
+                f"filename*=UTF-8''{quote(exported.filename)}"
+            ),
+            "Cache-Control": "no-store",
+        },
+    )

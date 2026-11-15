@@ -8,6 +8,11 @@ l'avoir annulateur (facture CANCELLED dans la même transaction), l'isolation pa
 dossier (RLS), les permissions (le lecteur lit, ne numérote pas) et le garde-fou
 comptable : aucune écriture n'est générée par la ventes (Phase 4E le fera avec
 validation humaine).
+
+Depuis 4B-bis, les émissions portent la règle dure des mentions fiscales : les
+helpers de ce module créent des dossiers et des tiers conformes (NIF/adresse
+de l'émetteur, NIU/NCC/adresse du client) — les refus d'émission pour mentions
+manquantes sont testés dans test_sales_pdf.py.
 """
 
 import threading
@@ -89,11 +94,30 @@ class Sales:
         )
 
 
+def _dossier(make_company: MakeCompany) -> CompanyFixture:
+    """Dossier émetteur conforme (4B-bis) : NIF et adresse de l'émetteur exigés à
+    l'émission d'une facture ou d'un avoir (règle dure des mentions fiscales)."""
+    return make_company(
+        rccm=f"RCCM-KN-2026-B-{uuid.uuid4().hex[:4].upper()}",
+        nif=f"NIF{uuid.uuid4().hex[:10].upper()}",
+        address="Ratoma, Conakry",
+        phone="+224 600 00 00 00",
+    )
+
+
 def _creer_tier(client: TestClient, company: CompanyFixture, nom: str = "Solar Shop Guinée") -> str:
+    """Tier conforme (4B-bis) : NIU/NCC, adresse et RCCM — toutes les mentions
+    d'une fiche client commerciale complète (avertissements d'émission vides)."""
     response = client.post(
         f"/api/v1/companies/{company.id}/partners",
         headers=company.headers,
-        json={"name": f"{nom}-{uuid.uuid4().hex[:6]}", "is_client": True},
+        json={
+            "name": f"{nom}-{uuid.uuid4().hex[:6]}",
+            "is_client": True,
+            "tax_id": f"NIU{uuid.uuid4().hex[:10].upper()}",
+            "rccm": f"RCCM-KN-2026-B-{uuid.uuid4().hex[:4].upper()}",
+            "address": "Kaloum, Conakry",
+        },
     )
     assert response.status_code == 201, response.text
     partner_id: str = response.json()["id"]
@@ -152,7 +176,7 @@ def _devis_brouillon(sales: Sales, **overrides: object) -> str:
 
 
 def test_brouillon_jamais_numerote(client: TestClient, make_company: MakeCompany) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     document_id = _facture_brouillon(sales, _creer_tva(client, company))
     document = sales.get(document_id).json()
@@ -168,7 +192,7 @@ def test_brouillon_jamais_numerote(client: TestClient, make_company: MakeCompany
 def test_emission_numerote_et_fige_les_mentions(
     client: TestClient, make_company: MakeCompany
 ) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     document_id = _facture_brouillon(sales, _creer_tva(client, company))
     response = sales.issue(document_id)
@@ -183,7 +207,7 @@ def test_emission_numerote_et_fige_les_mentions(
 
 
 def test_numeros_consecutifs_sequentiels(client: TestClient, make_company: MakeCompany) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     for attendu in (1, 2, 3):
         document_id = _facture_brouillon(sales, _creer_tva(client, company))
@@ -192,7 +216,7 @@ def test_numeros_consecutifs_sequentiels(client: TestClient, make_company: MakeC
 
 
 def test_compteurs_independants_par_type(client: TestClient, make_company: MakeCompany) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     quote_id = _devis_brouillon(sales)
     # Un devis n'est pas « émis » : il est envoyé, et c'est l'envoi qui le numérote.
@@ -207,7 +231,7 @@ def test_compteurs_independants_par_type(client: TestClient, make_company: MakeC
 def test_brouillons_abandonnes_ne_cree_pas_de_trou(
     client: TestClient, make_company: MakeCompany
 ) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     tva = _creer_tva(client, company)
     a = _facture_brouillon(sales, tva)
@@ -225,7 +249,7 @@ def test_echec_apres_increment_restaure_le_compteur(
     """Propriété transactionnelle du sans-trou : une erreur déclenchée APRÈS
     l'incrément du compteur (ici, par le journal d'audit) laisse la transaction
     en échec ; son ROLLBACK restaure le compteur — le numéro n'est pas consommé."""
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     tva = _creer_tva(client, company)
     premier = _facture_brouillon(sales, tva)
@@ -256,7 +280,7 @@ def test_cent_emissions_concurrentes_sans_trou(
     consécutifs. Les brouillons sont pré-créés (hors course), puis émis par des
     fils sur des connexions PostgreSQL réelles : le verrou FOR UPDATE du compteur
     sérialise les attributions, et l'ensemble exact {1..100} est vérifié."""
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     tva = _creer_tva(client, company)
     ids = [_facture_brouillon(sales, tva) for _ in range(100)]
@@ -301,7 +325,7 @@ def test_cent_emissions_concurrentes_sans_trou(
 
 
 def test_cycle_devis_conversion_facture(client: TestClient, make_company: MakeCompany) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     _creer_tva(client, company)
     quote_id = _devis_brouillon(sales)
@@ -319,7 +343,7 @@ def test_cycle_devis_conversion_facture(client: TestClient, make_company: MakeCo
 
 
 def test_devis_refuse_conserve_son_numero(client: TestClient, make_company: MakeCompany) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     quote_id = _devis_brouillon(sales)
     sales.send(quote_id)
@@ -331,7 +355,7 @@ def test_devis_refuse_conserve_son_numero(client: TestClient, make_company: Make
 
 
 def test_avoir_partiel_sur_facture_emise(client: TestClient, make_company: MakeCompany) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     tva = _creer_tva(client, company)
     tier = _creer_tier(client, company)
@@ -362,7 +386,7 @@ def test_avoir_partiel_sur_facture_emise(client: TestClient, make_company: MakeC
 
 
 def test_avoir_annulateur_cloture_la_facture(client: TestClient, make_company: MakeCompany) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     tva = _creer_tva(client, company)
     tier = _creer_tier(client, company)
@@ -409,7 +433,7 @@ def _facture_brouillon_ou_erreur(
 def test_facture_annulee_directement_conserve_le_numero(
     client: TestClient, make_company: MakeCompany
 ) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     tva = _creer_tva(client, company)
     invoice_id = _facture_brouillon(sales, tva)
@@ -422,7 +446,7 @@ def test_facture_annulee_directement_conserve_le_numero(
 def test_patch_brouillon_et_refus_apres_emission(
     client: TestClient, make_company: MakeCompany
 ) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     tva = _creer_tva(client, company)
     document_id = _facture_brouillon(sales, tva)
@@ -451,7 +475,7 @@ def test_patch_brouillon_et_refus_apres_emission(
 def test_calculs_arrondis_tabules(client: TestClient, make_company: MakeCompany) -> None:
     """Cas exacts : 3,333 × 1 999 - 15 % → HT 5 663 ; TVA 18 % → 1 019 (arrondi
     comptable demi-point vers +∞), TTC 6 682."""
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     tva = _creer_tva(client, company)
     document_id = _facture_brouillon(
@@ -474,7 +498,7 @@ def test_calculs_arrondis_tabules(client: TestClient, make_company: MakeCompany)
 
 
 def test_taux_ou_exoneration_exigee(client: TestClient, make_company: MakeCompany) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     ni_taux_ni_motif = {"lines": [{"label": "x", "quantity": 1000, "unit_price_ht": 100}]}
     response = sales.create(
@@ -507,7 +531,7 @@ def test_taux_ou_exoneration_exigee(client: TestClient, make_company: MakeCompan
 def test_avoir_sans_origine_ou_tier_different_refuse(
     client: TestClient, make_company: MakeCompany
 ) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     tva = _creer_tva(client, company)
     response = sales.create(
@@ -532,7 +556,7 @@ def test_avoir_sans_origine_ou_tier_different_refuse(
 
 
 def test_echeance_avant_emission_refusee(client: TestClient, make_company: MakeCompany) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     tva = _creer_tva(client, company)
     document_id = _facture_brouillon(sales, tva)
@@ -544,7 +568,7 @@ def test_echeance_avant_emission_refusee(client: TestClient, make_company: MakeC
 
 
 def test_emission_hors_exercice_refusee(client: TestClient, make_company: MakeCompany) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     tva = _creer_tva(client, company)
     document_id = _facture_brouillon(sales, tva)
@@ -553,8 +577,8 @@ def test_emission_hors_exercice_refusee(client: TestClient, make_company: MakeCo
 
 
 def test_isolation_entre_dossiers(client: TestClient, make_company: MakeCompany) -> None:
-    mine = Sales(client, make_company())
-    theirs = Sales(client, make_company())
+    mine = Sales(client, _dossier(make_company))
+    theirs = Sales(client, _dossier(make_company))
     tva = _creer_tva(mine.client, mine.company)
     document_id = _facture_brouillon(mine, tva)
     assert theirs.list().json()["items"] == []
@@ -565,7 +589,7 @@ def test_isolation_entre_dossiers(client: TestClient, make_company: MakeCompany)
 def test_lecteur_lit_mais_ne_numerote_pas(
     client: TestClient, make_company: MakeCompany, make_user: Callable[..., object]
 ) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     lecteur = make_user()
     client.post(
@@ -604,7 +628,7 @@ def test_le_module_ventes_necrit_jamais_en_comptabilite(
     client: TestClient, make_company: MakeCompany
 ) -> None:
     """Pré-requis 4E : aucun chemin du module ventes ne génère d'écriture."""
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     tva = _creer_tva(client, company)
     tier = _creer_tier(client, company)
@@ -623,7 +647,7 @@ def test_le_module_ventes_necrit_jamais_en_comptabilite(
 
 
 def test_audit_trace_les_transitions(client: TestClient, make_company: MakeCompany) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     tva = _creer_tva(client, company)
     document_id = _facture_brouillon(sales, tva)
@@ -638,7 +662,7 @@ def test_audit_trace_les_transitions(client: TestClient, make_company: MakeCompa
 
 
 def test_liste_filtree_par_type_et_statut(client: TestClient, make_company: MakeCompany) -> None:
-    company = make_company()
+    company = _dossier(make_company)
     sales = Sales(client, company)
     tva = _creer_tva(client, company)
     invoice_id = _facture_brouillon(sales, tva)
