@@ -1365,3 +1365,72 @@ par le cahier des charges est prouvée en concurrence réelle, rien n'écrit en
 comptabilité sans validation humaine. Prochain chantier : **4B-bis** (PDF conforme
 consommant les instantanés figés) puis **Phase 4C** — règlements et lettrage des
 factures émises.
+
+## 34. Phase 4B-bis — PDF conforme des documents de vente et règle dure des mentions (2026-11-15)
+
+Deuxième jalon du « commercialisable » : les documents de vente numérotés en 4B
+deviennent des documents remis au client — factures, devis et avoirs en PDF avec les
+mentions légales exigées (ARBITRAGE_COMPTABLE.md, KF-16 : raison sociale, NIU/NCC ou
+NIF, adresse, montants HT / TVA / TTC, référence de l'exercice), et une règle dure qui
+empêche de naître un document fiscal incomplet.
+
+### PR — implémentation
+
+- **Rendu** : `kora/sales/pdf.py` consomme exclusivement les données figées à la
+  numérotation (instantanés JSONB de l'émetteur et du tier, numéro, dates, lignes,
+  taux datés) — jamais les fiches vivantes : un document émis reste fidèle même si
+  les fiches changent ensuite. Blocs émetteur/client (mentions présentes uniquement),
+  timbre d'état encadré (« FACTURE ANNULÉE — numéro conservé », « DEVIS REFUSÉ »),
+  mentions d'origine (« Devis d'origine : DEV-… », « Annule et remplace la facture
+  FAC-… »), tableau des lignes (quantités en millièmes, remises et TVA en points de
+  base convertis sans flottant, motif d'exonération sous la désignation), totaux
+  décomposés par taux (le taux daté figé fait foi), notes, référence de l'exercice,
+  pied de page paginé. Numéro d'affichage « FAC-2026-00042 » (l'entier stocké reste
+  la clé sans trou). Polices et conventions partagées avec les exports comptables
+  (ReportLab, DejaVu, documents en français).
+- **Règle dure à l'émission** : une facture ou un avoir **refuse de naître** sans les
+  mentions fiscales — NIU/NCC et adresse du client, NIF et adresse de l'émetteur —
+  422 levé AVANT le compteur (aucun numéro consommé : la chronologie sans trou reste
+  intacte, testé). Le devis, document commercial et non fiscal, reste averti sans être
+  bloqué. Les avertissements complémentaires (RCCM émetteur/tier) sont inchangés et
+  laissent les émissions conformes sans avertissement.
+- **API** : `GET /api/v1/companies/{company_id}/sales/{document_id}/pdf` — binaire
+  `application/pdf`, permission `sales:read`, brouillon jamais numéroté refusé (422),
+  quota d'exports KF-13 (mêmes compteurs que les exports comptables), audit
+  `sales_document.exported` rattaché au document (payload : type, numéro formaté,
+  TTC), nom de fichier commercial. Contrat régénéré (**96 chemins / 154 schémas**,
+  pur ajout) et types TypeScript mis à jour.
+- **Front (fr/en)** : bouton PDF sur chaque document numéroté, téléchargement via BFF
+  `/dossiers/{companyId}/ventes/{documentId}/pdf` (le navigateur n'appelle jamais
+  l'API directement, relayage en flux, messages d'erreur lisibles), avis sur la règle
+  dure dans le formulaire de création.
+- **Corrections d'hygiène héritées de main** : le registre des modèles d'Alembic
+  (`kora/db/models.py`) n'importait pas `kora.models.sales` — `alembic check` échouait
+  depuis le merge 4B (tables 4B vues comme « à supprimer » par l'autogenerate) ; corrigé.
+  `uv.lock` désynchronisé de `pyproject.toml` (boto3, stubs types-*) réaligné
+  (`make api-lock`). `pypdf` ajouté au groupe dev pour l'extraction du texte des PDF
+  dans les tests.
+
+### Validation
+
+| Contrôle | Résultat |
+|---|---|
+| pytest complet (PG 16.2 réel, RLS active, fakeredis, Moto S3, Mailpit SMTP AUTH) | **891/891** = 878 existants + **10 nouveaux** (PDF et règle dure) + 3 sondes d'isolation automatiques de la nouvelle route |
+| Contenu PDF vérifié par extraction (pypdf) | mentions obligatoires présentes (raison sociale, NIU/NCC, RCCM, adresses, montants HT/TVA/TTC, TVA par taux, référence de l'exercice), quantités converties (2,5), timbres d'état, mentions d'origine |
+| Règle dure | émission refusée 422 en l'absence de NIU/NCC, d'adresses ou de NIF ; correction des fiches tier/dossier → émission réussie (numéro 1) ; devis averti et non bloqué ; un refus ne consomme aucun numéro (numéro suivant = 2 et non 3) |
+| Ruff (lint + format) | 0 erreur (181 fichiers) |
+| mypy strict | 0 erreur (181 fichiers) |
+| ESLint `--max-warnings=0` / `tsc --noEmit` | 0 erreur |
+| Vitest | **69/69** |
+| Contrat OpenAPI | régénéré (96 chemins), pur ajout, types TS à jour |
+| Migrations | aller-retour 0017 → base → 0017 + `alembic check` = « No new upgrade operations detected » (parité modèle/migrations rétablie) |
+| Aperçu visuel | facture complète (remise, exonération, notes), facture annulée (timbre), devis refusé, avoir annulateur — rendus et relus |
+
+La CI reste bloquée par la facturation du compte GitHub (annotation officielle citée
+aux §29/§30) : à rejouer après régularisation.
+
+**Score** : politique inchangée — preuve locale complète, CI encore indisponible :
+**84,5/100**. Le produit vendable se précise : devis, factures et avoirs numérotés
+sans trou, PDF conforme remis au client, mentions fiscales garanties à la source.
+Prochains chantiers : **Phase 4C** (règlements et lettrage des factures émises),
+envoi du PDF par email/WhatsApp, balance âgée.

@@ -13,7 +13,9 @@ Règles portées par le service (et la base quand possible) :
   lignes — jamais saisis par l'appelant ; les taux de TVA sont re-résolus à la date
   d'émission (le taux daté actif ce jour-là fait foi) ;
 - les mentions légales exigées sur les factures guinéennes sont figées à l'émission
-  dans les instantanés JSONB (tier et émetteur) ;
+  dans les instantanés JSONB (tier et émetteur) — et depuis 4B-bis, une facture ou
+  un avoir refuse de naître sans les mentions fiscales (règle dure, ARBITRAGE
+  KF-16) : le PDF conforme ne peut jamais produire un document fiscal incomplet ;
 - l'ordre de verrous est « document puis exercice puis compteur », aligné sur le
   grand livre (« écriture puis exercice puis numérotation ») : pas d'interblocage
   possible entre les deux modules ;
@@ -32,10 +34,19 @@ from sqlalchemy.orm import Session
 
 from kora.accounting.entries import Actor, _fiscal_year_for
 from kora.audit.service import record_event
-from kora.core.errors import BusinessRuleError, ConflictError, NotFoundError
+from kora.core import quota
+from kora.core.config import get_settings
+from kora.core.errors import (
+    BusinessRuleError,
+    ConflictError,
+    NotFoundError,
+    TooManyRequestsError,
+)
+from kora.exports.service import MEDIA_TYPES, ExportFile
 from kora.models.accounting import TaxRate
 from kora.models.common import utcnow
 from kora.models.identity import Company
+from kora.models.organization import FiscalYear
 from kora.models.partners import Partner
 from kora.models.sales import (
     MAX_LINES_PER_DOCUMENT,
@@ -47,6 +58,7 @@ from kora.models.sales import (
     compute_line_ht,
     compute_line_tax,
 )
+from kora.sales import pdf as sales_pdf
 
 NUMBERED_KINDS = (DocKind.INVOICE, DocKind.CREDIT_NOTE)
 
@@ -254,8 +266,11 @@ def _partner_snapshot(partner: Partner) -> dict[str, str | None]:
 
 
 def _emission_warnings(partner: Partner, company: Company) -> list[str]:
-    """Mentions manquantes signalées à l'émission (non bloquant en 4B ; la règle
-    dure sera posée avec le PDF conforme en 4B-bis)."""
+    """Mentions manquantes signalées à l'émission. Depuis 4B-bis, les mentions
+    fiscales (NIU/NCC, adresses, NIF) sont exigées à l'émission d'une facture ou
+    d'un avoir (règle dure) : pour ces documents, restent ici les mentions
+    complémentaires (RCCM) ; pour un devis — document commercial, pas fiscal —
+    tous les avertissements restent non bloquants."""
     warnings: list[str] = []
     if not partner.tax_id:
         warnings.append("Le tier n'a pas de NIU/NCC ou NIF.")
@@ -268,6 +283,24 @@ def _emission_warnings(partner: Partner, company: Company) -> list[str]:
     if not company.nif:
         warnings.append("Le dossier n'a pas de NIF (mention légale de l'émetteur).")
     return warnings
+
+
+def _mentions_obligatoires_manquantes(partner: Partner, company: Company) -> list[str]:
+    """Règle dure (4B-bis, ARBITRAGE_COMPTABLE.md KF-16) : les mentions fiscales
+    exigées sur une facture conforme — NIU/NCC et adresse du client, NIF et adresse
+    de l'émetteur. La raison sociale est toujours présente (colonne non nulle).
+    Leur absence empêche l'émission d'une facture ou d'un avoir : le PDF conforme
+    ne peut jamais produire un document fiscal incomplet."""
+    manquantes: list[str] = []
+    if not partner.tax_id:
+        manquantes.append("le NIU/NCC ou NIF du client (fiche tier)")
+    if not partner.address:
+        manquantes.append("l'adresse du client (fiche tier)")
+    if not company.nif:
+        manquantes.append("le NIF de l'émetteur (dossier)")
+    if not company.address:
+        manquantes.append("l'adresse de l'émetteur (dossier)")
+    return manquantes
 
 
 def _next_doc_number(
@@ -449,6 +482,17 @@ def delete_draft(session: Session, actor: Actor, document_id: uuid.UUID) -> None
     session.commit()
 
 
+def _verifier_cible_numerotation(doc_kind: DocKind, target_status: str) -> None:
+    """Cible de numérotation cohérente avec le type : un devis est numéroté à
+    l'envoi, une facture ou un avoir à l'émission."""
+    if doc_kind not in NUMBERED_KINDS and doc_kind is not DocKind.QUOTE:
+        raise BusinessRuleError("Type de document inconnu.")
+    if doc_kind is DocKind.QUOTE and target_status != DocStatus.SENT.value:
+        raise BusinessRuleError("Un devis est numéroté à l'envoi.")
+    if doc_kind in NUMBERED_KINDS and target_status != DocStatus.ISSUED.value:
+        raise BusinessRuleError("Une facture ou un avoir est numéroté à l'émission.")
+
+
 def _number_and_emit(
     session: Session,
     actor: Actor,
@@ -462,12 +506,7 @@ def _number_and_emit(
     instantanés → statut → commit. Toute erreur en aval du compteur est un ROLLBACK :
     le numéro est restauré, aucun trou."""
     doc_kind = DocKind(document.doc_kind)
-    if doc_kind not in NUMBERED_KINDS and doc_kind is not DocKind.QUOTE:
-        raise BusinessRuleError("Type de document inconnu.")
-    if doc_kind is DocKind.QUOTE and target_status != DocStatus.SENT.value:
-        raise BusinessRuleError("Un devis est numéroté à l'envoi.")
-    if doc_kind in NUMBERED_KINDS and target_status != DocStatus.ISSUED.value:
-        raise BusinessRuleError("Une facture ou un avoir est numéroté à l'émission.")
+    _verifier_cible_numerotation(doc_kind, target_status)
     fiscal_year = _fiscal_year_for(session, actor.company_id, day, lock=True)
     lines = list(
         session.execute(
@@ -484,6 +523,15 @@ def _number_and_emit(
     company = session.get_one(Company, actor.company_id)
     if document.due_on is not None and doc_kind is DocKind.INVOICE and document.due_on < day:
         raise BusinessRuleError("L'échéance d'une facture ne peut pas précéder sa date d'émission.")
+    # Règle dure (4B-bis) : facture et avoir naissent conformes ou ne naissent pas.
+    # Contrôle AVANT le compteur : rien à restaurer, aucune numérotation consommée.
+    if doc_kind in NUMBERED_KINDS and (
+        manquantes := _mentions_obligatoires_manquantes(partner, company)
+    ):
+        raise BusinessRuleError(
+            "Émission refusée : mentions obligatoires manquantes pour une facture "
+            "conforme — " + ", ".join(manquantes) + "."
+        )
     # Les taux datés qui font foi sont ceux actifs à la date du document.
     for line in lines:
         if line.tax_rate_id is not None:
@@ -701,3 +749,73 @@ def list_documents(
         ).scalars()
     )
     return items, total
+
+
+def export_document_pdf(
+    session: Session, company_id: uuid.UUID, document_id: uuid.UUID, actor: Actor
+) -> ExportFile:
+    """PDF conforme d'un document numéroté (4B-bis) : exclusivement les données
+    figées à la numérotation (instantanés émetteur/tier, numéro, lignes, taux) —
+    jamais les fiches vivantes. Un brouillon n'a ni numéro ni mentions figées :
+    pas de PDF (le document commercial est le PDF numéroté).
+
+    Quota d'exports KF-13 (mêmes compteurs que les exports comptables : la
+    génération est synchrone et coûteuse) et journal d'audit : le PDF fait
+    partie de la trace du document, comme son émission."""
+    document, lines = get_document(session, company_id, document_id)
+    if document.number is None:
+        raise BusinessRuleError(
+            "Le PDF est disponible après numérotation : envoyez le devis ou émettez la facture."
+        )
+    settings = get_settings()
+    user_limit = settings.exports_per_user_per_hour
+    if not quota.allowed(
+        "export-user", str(actor.user_id), limit=user_limit, window_seconds=quota.HOUR
+    ):
+        raise TooManyRequestsError(
+            f"Limite de {user_limit} exports par heure atteinte pour votre compte.",
+            headers={"Retry-After": quota.retry_after(quota.HOUR)},
+        )
+    company_limit = settings.exports_per_company_per_hour
+    if not quota.allowed(
+        "export-company", str(company_id), limit=company_limit, window_seconds=quota.HOUR
+    ):
+        raise TooManyRequestsError(
+            f"Limite de {company_limit} exports par heure atteinte pour ce dossier.",
+            headers={"Retry-After": quota.retry_after(quota.HOUR)},
+        )
+    fiscal_year = session.get_one(FiscalYear, document.fiscal_year_id)
+    origin_number: str | None = None
+    if document.origin_document_id is not None:
+        origin = session.execute(
+            select(SalesDocument).where(
+                SalesDocument.id == document.origin_document_id,
+                SalesDocument.tenant_id == company_id,
+            )
+        ).scalar_one_or_none()
+        if origin is not None and origin.number is not None:
+            origin_fiscal = session.get_one(FiscalYear, origin.fiscal_year_id)
+            origin_number = sales_pdf.format_document_number(
+                origin.doc_kind, origin_fiscal.start_date, origin.number
+            )
+    content = sales_pdf.render_document(
+        document, lines, fiscal_year, origin_number=origin_number, generated_at=utcnow()
+    )
+    filename = sales_pdf.filename_document(document, fiscal_year)
+    record_event(
+        session,
+        action="sales_document.exported",
+        entity_type="sales_document",
+        entity_id=document.id,
+        payload={
+            "type": document.doc_kind,
+            "numero": sales_pdf.format_document_number(
+                document.doc_kind, fiscal_year.start_date, document.number
+            ),
+            "total_ttc": document.total_ttc,
+        },
+        actor_user_id=actor.user_id,
+        ip_address=actor.ctx.ip_address,
+    )
+    session.commit()
+    return ExportFile(content, filename, MEDIA_TYPES["pdf"])

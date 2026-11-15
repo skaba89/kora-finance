@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { Download } from "lucide-react";
+
 import { ActionForm } from "@/components/forms/action-form";
 import { Field, SelectField } from "@/components/forms/field";
 import { InlineAction } from "@/components/forms/inline-action";
@@ -164,6 +166,17 @@ export default async function SalesPage({
                     <TableCell>{formatMoney(document.total_ttc, document.currency)}</TableCell>
                     <TableCell>{document.issued_on ?? "—"}</TableCell>
                     <TableCell className="space-x-2 text-right">
+                      {document.number != null && (
+                        <Button asChild variant="outline" size="sm">
+                          <a
+                            href={`/dossiers/${companyId}/ventes/${document.id}/pdf`}
+                            download
+                          >
+                            <Download aria-hidden className="size-4" />
+                            {t.sales.pdf}
+                          </a>
+                        </Button>
+                      )}
                       {manage && document.status === "DRAFT" && document.doc_kind === "quote" && (
                         <InlineAction
                           action={sendQuoteAction.bind(null, companyId, document.id)}
@@ -316,6 +329,7 @@ export default async function SalesPage({
                 <Field label={t.sales.validUntil} name="valid_until" type="date" />
               </div>
               <p className="text-muted-foreground text-xs">{t.sales.createHint}</p>
+              <p className="text-muted-foreground text-xs">{t.sales.mentionsNotice}</p>
             </ActionForm>
           </CardContent>
         </Card>

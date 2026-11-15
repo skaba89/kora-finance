@@ -15956,6 +15956,108 @@
         ]
       }
     },
+    "/api/v1/companies/{company_id}/sales/{document_id}/pdf": {
+      "get": {
+        "description": "PDF conforme du document numéroté (facture, devis envoyé, avoir) : mentions\nlégales figées à la numérotation, montants et exercice. Un brouillon est refusé.",
+        "operationId": "export_document_pdf_api_v1_companies__company_id__sales__document_id__pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "PDF conforme du document de vente"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Document Pdf",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
     "/api/v1/companies/{company_id}/sales/{document_id}/send": {
       "post": {
         "description": "Envoi d'un devis : numérotation définitive (chronologie sans trou).",
