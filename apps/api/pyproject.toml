@@ -37,7 +37,7 @@ dev = [
     "time-machine>=3.5,<3.7",
     "types-openpyxl==3.1.5.20261017",
     "types-reportlab==5.1.0.20261104",
-    "types-boto3[s3]==1.43.111",
+    "types-boto3[s3]==1.44.2",
 ]
 
 # Pas de paquet installable : le code vit dans src/ et PYTHONPATH=src
