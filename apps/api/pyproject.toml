@@ -22,7 +22,7 @@ dependencies = [
     "openpyxl>=3.1.5,<3.2",
     "reportlab>=5.0.1,<5.2",
     # Publié chaque jour : version exacte, au moins deux semaines d'ancienneté.
-    "boto3==1.43.126",
+    "boto3==1.44.2",
 ]
 
 [dependency-groups]
