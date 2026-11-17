@@ -1595,3 +1595,64 @@ régularisation du compte ; planification automatique des relances hors périmè
 validation humaine, envoi des documents par email/WhatsApp (4D-bis éventuel),
 achats (phase suivante).
 - Suivi : `AUDIT_SUIVI_20261109.md` §36.
+
+## 2026-11-18 — Phase 4E : intégration comptable des ventes (acte explicite du comptable)
+
+**Objet** — fermer le cycle de vente ouvert en 4B : les documents émis et les
+règlements deviennent des écritures validées du grand livre. La comptabilisation
+est un acte explicite (permission `entries:post`), jamais un effet de bord : le
+garde-fou testé depuis la 4A reste vrai, la 4E n'ajoute que l'action délibérée
+qui le rompt.
+
+**Livré** :
+- Migration 0020 : colonnes `entry_id` NULLables sur `sales_documents` et
+  `sales_payments`, FK composites RESTRICT vers `journal_entries` (pattern des
+  mouvements de trésorerie) — NULL tant que non comptabilisé ; RLS déjà forcée
+  sur les tables (0017/0018), rien à ajouter.
+- `kora/sales/accounting.py` : facture émise → journal des ventes VT (débit
+  411x au TTC, crédit du compte de produits au HT par groupe de taux, crédit du
+  compte collecté de chaque taux — 4431 TVA normale) ; avoir → écriture inverse ;
+  règlement → journal de trésorerie selon le mode (571 caisse au journal CA,
+  521 banque au journal BQ ou MM) créancier du compte de tiers. Comptes résolus
+  dans le plan du dossier : compte client par défaut de la fiche sinon 411,
+  produits 701 sauf choix explicite, TVA = compte collecté du taux daté (refus
+  clair si le réglage manque). Date = fait générateur (émission / encaissement) :
+  exercice ouvert et non verrouillé exigé. Montants issus des instantanés
+  d'émission — jamais recalculés. Exonération → HT au compte de produits, sans
+  ligne de TVA.
+- Course critique : 20 comptabilisations concurrentes de la même facture =
+  1 écriture + 19 refus 409 (verrou du document, la seconde lecture voit
+  `entry_id` rempli avant tout INSERT).
+- Interlocks symétriques : règlement comptabilisé → suppression refusée jusqu'à
+  la contre-passation de son écriture ; facture comptabilisée → annulation
+  refusée jusqu'à la contre-passation ; après contre-passation, la correction
+  passe (audit complet conservé).
+- Routes `POST /sales/{id}/entry` et `POST /payments/{id}/entry`
+  (`entries:post`) ; audit `sales_document.posted` / `sales_payment.posted` ;
+  `DocumentOut`/`PaymentOut` enrichis additivement (`entry_id`). Contrat :
+  **104 chemins** (2 ajoutés), 170 schémas (2 ajoutés) — pur ajout (3 champs
+  `entry_id` nullables sur des réponses + une description), types TS régénérés.
+- Front fr/en : colonne « Compta » avec badges « Comptabilisée » /
+  « Comptabilisé », bouton Comptabiliser (confirmation d'acte définitif) visible
+  avec `entries:post`, avis d'en-tête réécrit ; actions via BFF, types TS.
+
+**Validation** : pytest **18 nouveaux** (`test_sales_accounting.py` : écritures
+attendues au compte près, exonération, avoir inverse, refus devis/brouillon/
+annulée, double comptabilisation, course 20 fils, règlements CA/MM/BQ,
+interlocks avec contre-passation, exercice verrouillé, compte de regroupement
+refusé / sous-compte accepté, taux sans compte collecté, garde-fou « cycle sans
+action → grand livre vide », isolation, lecteur 403) ; régression par tranches
+sur la pile réelle hors Docker (PG 16.2 + btree_gist recompilé contre les
+binaires pgserver — `PG_CONFIG` en argument make, l'option d'environnement
+prenait le pg_config système PG 17 —, fakeredis 2.34.1 serveur TCP (2.40 perd
+son CLI), Moto S3 + buckets, Mailpit v1.33.1 ; pile et scripts reconstruits
+après recyclage du bac à sable : `scripts/stack.py` + `scripts/test-env.sh`) ;
+ruff 0 ; mypy strict 0 ; ESLint 0 ; tsc 0 ; Vitest 69/69 ; build Next.js OK ;
+migrations aller-retour 0020 → 0019 → 0020 + `alembic check` propre.
+
+**Reste** : CI toujours bloquée (facturation GitHub) : à rejouer après
+régularisation du compte ; envoi des documents par email/WhatsApp (4D-bis
+éventuel) ; imputation par famille de produits (plusieurs comptes 70x par
+document) = évolution future ; achats (phase suivante) ; arbitrage
+expert-comptable KF-15/16 avant données réelles.
+- Suivi : `AUDIT_SUIVI_20261109.md` §37.
