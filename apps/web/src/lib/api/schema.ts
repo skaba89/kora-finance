@@ -1295,6 +1295,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/receivables/overdue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Receivables Overdue
+         * @description Factures échues non soldées, candidates à la relance : retard en jours,
+         *     historique de relances et adresse email du tier (absente : la fiche du tier
+         *     doit être complétée avant toute relance).
+         */
+        get: operations["receivables_overdue_api_v1_companies__company_id__receivables_overdue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/reminders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Reminders
+         * @description Relances du dossier (historique immuable), filtrables et paginées.
+         */
+        get: operations["list_reminders_api_v1_companies__company_id__reminders_get"];
+        put?: never;
+        /**
+         * Create Reminder
+         * @description Enregistre une relance d'une facture échue et programme l'email de
+         *     rappel. Le niveau est compté sous verrou de la facture ; une panne de la
+         *     file n'annule pas l'enregistrement (`email_queued` False : la relance reste
+         *     renvoyable). Aucune écriture comptable.
+         */
+        post: operations["create_reminder_api_v1_companies__company_id__reminders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/reminders/{reminder_id}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resend Reminder
+         * @description Re-programme l'envoi email d'une relance déjà enregistrée (après une
+         *     file injoignable) : journalisé, la relance reste inchangée.
+         */
+        post: operations["resend_reminder_api_v1_companies__company_id__reminders__reminder_id__resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/sales": {
         parameters: {
             query?: never;
@@ -2697,6 +2767,8 @@ export interface components {
             } | null;
             /** Payment Status */
             payment_status?: ("none" | "partial" | "paid") | null;
+            /** Reminders Count */
+            reminders_count?: number | null;
             /** Reverses Document Id */
             reverses_document_id: string | null;
             /**
@@ -2758,6 +2830,8 @@ export interface components {
             partner_id: string;
             /** Payment Status */
             payment_status?: ("none" | "partial" | "paid") | null;
+            /** Reminders Count */
+            reminders_count?: number | null;
             /** Reverses Document Id */
             reverses_document_id: string | null;
             /**
@@ -3970,6 +4044,49 @@ export interface components {
             /** Treasury */
             treasury: boolean;
         };
+        /**
+         * OverdueItemOut
+         * @description Une facture échue candidate à la relance, avec son historique.
+         */
+        OverdueItemOut: {
+            /** Currency */
+            currency: string;
+            /** Days Late */
+            days_late: number;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Due On */
+            due_on: string;
+            /** Next Level */
+            next_level: number;
+            /** Number */
+            number: number;
+            /** Outstanding Ttc */
+            outstanding_ttc: number;
+            /** Partner Email */
+            partner_email: string | null;
+            /**
+             * Partner Id
+             * Format: uuid
+             */
+            partner_id: string;
+            /** Partner Name */
+            partner_name: string;
+            /** Reminders Count */
+            reminders_count: number;
+            /** Total Ttc */
+            total_ttc: number;
+        };
+        /** OverdueOut */
+        OverdueOut: {
+            /** As Of */
+            as_of: string;
+            /** Items */
+            items: components["schemas"]["OverdueItemOut"][];
+        };
         /** Page[AccountOut] */
         Page_AccountOut_: {
             /** Items */
@@ -4331,6 +4448,81 @@ export interface components {
             locale: "fr" | "en";
             /** Password */
             password: string;
+        };
+        /**
+         * ReminderCreatedOut
+         * @description Résultat d'une relance enregistrée : `email_queued` est False si la file
+         *     d'attente était injoignable — la relance reste enregistrée et renvoyable.
+         */
+        ReminderCreatedOut: {
+            /** Email Queued */
+            email_queued: boolean;
+            reminder: components["schemas"]["ReminderOut"];
+        };
+        /**
+         * ReminderIn
+         * @description Relance demandée : la facture visée et la date du rappel. Le niveau est
+         *     compté par le service (jamais saisi) ; une même facture ne reçoit qu'une
+         *     relance par jour (unicité en base — doublon refusé 409).
+         */
+        ReminderIn: {
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Note */
+            note?: string | null;
+            /**
+             * Reminded On
+             * Format: date
+             */
+            reminded_on: string;
+        };
+        /** ReminderOut */
+        ReminderOut: {
+            /**
+             * Channel
+             * @constant
+             */
+            channel: "EMAIL";
+            /** Created At */
+            created_at: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Email To */
+            email_to: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Level */
+            level: number;
+            /** Note */
+            note: string | null;
+            /**
+             * Partner Id
+             * Format: uuid
+             */
+            partner_id: string;
+            /** Reminded On */
+            reminded_on: string;
+        };
+        /** RemindersOut */
+        RemindersOut: {
+            /** Items */
+            items: components["schemas"]["ReminderOut"][];
+            /** Total */
+            total: number;
+        };
+        /** ResendOut */
+        ResendOut: {
+            /** Email Queued */
+            email_queued: boolean;
         };
         /** ResetPasswordRequest */
         ResetPasswordRequest: {
@@ -10330,6 +10522,240 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    receivables_overdue_api_v1_companies__company_id__receivables_overdue_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverdueOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reminders_api_v1_companies__company_id__reminders_get: {
+        parameters: {
+            query?: {
+                document_id?: string | null;
+                partner_id?: string | null;
+                date_from?: string | null;
+                date_to?: string | null;
+                /** @description Taille de page */
+                limit?: number;
+                /** @description Décalage */
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemindersOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_reminder_api_v1_companies__company_id__reminders_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReminderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReminderCreatedOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    resend_reminder_api_v1_companies__company_id__reminders__reminder_id__resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reminder_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResendOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
