@@ -285,3 +285,40 @@ export async function resendReminderAction(
   refresh();
   return { status: "success", message: t.sales.reminderResent };
 }
+
+/** Comptabilise une facture ou un avoir émis (Phase 4E) : acte explicite du
+ * comptable — crée et valide l'écriture du journal des ventes, liée au document.
+ * Refusé si le document est déjà comptabilisé (409) ; une erreur se corrige par
+ * contre-passation au grand livre. */
+export async function postDocumentEntryAction(
+  companyId: string,
+  documentId: string,
+  _: ActionState,
+): Promise<ActionState> {
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/sales/{document_id}/entry",
+    { params: { path: { company_id: companyId, document_id: documentId } }, body: {} },
+  );
+  if (!response.ok) return failure(error);
+  const t = await actionDictionary();
+  refresh();
+  return { status: "success", message: t.sales.posted };
+}
+
+/** Comptabilise un règlement (Phase 4E) : crée et valide l'écriture du journal
+ * de trésorerie (caisse, banque ou Mobile Money selon le mode), liée au
+ * règlement. Refusé si le règlement est déjà comptabilisé (409). */
+export async function postPaymentEntryAction(
+  companyId: string,
+  paymentId: string,
+  _: ActionState,
+): Promise<ActionState> {
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/payments/{payment_id}/entry",
+    { params: { path: { company_id: companyId, payment_id: paymentId } }, body: {} },
+  );
+  if (!response.ok) return failure(error);
+  const t = await actionDictionary();
+  refresh();
+  return { status: "success", message: t.sales.paymentPosted };
+}

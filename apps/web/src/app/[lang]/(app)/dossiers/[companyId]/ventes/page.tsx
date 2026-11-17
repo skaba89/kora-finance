@@ -27,6 +27,8 @@ import {
   deleteDocumentAction,
   deletePaymentAction,
   issueDocumentAction,
+  postDocumentEntryAction,
+  postPaymentEntryAction,
   resendReminderAction,
   sendQuoteAction,
 } from "@/lib/actions/sales";
@@ -54,7 +56,9 @@ const STATUSES = ["DRAFT", "SENT", "ACCEPTED", "REJECTED", "ISSUED", "CANCELLED"
 
 /** Page ventes (4B) : devis, factures et avoirs à numérotation sans trou. Créer un
  * brouillon n'écrit rien en comptabilité ; le numéro est attribué à l'émission
- * (facture/avoir) ou à l'envoi (devis) et n'est jamais réutilisé. */
+ * (facture/avoir) ou à l'envoi (devis) et n'est jamais réutilisé. La
+ * comptabilisation (4E) est un acte explicite du comptable : elle crée l'écriture
+ * validée et la lie au document ou au règlement. */
 export default async function SalesPage({
   params,
   searchParams,
@@ -82,6 +86,8 @@ export default async function SalesPage({
       getSalesReminders(companyId, { limit: 50, offset: 0 }),
     ]);
   const manage = can(company, "sales:manage");
+  // La comptabilisation (4E) est un acte comptable : permission entries:post.
+  const canPost = can(company, "entries:post");
   const activeRates = taxRates.filter((rate) => {
     const today = new Date().toISOString().slice(0, 10);
     return rate.valid_from <= today && (!rate.valid_to || rate.valid_to >= today);
@@ -166,6 +172,7 @@ export default async function SalesPage({
                   <TableHead>{t.sales.totalLabel}</TableHead>
                   <TableHead>{t.sales.outstandingLabel}</TableHead>
                   <TableHead>{t.sales.issuedLabel}</TableHead>
+                  <TableHead>{t.sales.postedColumn}</TableHead>
                   <TableHead className="text-right">{t.common.actions}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -206,6 +213,13 @@ export default async function SalesPage({
                       )}
                     </TableCell>
                     <TableCell>{document.issued_on ?? "—"}</TableCell>
+                    <TableCell>
+                      {document.entry_id != null ? (
+                        <Badge variant="outline">{t.sales.postedBadge}</Badge>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
                     <TableCell className="space-x-2 text-right">
                       {document.number != null && (
                         <Button asChild variant="outline" size="sm">
@@ -272,6 +286,16 @@ export default async function SalesPage({
                           pendingLabel={t.common.pending}
                         />
                       )}
+                      {canPost &&
+                        document.status === "ISSUED" &&
+                        document.entry_id == null && (
+                          <InlineAction
+                            action={postDocumentEntryAction.bind(null, companyId, document.id)}
+                            confirm={t.sales.confirmPosting}
+                            label={t.sales.postEntry}
+                            pendingLabel={t.common.pending}
+                          />
+                        )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -363,6 +387,7 @@ export default async function SalesPage({
                   <TableHead>{t.sales.totalLabel}</TableHead>
                   <TableHead>{t.sales.paymentsAllocations}</TableHead>
                   <TableHead>{t.sales.paymentReference}</TableHead>
+                  <TableHead>{t.sales.postedColumn}</TableHead>
                   <TableHead className="text-right">{t.common.actions}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -386,7 +411,22 @@ export default async function SalesPage({
                         .join(", ")}
                     </TableCell>
                     <TableCell>{payment.reference ?? "—"}</TableCell>
+                    <TableCell>
+                      {payment.entry_id != null ? (
+                        <Badge variant="outline">{t.sales.paymentPostedBadge}</Badge>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
+                      {canPost && payment.entry_id == null && (
+                        <InlineAction
+                          action={postPaymentEntryAction.bind(null, companyId, payment.id)}
+                          confirm={t.sales.paymentConfirmPosting}
+                          label={t.sales.paymentPost}
+                          pendingLabel={t.common.pending}
+                        />
+                      )}
                       {manage && (
                         <InlineAction
                           action={deletePaymentAction.bind(null, companyId, payment.id)}

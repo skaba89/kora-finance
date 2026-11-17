@@ -564,7 +564,7 @@ export const fr = {
     subtitle:
       "Devis, factures et avoirs du dossier, numérotés chronologiquement sans trou (OHADA).",
     noPostingNotice:
-      "Créer ou modifier un document n'écrit rien en comptabilité : l'intégration comptable est une phase dédiée, avec validation humaine.",
+      "Créer ou émettre un document n'écrit rien en comptabilité : la comptabilisation est un acte explicite du comptable (bouton « Comptabiliser »), qui crée l'écriture validée et la lie au document.",
     filterAll: "Tous les documents",
     filterStatus: "Statut",
     listTitle: "Documents",
@@ -703,6 +703,17 @@ export const fr = {
       CARD: "Carte",
       OTHER: "Autre",
     },
+    postedBadge: "Comptabilisée",
+    postEntry: "Comptabiliser",
+    confirmPosting:
+      "Action définitive : l'écriture validée sera numérotée au journal des ventes et liée au document. Continuer ?",
+    posted: "Document comptabilisé : l'écriture est liée au document (grand livre).",
+    paymentPost: "Comptabiliser",
+    paymentPostedBadge: "Comptabilisé",
+    paymentPosted: "Encaissement comptabilisé : l'écriture est liée au règlement (grand livre).",
+    paymentConfirmPosting:
+      "Action définitive : l'écriture validée sera numérotée au journal de trésorerie et liée au règlement. Continuer ?",
+    postedColumn: "Compta",
   },
   partners: {
     title: "Référentiel des tiers",
