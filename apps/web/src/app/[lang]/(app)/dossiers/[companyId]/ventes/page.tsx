@@ -22,10 +22,12 @@ import {
   convertQuoteAction,
   createDocumentAction,
   createPaymentAction,
+  createReminderAction,
   decideQuoteAction,
   deleteDocumentAction,
   deletePaymentAction,
   issueDocumentAction,
+  resendReminderAction,
   sendQuoteAction,
 } from "@/lib/actions/sales";
 import {
@@ -34,7 +36,9 @@ import {
   getPartners,
   getSalesAging,
   getSalesDocuments,
+  getSalesOverdue,
   getSalesPayments,
+  getSalesReminders,
   getTaxRates,
 } from "@/lib/dal";
 import { formatMoney } from "@/lib/format";
@@ -65,15 +69,18 @@ export default async function SalesPage({
     typeof statut === "string" && STATUSES.includes(statut as (typeof STATUSES)[number])
       ? (statut as (typeof STATUSES)[number])
       : undefined;
-  const [{ t }, company, documents, partners, taxRates, payments, aging] = await Promise.all([
-    getDictionary(),
-    getCompany(companyId),
-    getSalesDocuments(companyId, { kind: kindParam, status: statusParam, limit: 100, offset: 0 }),
-    getPartners(companyId, { active: true, limit: 200, offset: 0 }),
-    getTaxRates(companyId),
-    getSalesPayments(companyId, { limit: 50, offset: 0 }),
-    getSalesAging(companyId),
-  ]);
+  const [{ t }, company, documents, partners, taxRates, payments, aging, overdue, reminders] =
+    await Promise.all([
+      getDictionary(),
+      getCompany(companyId),
+      getSalesDocuments(companyId, { kind: kindParam, status: statusParam, limit: 100, offset: 0 }),
+      getPartners(companyId, { active: true, limit: 200, offset: 0 }),
+      getTaxRates(companyId),
+      getSalesPayments(companyId, { limit: 50, offset: 0 }),
+      getSalesAging(companyId),
+      getSalesOverdue(companyId),
+      getSalesReminders(companyId, { limit: 50, offset: 0 }),
+    ]);
   const manage = can(company, "sales:manage");
   const activeRates = taxRates.filter((rate) => {
     const today = new Date().toISOString().slice(0, 10);
@@ -434,6 +441,136 @@ export default async function SalesPage({
                     </TableRow>
                   );
                 })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>{t.sales.reminderTitle}</CardTitle>
+          <p className="text-muted-foreground text-sm">
+            {t.sales.reminderAsOf} {overdue.as_of} — {overdue.items.length} {t.sales.reminderOverdueCount}
+          </p>
+        </CardHeader>
+        <CardContent>
+          {overdue.items.length === 0 ? (
+            <p className="text-muted-foreground text-sm">{t.sales.reminderEmpty}</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t.sales.reminderOverdueDoc}</TableHead>
+                  <TableHead>{t.sales.reminderPartner}</TableHead>
+                  <TableHead>{t.sales.reminderDue}</TableHead>
+                  <TableHead className="text-right">{t.sales.reminderBalance}</TableHead>
+                  <TableHead className="text-right">{t.sales.reminderLate}</TableHead>
+                  <TableHead className="text-right">{t.sales.reminderCount}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {overdue.items.map((item) => (
+                  <TableRow key={item.document_id}>
+                    <TableCell className="font-mono text-xs">FAC-{item.number}</TableCell>
+                    <TableCell>
+                      {item.partner_name}
+                      {item.partner_email == null && (
+                        <span className="text-muted-foreground"> — {t.sales.reminderNoEmail}</span>
+                      )}
+                    </TableCell>
+                    <TableCell>{item.due_on}</TableCell>
+                    <TableCell className="text-right">
+                      {formatMoney(item.outstanding_ttc, item.currency)}
+                    </TableCell>
+                    <TableCell className="text-right">{item.days_late} j</TableCell>
+                    <TableCell className="text-right">{item.reminders_count}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          {manage && overdue.items.length > 0 && (
+            <ActionForm
+              action={createReminderAction.bind(null, companyId)}
+              className="mt-6 space-y-4"
+              submitLabel={t.sales.reminderRecord}
+              pendingLabel={t.common.pending}
+            >
+              <h3 className="text-sm font-medium">{t.sales.reminderFormTitle}</h3>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <SelectField
+                  label={t.sales.reminderDoc}
+                  name="document_id"
+                  required
+                  options={[
+                    { value: "", label: t.sales.reminderDocPlaceholder },
+                    ...overdue.items
+                      .filter((item) => item.partner_email != null)
+                      .map((item) => ({
+                        value: item.document_id,
+                        label: `FAC-${item.number} — ${item.partner_name} · ${formatMoney(item.outstanding_ttc, item.currency)} · ${item.days_late} j · ${t.sales.reminderNext} ${item.next_level}`,
+                      })),
+                  ]}
+                />
+                <Field label={t.sales.reminderNote} name="note" />
+              </div>
+              <p className="text-muted-foreground text-xs">{t.sales.reminderHint}</p>
+            </ActionForm>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>{t.sales.remindersHistoryTitle}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {reminders.items.length === 0 ? (
+            <p className="text-muted-foreground text-sm">{t.sales.remindersHistoryEmpty}</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t.sales.reminderOn}</TableHead>
+                  <TableHead>{t.sales.reminderOverdueDoc}</TableHead>
+                  <TableHead>{t.sales.reminderLevel}</TableHead>
+                  <TableHead>{t.sales.reminderTo}</TableHead>
+                  <TableHead>{t.sales.reminderNote}</TableHead>
+                  <TableHead className="text-right">{t.common.actions}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reminders.items.map((reminder) => (
+                  <TableRow key={reminder.id}>
+                    <TableCell>{reminder.reminded_on}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {(() => {
+                        const target = documents.items.find(
+                          (document) => document.id === reminder.document_id,
+                        );
+                        return target?.number != null ? `FAC-${target.number}` : "…";
+                      })()}
+                    </TableCell>
+                    <TableCell>
+                      {(t.sales.reminderLevels as Record<string, string>)[
+                        reminder.level
+                      ] ?? `#${reminder.level}`}
+                    </TableCell>
+                    <TableCell className="text-xs">{reminder.email_to}</TableCell>
+                    <TableCell>{reminder.note ?? "—"}</TableCell>
+                    <TableCell className="text-right">
+                      {manage && (
+                        <InlineAction
+                          action={resendReminderAction.bind(null, companyId, reminder.id)}
+                          confirm={t.sales.reminderConfirmResend}
+                          label={t.sales.reminderResend}
+                          pendingLabel={t.common.pending}
+                        />
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           )}
