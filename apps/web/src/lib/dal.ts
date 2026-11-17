@@ -394,3 +394,28 @@ export async function getSalesAging(companyId: string, asOf?: string) {
     }),
   );
 }
+
+/** Factures échues candidates à la relance (Phase 4D) : retard en jours,
+ * historique et adresse email du tier. */
+export async function getSalesOverdue(companyId: string, asOf?: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/receivables/overdue", {
+      params: {
+        path: { company_id: companyId },
+        query: asOf ? { as_of: asOf } : undefined,
+      },
+    }),
+  );
+}
+
+/** Historique immuable des relances de factures échues (Phase 4D). */
+export async function getSalesReminders(
+  companyId: string,
+  query?: { document_id?: string; limit?: number; offset?: number },
+) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/reminders", {
+      params: { path: { company_id: companyId }, query },
+    }),
+  );
+}

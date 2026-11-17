@@ -104,6 +104,24 @@ email/WhatsApp, relances, balance âgée.
   `sales:read`/`sales:manage` réutilisées, audit `sales_payment.created`/`deleted`,
   zéro écriture comptable (4E à venir) ; page Ventes fr/en : solde dû, règlements,
   formulaire d'encaissement Mobile Money en tête, balance âgée).
+- **4D — Relances de factures échues** ✅ (2026-11-17, branche
+  `feature/kora-4d-relances` : migration 0019 `sales_reminders` (RLS forcée, FK
+  composites, unicité (dossier, facture, jour du rappel)) ; une relance vise une
+  facture ÉMISE, ÉCHUE (échéance passée à la date du rappel) et non soldée
+  (même calcul du solde qu'en 4C) ; le niveau (1re, 2e, 3e relance…) est compté
+  par le service sous verrou FOR UPDATE de la facture — jamais saisi ; deux
+  courses concurrentes se sérialisent sur le verrou : 20 relances concurrentes
+  le même jour = 1 création + 19 refus 409 ; relance immuable (aucune
+  suppression ni modification — le contrat n'expose que GET/POST) ; l'email
+  français au client part dans le worker (jamais pendant la requête) : une panne
+  de la file n'annule pas la relance, `email_queued` porté par la réponse et
+  renvoi journalisé depuis l'historique ; adresse destinataire figée à l'envoi
+  (traçabilité) ; routes `/receivables/overdue` (candidates : retard, historique,
+  email du tier), `/reminders` et `/reminders/{id}/resend`, `DocumentOut`
+  enrichi additivement (`reminders_count`) ; WhatsApp : évolution future (canal
+  borné à EMAIL par CHECK) ; zéro écriture comptable (4E à venir) ; page Ventes
+  fr/en : factures échues candidates, formulaire de relance (message
+  personnalisé facultatif), historique avec renvoi).
 
 ## Phase 5 — Import et migration
 FEC, Excel, balance d'ouverture en tâche de fond, rapport de contrôle.

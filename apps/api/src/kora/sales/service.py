@@ -303,8 +303,7 @@ def _exige_facture_sans_reglement(
     ).scalar_one_or_none()
     if a_un_reglement is not None:
         raise ConflictError(
-            "Cette facture porte des règlements : supprimez-les (journalisés) "
-            "avant de l'annuler."
+            "Cette facture porte des règlements : supprimez-les (journalisés) avant de l'annuler."
         )
 
 

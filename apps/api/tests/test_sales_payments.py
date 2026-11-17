@@ -39,9 +39,7 @@ class Payments:
         self.company = company
         self.base = f"/api/v1/companies/{company.id}"
 
-    def create(
-        self, body: dict[str, object], company: CompanyFixture | None = None
-    ) -> Response:
+    def create(self, body: dict[str, object], company: CompanyFixture | None = None) -> Response:
         headers = (company or self.company).headers
         return self.client.post(f"{self.base}/payments", headers=headers, json=body)
 
@@ -61,9 +59,7 @@ class Payments:
     def aging(self, company: CompanyFixture | None = None, **params: object) -> Response:
         headers = (company or self.company).headers
         query = {k: str(v) for k, v in params.items() if v is not None}
-        return self.client.get(
-            f"{self.base}/receivables/aging", headers=headers, params=query
-        )
+        return self.client.get(f"{self.base}/receivables/aging", headers=headers, params=query)
 
 
 def _facture_emise(
@@ -102,9 +98,7 @@ def _reglement(
     )
 
 
-def test_reglement_integral_solde_zero(
-    client: TestClient, make_company: MakeCompany
-) -> None:
+def test_reglement_integral_solde_zero(client: TestClient, make_company: MakeCompany) -> None:
     company = _dossier(make_company)
     sales = Sales(client, company)
     reglements = Payments(client, company)
@@ -121,9 +115,7 @@ def test_reglement_integral_solde_zero(
     assert facture["payment_status"] == "paid"
 
 
-def test_reglement_partiel_et_multi_factures(
-    client: TestClient, make_company: MakeCompany
-) -> None:
+def test_reglement_partiel_et_multi_factures(client: TestClient, make_company: MakeCompany) -> None:
     company = _dossier(make_company)
     sales = Sales(client, company)
     reglements = Payments(client, company)
@@ -205,9 +197,7 @@ def test_refus_hors_solde_et_statuts_interdits(
     assert _reglement(reglements, avoir, 100).status_code == 422
 
 
-def test_facture_annulee_refuse_le_reglement(
-    client: TestClient, make_company: MakeCompany
-) -> None:
+def test_facture_annulee_refuse_le_reglement(client: TestClient, make_company: MakeCompany) -> None:
     company = _dossier(make_company)
     sales = Sales(client, company)
     reglements = Payments(client, company)
@@ -269,9 +259,7 @@ def test_suppression_libere_le_solde_et_journalise(
     assert "sales_payment.deleted" in actions
 
 
-def test_facture_lettree_ne_s_annule_pas(
-    client: TestClient, make_company: MakeCompany
-) -> None:
+def test_facture_lettree_ne_s_annule_pas(client: TestClient, make_company: MakeCompany) -> None:
     company = _dossier(make_company)
     sales = Sales(client, company)
     reglements = Payments(client, company)
@@ -327,12 +315,10 @@ def test_lecteur_lit_mais_ne_reglemente_pas(
     invoice_id = _facture_emise(sales, client, company)
     headers = lecteur.headers(client)  # type: ignore[attr-defined]
     assert (
-        client.get(f"/api/v1/companies/{company.id}/payments", headers=headers).status_code
-        == 200
+        client.get(f"/api/v1/companies/{company.id}/payments", headers=headers).status_code == 200
     )
     assert (
-        client.get(f"/api/v1/companies/{company.id}/receivables/aging", headers=headers)
-        .status_code
+        client.get(f"/api/v1/companies/{company.id}/receivables/aging", headers=headers).status_code
         == 200
     )
     reponse = client.post(
@@ -453,9 +439,7 @@ def test_reglements_concurrents_sans_excedent(
 
     def regler() -> None:
         try:
-            reponse = _reglement(
-                reglements, invoice_id, 1_000, paid_on="2026-06-15", method="CASH"
-            )
+            reponse = _reglement(reglements, invoice_id, 1_000, paid_on="2026-06-15", method="CASH")
             with verrou:
                 resultats.append(str(reponse.status_code))
         except BaseException as exc:  # pragma: no cover - diagnostic de course
@@ -475,8 +459,6 @@ def test_reglements_concurrents_sans_excedent(
     assert facture["outstanding_ttc"] == 0
     assert facture["payment_status"] == "paid"
     total = sum(
-        a["amount"]
-        for p in reglements.list(limit=100).json()["items"]
-        for a in p["allocations"]
+        a["amount"] for p in reglements.list(limit=100).json()["items"] for a in p["allocations"]
     )
     assert total == 10_000, "la somme lettrée dépasse le TTC : fuite de contrôle"

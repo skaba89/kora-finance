@@ -11,6 +11,7 @@ from kora.auth import recovery
 from kora.core.config import get_settings
 from kora.core.logging import configure_logging
 from kora.db.session import get_sessionmaker
+from kora.db.tenant import bind_tenant
 from kora.email import sender
 from kora.email.sender import OutgoingEmail
 from kora.organization import invitations
@@ -74,3 +75,24 @@ def notify_password_changed(user_id: str) -> None:
 @dramatiq.actor(max_retries=_RETRIES, min_backoff=_MIN_BACKOFF_MS, max_backoff=_MAX_BACKOFF_MS)
 def send_invitation(invitation_id: str) -> None:
     _prepare_and_deliver(lambda s: invitations.prepare_email(s, uuid.UUID(invitation_id)))
+
+
+@dramatiq.actor(max_retries=_RETRIES, min_backoff=_MIN_BACKOFF_MS, max_backoff=_MAX_BACKOFF_MS)
+def send_sales_reminder(tenant_id: str, reminder_id: str) -> None:
+    """Relance de facture échue (4D) : l'email est composé depuis l'état
+    persisté puis confié à `deliver_email`. Le tenant est lié explicitement à
+    la session : les tables de vente sont sous RLS forcée et une session sans
+    tenant n'y voit aucune ligne (échec fermé)."""
+    # Import local obligatoire : importer `kora.sales` au niveau du module créerait
+    # un cycle (accounting.entries → attachments.service → worker.tasks → sales).
+    from kora.sales import reminders  # noqa: PLC0415
+
+    try:
+        with get_sessionmaker()() as session:
+            bind_tenant(session, uuid.UUID(tenant_id))
+            email = reminders.prepare_email(session, uuid.UUID(reminder_id))
+    except LookupError:
+        # La relance a disparu (dossier supprimé) : aucun envoi, aucun réessai.
+        logger.info("relance disparue, envoi abandonné", extra={"relance": reminder_id})
+        return
+    deliver_email.send(email.to_dict())

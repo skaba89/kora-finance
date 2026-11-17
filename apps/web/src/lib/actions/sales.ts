@@ -237,3 +237,51 @@ export async function deletePaymentAction(
   refresh();
   return { status: "success", message: t.sales.paymentDeleted };
 }
+
+/** Enregistre une relance d'une facture échue (Phase 4D) : le niveau est compté
+ * par l'API sous verrou (jamais saisi), une seule relance par facture et par
+ * jour ; l'email part depuis le worker — une panne de la file ne bloque pas la
+ * relance (renvoi possible depuis l'historique). */
+export async function createReminderAction(
+  companyId: string,
+  _: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const documentId = field(formData, "document_id");
+  if (!documentId) {
+    const t = await actionDictionary();
+    return { status: "error", message: t.sales.reminderDocRequired };
+  }
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/reminders",
+    {
+      params: { path: { company_id: companyId } },
+      body: {
+        document_id: documentId,
+        reminded_on: new Date().toISOString().slice(0, 10),
+        note: field(formData, "note") || undefined,
+      },
+    },
+  );
+  if (!response.ok) return failure(error);
+  const t = await actionDictionary();
+  refresh();
+  return { status: "success", message: t.sales.reminderCreated };
+}
+
+/** Re-programme l'envoi email d'une relance déjà enregistrée : la relance reste
+ * inchangée (immuable), l'action est journalisée. */
+export async function resendReminderAction(
+  companyId: string,
+  reminderId: string,
+  _: ActionState,
+): Promise<ActionState> {
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/reminders/{reminder_id}/resend",
+    { params: { path: { company_id: companyId, reminder_id: reminderId } } },
+  );
+  if (!response.ok) return failure(error);
+  const t = await actionDictionary();
+  refresh();
+  return { status: "success", message: t.sales.reminderResent };
+}

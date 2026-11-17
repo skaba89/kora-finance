@@ -114,6 +114,43 @@ _TEMPLATES: dict[str, dict[Locale, _Template]] = {
             outro="If you do not know this person, ignore this email.",
         ),
     },
+    # Relance de facture échue (4D) : email adressé AU CLIENT du dossier, pas à
+    # un utilisateur Kora. Langue commerciale des clients visés : le français —
+    # un gabarit par locale du tier est une évolution future.
+    "invoice_reminder": {
+        "fr": _Template(
+            subject="Relance n°{level} — facture {number} échue ({company})",
+            intro=(
+                "Bonjour {partner_name},\n\nSauf erreur de notre part, la facture {number}, "
+                "émise par « {company} », était payable le {due_on} et reste échue depuis "
+                "{days} jour(s). Le solde restant à régler s'élève à {amount} {currency}."
+                "{note_extra}\n\nNous vous remercions de procéder au règlement de cette "
+                "facture dans les meilleurs délais."
+            ),
+            action=None,
+            outro=(
+                "Si un règlement a déjà été effectué ou si vous constatez une erreur, merci "
+                "de nous en informer. Ce rappel vous a été adressé par « {company} » via "
+                "Kora Finance."
+            ),
+        ),
+        "en": _Template(
+            subject="Reminder no. {level} — overdue invoice {number} ({company})",
+            intro=(
+                "Hello {partner_name},\n\nUnless we are mistaken, invoice {number}, issued by "
+                "“{company}”, was due on {due_on} and has now been overdue for {days} "
+                "day(s). The remaining balance to settle is {amount} {currency}."
+                "{note_extra}\n\nWe kindly ask you to settle this invoice at your earliest "
+                "convenience."
+            ),
+            action=None,
+            outro=(
+                "If a payment has already been made or if you believe this to be an error, "
+                "please let us know. This reminder was sent to you by “{company}” via "
+                "Kora Finance."
+            ),
+        ),
+    },
 }
 
 ROLE_LABELS: dict[Locale, dict[str, str]] = {
