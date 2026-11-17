@@ -21,12 +21,22 @@ import {
   cancelInvoiceAction,
   convertQuoteAction,
   createDocumentAction,
+  createPaymentAction,
   decideQuoteAction,
   deleteDocumentAction,
+  deletePaymentAction,
   issueDocumentAction,
   sendQuoteAction,
 } from "@/lib/actions/sales";
-import { can, getCompany, getPartners, getSalesDocuments, getTaxRates } from "@/lib/dal";
+import {
+  can,
+  getCompany,
+  getPartners,
+  getSalesAging,
+  getSalesDocuments,
+  getSalesPayments,
+  getTaxRates,
+} from "@/lib/dal";
 import { formatMoney } from "@/lib/format";
 import { getDictionary } from "@/lib/i18n/server";
 
@@ -55,12 +65,14 @@ export default async function SalesPage({
     typeof statut === "string" && STATUSES.includes(statut as (typeof STATUSES)[number])
       ? (statut as (typeof STATUSES)[number])
       : undefined;
-  const [{ t }, company, documents, partners, taxRates] = await Promise.all([
+  const [{ t }, company, documents, partners, taxRates, payments, aging] = await Promise.all([
     getDictionary(),
     getCompany(companyId),
     getSalesDocuments(companyId, { kind: kindParam, status: statusParam, limit: 100, offset: 0 }),
     getPartners(companyId, { active: true, limit: 200, offset: 0 }),
     getTaxRates(companyId),
+    getSalesPayments(companyId, { limit: 50, offset: 0 }),
+    getSalesAging(companyId),
   ]);
   const manage = can(company, "sales:manage");
   const activeRates = taxRates.filter((rate) => {
@@ -145,6 +157,7 @@ export default async function SalesPage({
                   <TableHead>{t.sales.kindLabel}</TableHead>
                   <TableHead>{t.sales.statusLabel}</TableHead>
                   <TableHead>{t.sales.totalLabel}</TableHead>
+                  <TableHead>{t.sales.outstandingLabel}</TableHead>
                   <TableHead>{t.sales.issuedLabel}</TableHead>
                   <TableHead className="text-right">{t.common.actions}</TableHead>
                 </TableRow>
@@ -164,6 +177,27 @@ export default async function SalesPage({
                       </Badge>
                     </TableCell>
                     <TableCell>{formatMoney(document.total_ttc, document.currency)}</TableCell>
+                    <TableCell>
+                      {document.payment_status != null ? (
+                        <Badge
+                          variant={
+                            document.payment_status === "paid"
+                              ? "outline"
+                              : document.payment_status === "partial"
+                                ? "secondary"
+                                : "default"
+                          }
+                        >
+                          {(
+                            t.sales.paymentStatus as Record<string, string>
+                          )[document.payment_status]}
+                          {" "}
+                          {formatMoney(document.outstanding_ttc ?? 0, document.currency)}
+                        </Badge>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
                     <TableCell>{document.issued_on ?? "—"}</TableCell>
                     <TableCell className="space-x-2 text-right">
                       {document.number != null && (
@@ -234,6 +268,172 @@ export default async function SalesPage({
                     </TableCell>
                   </TableRow>
                 ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {manage && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>{t.sales.paymentFormTitle}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ActionForm
+              action={createPaymentAction.bind(null, companyId)}
+              className="space-y-4"
+              submitLabel={t.sales.paymentRecord}
+              pendingLabel={t.common.pending}
+            >
+              <div className="grid gap-4 sm:grid-cols-3">
+                <SelectField
+                  label={t.sales.paymentDoc}
+                  name="document_id"
+                  required
+                  options={[
+                    { value: "", label: t.sales.paymentDocPlaceholder },
+                    ...documents.items
+                      .filter(
+                        (document) =>
+                          document.doc_kind === "invoice" &&
+                          document.status === "ISSUED" &&
+                          (document.outstanding_ttc ?? 0) > 0,
+                      )
+                      .map((document) => ({
+                        value: document.id,
+                        label: `FAC-${document.number} — ${t.sales.outstandingLabel} ${formatMoney(document.outstanding_ttc ?? 0, document.currency)}`,
+                      })),
+                  ]}
+                />
+                <Field
+                  label={t.sales.paymentAmount}
+                  name="amount"
+                  type="number"
+                  min="1"
+                  step="1"
+                  required
+                />
+                <Field label={t.sales.paymentDate} name="paid_on" type="date" required />
+                <SelectField
+                  label={t.sales.paymentMethod}
+                  name="method"
+                  options={(
+                    [
+                      "MOBILE_MONEY",
+                      "CASH",
+                      "BANK_TRANSFER",
+                      "CHECK",
+                      "CARD",
+                      "OTHER",
+                    ] as const
+                  ).map((method) => ({
+                    value: method,
+                    label: (t.sales.methods as Record<string, string>)[method] ?? method,
+                  }))}
+                />
+                <Field label={t.sales.paymentReference} name="reference" />
+              </div>
+              <p className="text-muted-foreground text-xs">{t.sales.paymentHint}</p>
+            </ActionForm>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>{t.sales.paymentsTitle}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {payments.items.length === 0 ? (
+            <p className="text-muted-foreground text-sm">{t.sales.paymentsEmpty}</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t.sales.paymentDate}</TableHead>
+                  <TableHead>{t.sales.paymentMethod}</TableHead>
+                  <TableHead>{t.sales.totalLabel}</TableHead>
+                  <TableHead>{t.sales.paymentsAllocations}</TableHead>
+                  <TableHead>{t.sales.paymentReference}</TableHead>
+                  <TableHead className="text-right">{t.common.actions}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {payments.items.map((payment) => (
+                  <TableRow key={payment.id}>
+                    <TableCell>{payment.paid_on}</TableCell>
+                    <TableCell>
+                      {(t.sales.methods as Record<string, string>)[payment.method] ??
+                        payment.method}
+                    </TableCell>
+                    <TableCell>{formatMoney(payment.amount, payment.currency)}</TableCell>
+                    <TableCell>
+                      {payment.allocations
+                        .map((allocation) => {
+                          const target = documents.items.find(
+                            (document) => document.id === allocation.document_id,
+                          );
+                          return target?.number != null ? `FAC-${target.number}` : "…";
+                        })
+                        .join(", ")}
+                    </TableCell>
+                    <TableCell>{payment.reference ?? "—"}</TableCell>
+                    <TableCell className="text-right">
+                      {manage && (
+                        <InlineAction
+                          action={deletePaymentAction.bind(null, companyId, payment.id)}
+                          confirm={t.sales.confirmPaymentDelete}
+                          label={t.common.remove}
+                          pendingLabel={t.common.pending}
+                        />
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>{t.sales.agingTitle}</CardTitle>
+          <p className="text-muted-foreground text-sm">
+            {t.sales.agingAsOf} {aging.as_of} — {formatMoney(aging.grand_total_ttc, company.company.currency)}
+          </p>
+        </CardHeader>
+        <CardContent>
+          {aging.grand_total_ttc === 0 ? (
+            <p className="text-muted-foreground text-sm">{t.sales.agingEmpty}</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t.sales.agingTitle}</TableHead>
+                  <TableHead>{t.sales.agingCount}</TableHead>
+                  <TableHead className="text-right">{t.sales.agingTotal}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(
+                  ["not_due", "d1_30", "d31_60", "d61_90", "d90_plus"] as const
+                ).map((bucket) => {
+                  const line = aging.buckets[bucket];
+                  if (!line || line.count === 0) return null;
+                  return (
+                    <TableRow key={bucket}>
+                      <TableCell>
+                        {(t.sales.agingBucket as Record<string, string>)[bucket]}
+                      </TableCell>
+                      <TableCell>{line.count}</TableCell>
+                      <TableCell className="text-right">
+                        {formatMoney(line.total_ttc, company.company.currency)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

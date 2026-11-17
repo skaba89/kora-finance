@@ -89,6 +89,21 @@ email/WhatsApp, relances, balance âgée.
   adresse du client, NIF et adresse de l'émetteur — le devis reste averti ;
   corrections d'hygiène : registre Alembic complet (`alembic check` rétabli) et
   `uv.lock` réaligné).
+- **4C — Règlements clients et lettrage commercial** ✅ (2026-11-17, branche
+  `feature/kora-4c-reglements-lettrage` : migration 0018 `sales_payments`/
+  `sales_payment_allocations` (RLS, FK composites), règlement = encaissement
+  affecté à une ou plusieurs factures émises du même tier, montant recalculé =
+  somme des affectations, solde restant dû TTC − affectations − avoirs partiels
+  émis calculé en lecture (aucun statut dérivé stocké) ; contrôle du solde sous
+  verrou FOR UPDATE des factures, ordre trié sans interblocage — 20 règlements
+  concurrents de 1 000 sur TTC 10 000 = 10 succès + 10 refus, somme lettrée
+  exactement 10 000 ; interlock : une facture lettrée ne s'annule pas (règlements
+  à supprimer d'abord, journalisés) ; routes `/payments` et `/receivables/aging`
+  (balance âgée en cinq buckets à date arbitraire), `DocumentOut` enrichi
+  additivement (`outstanding_ttc`, `payment_status`) ; permissions
+  `sales:read`/`sales:manage` réutilisées, audit `sales_payment.created`/`deleted`,
+  zéro écriture comptable (4E à venir) ; page Ventes fr/en : solde dû, règlements,
+  formulaire d'encaissement Mobile Money en tête, balance âgée).
 
 ## Phase 5 — Import et migration
 FEC, Excel, balance d'ouverture en tâche de fond, rapport de contrôle.

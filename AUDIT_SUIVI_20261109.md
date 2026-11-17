@@ -1434,3 +1434,62 @@ aux §29/§30) : à rejouer après régularisation.
 sans trou, PDF conforme remis au client, mentions fiscales garanties à la source.
 Prochains chantiers : **Phase 4C** (règlements et lettrage des factures émises),
 envoi du PDF par email/WhatsApp, balance âgée.
+
+## 35. Phase 4C — règlements clients, lettrage commercial et balance âgée (2026-11-17)
+
+### Constat d'origine
+Le CI GitHub Actions restait bloqué par la facturation du compte (chaque job tué
+à ~3 s, logs purgés) : les « erreurs » visibles sur les PRs Dependabot n'étaient
+pas des défauts de code. Les sept PRs Dependabot redondantes (#85 à #91) ont été
+refermées avec commentaire au profit des consolidations #92 (pip) et #93 (npm),
+à jour sur `main` et sans conflit — à merge après régularisation du compte.
+
+### PR #94 — implémentation
+Branche `feature/kora-4c-reglements-lettrage` (base 2269a49 = 4B-bis mergée) :
+- **Numérotation de l'argent, pas des documents** : un règlement est un
+  encaissement réel (date, mode borné CASH/BANK_TRANSFER/MOBILE_MONEY/CHECK/
+  CARD/OTHER, référence facultative), affecté à des factures émises du même tier
+  et de la même devise. Le montant est la somme des affectations — jamais saisi.
+- **Solde restant dû calculé en lecture** : TTC − affectations − avoirs partiels
+  émis (les avoirs annulateurs passent la facture en CANCELLED et refusent tout
+  règlement). Aucun statut dérivé stocké : aucune dérive possible entre
+  agrégats et statuts ; `payment_status` (none/partial/paid) est dérivé au
+  moment de la réponse, additif dans le contrat (aucun widening d'énumération).
+- **Sérialisation des contrôles** : chaque création verrouille les factures
+  visées FOR UPDATE dans un ordre trié (pas d'interblocage avec les autres
+  modules, aucun compteur impliqué), puis relit les sommes sous verrou. Test de
+  course : 20 fils sur connexions réelles, 1 000 chacun sur TTC 10 000 →
+  exactement 10 créations 201 et 10 refus 422, somme lettrée = 10 000.
+- **Interlock d'annulation** : `_exige_facture_sans_reglement` refuse l'annulation
+  (sans avoir ET par avoir annulateur) d'une facture qui porte des règlements —
+  supprimer un règlement est journalisé (`sales_payment.deleted`), ce qui rend
+  l'annulation à nouveau possible. Une facture annulée refuse tout règlement.
+- **Balance âgée** : `/receivables/aging` à date arbitraire (`as_of`), cinq
+  buckets, hors soldes nuls ou négatifs (avoirs excédentaires) ; sans échéance →
+  à-échoir.
+- **Hygiène héritée** : suppression d'un règlement déléguée au CASCADE de la
+  base (sans relation ORM, l'ordre parent/enfant du unit-of-work est indéterminé
+  — une suppression explicite des enfants après le CASCADE produisait un
+  SAWarning « 0 rows matched », escaladé en erreur par `filterwarnings=error`).
+
+### Validation
+- pytest **921/921** sur la pile réelle hors Docker (PG 16.2 + btree_gist compilé
+  pour la distribution embarquée, fakeredis TCP, Moto S3 + buckets, Mailpit AUTH
+  accept-any) — 15 tests nouveaux dans `test_sales_payments.py` ;
+- ruff 0 ; mypy strict 0 (183 fichiers) ; ESLint 0 ; tsc 0 ; Vitest 69/69 ;
+- migrations aller-retour 0018 → 0017 → 0018 ; `alembic check` : « No new
+  upgrade operations detected » ;
+- contrat OpenAPI : 96 → 99 chemins, 154 → 161 schémas — **pur ajout**, types TS
+  régénérés et committés ;
+- front fr/en relu : solde dû par facture, règlements, encaissement, balance
+  âgée ; actions serveur via BFF.
+
+### Points d'honnêteté
+- CI GitHub Actions **toujours bloquée par la facturation** : la validation
+  intégrale ci-dessus est locale (même pile que la CI), à rejouer sur GitHub
+  après régularisation du compte — aucune affirmation de « CI verte ».
+- Le trop-perçu (acompte flottant) n'existe pas à cette phase : le règlement
+  refuse de dépasser le solde ; les avoirs excédentaires rendent un solde
+  négatif, exclu de la balance âgée. Évolution possible en 4D.
+- Les avoirs autonomes (sans facture d'origine) ne réduisent le solde d'aucune
+  facture ; leur imputation en crédit (credit memo) reste à venir.

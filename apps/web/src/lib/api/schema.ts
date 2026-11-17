@@ -1227,6 +1227,74 @@ export interface paths {
         patch: operations["update_partner_api_v1_companies__company_id__partners__partner_id__patch"];
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Payments
+         * @description Règlements du dossier (encaissements lettrés), filtrables et paginés.
+         */
+        get: operations["list_payments_api_v1_companies__company_id__payments_get"];
+        put?: never;
+        /**
+         * Create Payment
+         * @description Enregistre un règlement client et son lettrage : le solde des factures
+         *     visées est contrôlé sous verrou — jamais d'affectation au-delà du restant dû.
+         */
+        post: operations["create_payment_api_v1_companies__company_id__payments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/payments/{payment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Payment */
+        get: operations["get_payment_api_v1_companies__company_id__payments__payment_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Payment
+         * @description Supprime un règlement (correction de saisie) : les soldes des factures
+         *     sont libérés et l'action est journalisée.
+         */
+        delete: operations["delete_payment_api_v1_companies__company_id__payments__payment_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/receivables/aging": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Receivables Aging
+         * @description Balance âgée clients : factures émises non soldées, par ancienneté de
+         *     retard au jour demandé (aujourd'hui par défaut).
+         */
+        get: operations["receivables_aging_api_v1_companies__company_id__receivables_aging_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/sales": {
         parameters: {
             query?: never;
@@ -1926,6 +1994,47 @@ export interface components {
             /** Label */
             label?: string | null;
         };
+        /** AgingBucketOut */
+        AgingBucketOut: {
+            /** Count */
+            count: number;
+            /** Total Ttc */
+            total_ttc: number;
+        };
+        /**
+         * AgingOut
+         * @description Balance âgée clients : créances émises non soldées par ancienneté de retard.
+         */
+        AgingOut: {
+            /** As Of */
+            as_of: string;
+            /** Buckets */
+            buckets: {
+                [key: string]: components["schemas"]["AgingBucketOut"];
+            };
+            /** Grand Total Ttc */
+            grand_total_ttc: number;
+        };
+        /** AllocationIn */
+        AllocationIn: {
+            /** Amount */
+            amount: number;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+        };
+        /** AllocationOut */
+        AllocationOut: {
+            /** Amount */
+            amount: number;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+        };
         /** AssetLineOut */
         AssetLineOut: {
             /** Code */
@@ -2575,6 +2684,8 @@ export interface components {
             number: number | null;
             /** Origin Document Id */
             origin_document_id: string | null;
+            /** Outstanding Ttc */
+            outstanding_ttc?: number | null;
             /**
              * Partner Id
              * Format: uuid
@@ -2584,6 +2695,8 @@ export interface components {
             partner_snapshot: {
                 [key: string]: unknown;
             } | null;
+            /** Payment Status */
+            payment_status?: ("none" | "partial" | "paid") | null;
             /** Reverses Document Id */
             reverses_document_id: string | null;
             /**
@@ -2636,11 +2749,15 @@ export interface components {
             number: number | null;
             /** Origin Document Id */
             origin_document_id: string | null;
+            /** Outstanding Ttc */
+            outstanding_ttc?: number | null;
             /**
              * Partner Id
              * Format: uuid
              */
             partner_id: string;
+            /** Payment Status */
+            payment_status?: ("none" | "partial" | "paid") | null;
             /** Reverses Document Id */
             reverses_document_id: string | null;
             /**
@@ -4015,6 +4132,73 @@ export interface components {
         PasswordRequest: {
             /** Password */
             password: string;
+        };
+        /**
+         * PaymentIn
+         * @description Règlement saisi : le montant n'est jamais transmis — c'est la somme des
+         *     affectations que le service recalcule et contrôle sous verrou.
+         */
+        PaymentIn: {
+            /** Allocations */
+            allocations: components["schemas"]["AllocationIn"][];
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "CASH" | "BANK_TRANSFER" | "MOBILE_MONEY" | "CHECK" | "CARD" | "OTHER";
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Paid On
+             * Format: date
+             */
+            paid_on: string;
+            /** Reference */
+            reference?: string | null;
+        };
+        /** PaymentOut */
+        PaymentOut: {
+            /** Allocations */
+            allocations: components["schemas"]["AllocationOut"][];
+            /** Amount */
+            amount: number;
+            /** Created At */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Fiscal Year Id
+             * Format: uuid
+             */
+            fiscal_year_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "CASH" | "BANK_TRANSFER" | "MOBILE_MONEY" | "CHECK" | "CARD" | "OTHER";
+            /** Notes */
+            notes: string | null;
+            /** Paid On */
+            paid_on: string;
+            /**
+             * Partner Id
+             * Format: uuid
+             */
+            partner_id: string;
+            /** Reference */
+            reference: string | null;
+        };
+        /** PaymentsOut */
+        PaymentsOut: {
+            /** Items */
+            items: components["schemas"]["PaymentOut"][];
+            /** Total */
+            total: number;
         };
         /** PeriodOut */
         PeriodOut: {
@@ -9872,6 +10056,280 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_payments_api_v1_companies__company_id__payments_get: {
+        parameters: {
+            query?: {
+                partner_id?: string | null;
+                document_id?: string | null;
+                date_from?: string | null;
+                date_to?: string | null;
+                /** @description Taille de page */
+                limit?: number;
+                /** @description Décalage */
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentsOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_payment_api_v1_companies__company_id__payments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_payment_api_v1_companies__company_id__payments__payment_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_payment_api_v1_companies__company_id__payments__payment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    receivables_aging_api_v1_companies__company_id__receivables_aging_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgingOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

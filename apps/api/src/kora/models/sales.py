@@ -274,3 +274,115 @@ class SalesDocumentLine(Base):
         ForeignKeyConstraint(["tenant_id"], ["companies.id"], ondelete="CASCADE"),
         Index("ix_sales_document_lines_tenant_document", "tenant_id", "document_id"),
     )
+
+
+class PaymentMethod(StrEnum):
+    """Mode d'encaissement d'un règlement client. Mobile Money est le premier
+    usage réel des PME guinéennes ; les autres modes couvrent la banque et la
+    caisse. La liste est bornée : la CHECK SQL refuse tout mode hors énumération."""
+
+    CASH = "CASH"
+    BANK_TRANSFER = "BANK_TRANSFER"
+    MOBILE_MONEY = "MOBILE_MONEY"
+    CHECK = "CHECK"
+    CARD = "CARD"
+    OTHER = "OTHER"
+
+
+class SalesPayment(Base):
+    """Règlement reçu d'un client (Phase 4C) : un encaissement d'un montant
+    strictement positif, affecté à une ou plusieurs factures émises du même tier
+    (affectations `SalesPaymentAllocation` — le lettrage commercial). Le montant
+    du règlement est la somme de ses affectations : le service le recalcule et
+    refuse tout excédent sur le solde restant des factures — jamais d'acompte
+    flottant non lettré à cette phase (le trop-perçu est une évolution future).
+
+    Le règlement est immuable après création : une erreur se corrige en
+    supprimant le règlement (journalisé) puis en le re-saisissant. Aucune
+    écriture comptable n'est générée ici : l'intégration comptable est la
+    Phase 4E, avec validation humaine."""
+
+    __tablename__ = "sales_payments"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    # Exercice de la date d'encaissement : fixé par le service à partir de
+    # paid_on (l'exercice doit être ouvert — même règle que les documents).
+    fiscal_year_id: Mapped[uuid.UUID]
+    paid_on: Mapped[date] = mapped_column(Date)
+    method: Mapped[str] = mapped_column(String(16))
+    reference: Mapped[str | None] = mapped_column(String(100))
+    notes: Mapped[str | None] = mapped_column(Text)
+    # Somme des affectations, en unités mineures (jamais saisi par l'appelant).
+    amount: Mapped[int] = mapped_column(BigInteger)
+    currency: Mapped[str] = mapped_column(String(3), server_default="GNF")
+    partner_id: Mapped[uuid.UUID]
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = created_at_column()
+    updated_at: Mapped[datetime] = updated_at_column()
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        CheckConstraint(
+            "method IN ('CASH', 'BANK_TRANSFER', 'MOBILE_MONEY', 'CHECK', 'CARD', 'OTHER')",
+            name="method_valid",
+        ),
+        CheckConstraint("amount > 0", name="amount_positive"),
+        CheckConstraint("length(trim(currency)) = 3", name="currency_iso4217"),
+        CheckConstraint(
+            "reference IS NULL OR length(trim(reference)) > 0", name="reference_not_blank"
+        ),
+        CheckConstraint("notes IS NULL OR length(trim(notes)) > 0", name="notes_not_blank"),
+        ForeignKeyConstraint(
+            ["tenant_id", "fiscal_year_id"],
+            ["fiscal_years.tenant_id", "fiscal_years.id"],
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "partner_id"],
+            ["partners.tenant_id", "partners.id"],
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(["tenant_id"], ["companies.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["created_by_user_id"], ["users.id"]),
+        Index("ix_sales_payments_tenant_partner", "tenant_id", "partner_id"),
+        Index("ix_sales_payments_tenant_date", "tenant_id", "paid_on"),
+    )
+
+
+class SalesPaymentAllocation(Base):
+    """Affectation d'un règlement à une facture (lettrage commercial) : le lien
+    qui porte le solde restant dû. Un règlement ne s'affecte qu'une fois à une
+    même facture (unicité), et jamais au-delà de son solde (contrôle du service,
+    sous verrou FOR UPDATE de la facture — deux règlements concurrents ne peuvent
+    pas excéder le TTC ensemble)."""
+
+    __tablename__ = "sales_payment_allocations"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    payment_id: Mapped[uuid.UUID]
+    document_id: Mapped[uuid.UUID]
+    amount: Mapped[int] = mapped_column(BigInteger)
+
+    __table_args__ = (
+        UniqueConstraint("payment_id", "document_id"),
+        CheckConstraint("amount > 0", name="amount_positive"),
+        ForeignKeyConstraint(
+            ["tenant_id", "payment_id"],
+            ["sales_payments.tenant_id", "sales_payments.id"],
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "document_id"],
+            ["sales_documents.tenant_id", "sales_documents.id"],
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(["tenant_id"], ["companies.id"], ondelete="CASCADE"),
+        Index("ix_sales_payment_allocations_tenant_document", "tenant_id", "document_id"),
+        Index("ix_sales_payment_allocations_tenant_payment", "tenant_id", "payment_id"),
+    )

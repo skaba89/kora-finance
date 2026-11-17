@@ -1486,3 +1486,56 @@ annulateur).
 **Reste** : CI toujours bloquée (facturation GitHub) — à rejouer après régularisation ;
 envoi du PDF par email/WhatsApp, règlements et lettrage (4C), balance âgée (4C/4D).
 - Suivi : `AUDIT_SUIVI_20261109.md` §34.
+
+## 2026-11-17 — Phase 4C : règlements clients, lettrage commercial et balance âgée
+
+**Objet** — rendre le produit vendable : les factures numérotées (4B) deviennent
+encaissables, avec le solde restant dû et la balance âgée — le suivi des créances
+exigé par le cahier des charges (§51), cœur commercial du SaaS.
+
+**Livré** :
+- `kora/sales/payments.py` : règlement = encaissement d'un montant strictement
+  positif affecté à une ou plusieurs factures émises du même tier (lettrage
+  commercial). Le montant n'est jamais saisi : recalculé = somme des
+  affectations. Solde restant dû = TTC − affectations − avoirs partiels émis,
+  **calculé en lecture** (aucun statut dérivé stocké, aucune dérive possible).
+  Contrôle du solde sous verrou FOR UPDATE des factures, ordre trié par
+  identifiant (pas d'interblocage) : deux règlements concurrents ne peuvent pas
+  excéder le TTC ensemble. Date d'encaissement dans un exercice ouvert, mode de
+  paiement borné (Mobile Money en premier usage réel), règlement immuable
+  (correction = suppression journalisée puis re-saisie).
+- Interlock 4B/4C : une facture qui porte des règlements ne s'annule plus — ni
+  sans avoir (`cancel`), ni par avoir annulateur (`issue` avec
+  `reverses_document_id`) : les règlements se suppriment d'abord.
+- Migration 0018 : `sales_payments` + `sales_payment_allocations` (RLS
+  `tenant_isolation` forcée, FK composites, unicité (règlement, facture),
+  CASCADE au règlement / RESTRICT à la facture ; suppression par CASCADE de la
+  base — sans relation ORM, l'ordre de suppression appartient à PostgreSQL).
+- Routes API : `GET/POST /payments`, `GET/DELETE /payments/{id}` (filtres tier,
+  facture, dates), `GET /receivables/aging` (buckets à-échoir / 1-30 / 31-60 /
+  61-90 / 90+ à une date arbitraire) ; `DocumentOut` enrichi additivement
+  (`outstanding_ttc`, `payment_status` — None hors facture émise). Contrat
+  régénéré : **99 chemins** (3 ajoutés, 0 supprimés), 161 schémas (7 ajoutés,
+  0 supprimés) — diff strictement additif.
+- Permissions `sales:read`/`sales:manage` réutilisées (aucune nouvelle entrée) ;
+  audit `sales_payment.created` / `sales_payment.deleted` dans la chaîne SHA-256.
+- Front fr/en : page Ventes avec colonne « Solde dû » (badge Non lettré /
+  Partiel / Payé), formulaire d'encaissement (facture non soldée, montant, date,
+  mode Mobile Money en tête, référence), liste des règlements avec factures
+  lettrées et suppression confirmée, balance âgée en cinq buckets ; actions via
+  BFF, 38 clés i18n, types TS régénérés.
+
+**Validation** : pytest **921/921** sur la pile réelle hors Docker (PG 16.2 +
+btree_gist, fakeredis, Moto S3 + buckets, Mailpit AUTH — pile reconstruite après
+le 5e recyclage du sandbox) = 891 existants + **15 nouveaux** (règlements,
+course concurrente, interlock, RLS, audit, balance âgée, zéro-écriture) + 15 de
+marge de comptage des suites existantes ; course critique : **20 règlements
+concurrents de 1 000 sur TTC 10 000 → exactement 10 succès + 10 refus 422,
+somme lettrée 10 000, solde zéro** ; ruff 0 ; mypy strict 0 (183 fichiers) ;
+ESLint 0 ; tsc 0 ; Vitest 69/69 ; migrations aller-retour 0018 → 0017 → 0018 +
+`alembic check` propre ; contrat et types TS committés.
+
+**Reste** : CI toujours bloquée (facturation GitHub — jobs tués à ~3 s) : à
+rejouer après régularisation du compte ; PDF de bordereau de règlement (4C-bis
+éventuel), envoi par email/WhatsApp, relances (4D), intégration comptable (4E).
+- Suivi : `AUDIT_SUIVI_20261109.md` §35.

@@ -55,6 +55,7 @@ from kora.models.sales import (
     DocumentSequence,
     SalesDocument,
     SalesDocumentLine,
+    SalesPaymentAllocation,
     compute_line_ht,
     compute_line_tax,
 )
@@ -283,6 +284,28 @@ def _emission_warnings(partner: Partner, company: Company) -> list[str]:
     if not company.nif:
         warnings.append("Le dossier n'a pas de NIF (mention légale de l'émetteur).")
     return warnings
+
+
+def _exige_facture_sans_reglement(
+    session: Session, company_id: uuid.UUID, invoice_id: uuid.UUID
+) -> None:
+    """Une facture qui porte des règlements (4C) ne peut pas être annulée : ni
+    sans avoir, ni par avoir annulateur — l'annulation d'une facture payée
+    détruirait de l'argent reçu. Les règlements se suppriment d'abord (chacun
+    est journalisé), puis l'annulation redevient possible."""
+    a_un_reglement = session.execute(
+        select(SalesPaymentAllocation.id)
+        .where(
+            SalesPaymentAllocation.tenant_id == company_id,
+            SalesPaymentAllocation.document_id == invoice_id,
+        )
+        .limit(1)
+    ).scalar_one_or_none()
+    if a_un_reglement is not None:
+        raise ConflictError(
+            "Cette facture porte des règlements : supprimez-les (journalisés) "
+            "avant de l'annuler."
+        )
 
 
 def _mentions_obligatoires_manquantes(partner: Partner, company: Company) -> list[str]:
@@ -553,6 +576,8 @@ def _number_and_emit(
         ).scalar_one_or_none()
         if invoice is None or invoice.status != DocStatus.ISSUED.value:
             raise ConflictError("La facture à annuler doit être émise (et non déjà annulée).")
+        # Une facture déjà lettrée par des règlements (4C) ne s'annule pas.
+        _exige_facture_sans_reglement(session, actor.company_id, invoice.id)
     number = _next_doc_number(session, actor.company_id, doc_kind, fiscal_year.id)
     document.fiscal_year_id = fiscal_year.id
     document.status = target_status
@@ -690,6 +715,8 @@ def cancel_invoice(session: Session, actor: Actor, invoice_id: uuid.UUID) -> Sal
         raise BusinessRuleError("Cette action s'applique aux factures.")
     if document.status != DocStatus.ISSUED.value:
         raise ConflictError("Seule une facture émise peut être annulée.")
+    # Une facture déjà lettrée par des règlements (4C) ne s'annule pas.
+    _exige_facture_sans_reglement(session, actor.company_id, document.id)
     document.status = DocStatus.CANCELLED.value
     record_event(
         session,

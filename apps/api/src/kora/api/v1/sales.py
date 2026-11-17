@@ -1,7 +1,9 @@
 """Routes des devis, factures et avoirs : cycle de vie et numérotation sans trou (4B).
 
 Le PDF conforme d'un document numéroté (4B-bis) est servi en fichier binaire avec
-les mentions légales figées à la numérotation."""
+les mentions légales figées à la numérotation. Les règlements clients et leur
+lettrage commercial (4C) portent le solde restant dû des factures ; la balance
+âgée répartit les créances par ancienneté de retard."""
 
 import uuid
 from datetime import date
@@ -15,8 +17,14 @@ from kora.accounting.entries import Actor
 from kora.api.v1.common import TENANT_ERRORS, WRITE_ERRORS, Limit, Offset, RequestBody
 from kora.auth.deps import Ctx, DbSession
 from kora.core.errors import ErrorResponse
-from kora.models.sales import SalesDocument, SalesDocumentLine
-from kora.sales import service
+from kora.models.common import utcnow
+from kora.models.sales import (
+    SalesDocument,
+    SalesDocumentLine,
+    SalesPayment,
+    SalesPaymentAllocation,
+)
+from kora.sales import payments, service
 from kora.sales.service import DocumentData, LineData
 from kora.tenancy.deps import SalesManage, SalesRead, TenantContext
 
@@ -24,6 +32,10 @@ router = APIRouter(prefix="/companies/{company_id}", tags=["ventes"])
 
 DocKindParam = Literal["quote", "invoice", "credit_note"]
 DocStatusParam = Literal["DRAFT", "SENT", "ACCEPTED", "REJECTED", "ISSUED", "CANCELLED"]
+PaymentMethodParam = Literal[
+    "CASH", "BANK_TRANSFER", "MOBILE_MONEY", "CHECK", "CARD", "OTHER"
+]
+PaymentStatusParam = Literal["none", "partial", "paid"]
 
 
 def _actor(tenant: TenantContext, ctx: Ctx) -> Actor:
@@ -72,6 +84,10 @@ class DocumentOut(BaseModel):
     origin_document_id: uuid.UUID | None
     reverses_document_id: uuid.UUID | None
     created_at: str
+    # Solde restant dû et statut de paiement (4C) : remplis uniquement pour une
+    # facture émise ; None ailleurs (brouillon, devis, avoir, facture annulée).
+    outstanding_ttc: int | None = None
+    payment_status: PaymentStatusParam | None = None
 
 
 class DocumentDetailOut(DocumentOut):
@@ -170,7 +186,13 @@ def _line_out(line: SalesDocumentLine) -> LineOut:
     )
 
 
-def _out(document: SalesDocument) -> DocumentOut:
+def _out(document: SalesDocument, lettres: dict[uuid.UUID, int] | None = None) -> DocumentOut:
+    outstanding: int | None = None
+    payment_status: payments.PaymentStatus | None = None
+    if document.doc_kind == "invoice" and document.status == "ISSUED":
+        credited = (lettres or {}).get(document.id, 0)
+        outstanding = document.total_ttc - credited
+        payment_status = payments.payment_status_for(outstanding, document.total_ttc)
     return DocumentOut(
         id=document.id,
         doc_kind=document.doc_kind,
@@ -188,16 +210,27 @@ def _out(document: SalesDocument) -> DocumentOut:
         origin_document_id=document.origin_document_id,
         reverses_document_id=document.reverses_document_id,
         created_at=document.created_at.isoformat(),
+        outstanding_ttc=outstanding,
+        payment_status=payment_status,
     )
 
 
-def _detail_out(document: SalesDocument, lines: list[SalesDocumentLine]) -> DocumentDetailOut:
+def _detail_out(
+    document: SalesDocument,
+    lines: list[SalesDocumentLine],
+    lettres: dict[uuid.UUID, int] | None = None,
+) -> DocumentDetailOut:
     return DocumentDetailOut(
-        **_out(document).model_dump(),
+        **_out(document, lettres).model_dump(),
         lines=[_line_out(line) for line in lines],
         partner_snapshot=document.partner_snapshot,
         issuer_snapshot=document.issuer_snapshot,
     )
+
+
+def _lettres(db: DbSession, company_id: uuid.UUID, document: SalesDocument) -> dict[uuid.UUID, int]:
+    """Sommes lettrées d'un document unique (détail et mutations) : une requête."""
+    return payments.outstanding_for_documents(db, company_id, [document.id])
 
 
 @router.get("/sales", responses={404: {"model": ErrorResponse}})
@@ -222,7 +255,10 @@ def list_documents(
         limit=limit,
         offset=offset,
     )
-    return DocumentsOut(items=[_out(d) for d in items], total=total)
+    lettres = payments.outstanding_for_documents(
+        db, tenant.company_id, [d.id for d in items]
+    )
+    return DocumentsOut(items=[_out(d, lettres) for d in items], total=total)
 
 
 @router.post("/sales", status_code=status.HTTP_201_CREATED, responses=WRITE_ERRORS)
@@ -231,13 +267,13 @@ def create_document(
 ) -> DocumentDetailOut:
     created = service.create_document(db, _actor(tenant, ctx), _data(body))
     document, lines = service.get_document(db, tenant.company_id, created.id)
-    return _detail_out(document, lines)
+    return _detail_out(document, lines, _lettres(db, tenant.company_id, document))
 
 
 @router.get("/sales/{document_id}", responses={404: {"model": ErrorResponse}})
 def get_document(document_id: uuid.UUID, tenant: SalesRead, db: DbSession) -> DocumentDetailOut:
     document, lines = service.get_document(db, tenant.company_id, document_id)
-    return _detail_out(document, lines)
+    return _detail_out(document, lines, _lettres(db, tenant.company_id, document))
 
 
 @router.patch("/sales/{document_id}", responses=WRITE_ERRORS)
@@ -263,7 +299,7 @@ def update_document(
         )
     updated = service.update_draft(db, _actor(tenant, ctx), document_id, changes)
     document, lines = service.get_document(db, tenant.company_id, updated.id)
-    return _detail_out(document, lines)
+    return _detail_out(document, lines, _lettres(db, tenant.company_id, document))
 
 
 @router.delete("/sales/{document_id}", status_code=204, responses=WRITE_ERRORS)
@@ -285,7 +321,10 @@ def issue_document(
         db, _actor(tenant, ctx), document_id, issued_on=issued_on
     )
     _, lines = service.get_document(db, tenant.company_id, document.id)
-    return DocumentIssuedOut(document=_detail_out(document, lines), warnings=warnings)
+    return DocumentIssuedOut(
+        document=_detail_out(document, lines, _lettres(db, tenant.company_id, document)),
+        warnings=warnings,
+    )
 
 
 @router.post("/sales/{document_id}/send", responses=WRITE_ERRORS)
@@ -295,7 +334,10 @@ def send_quote(
     """Envoi d'un devis : numérotation définitive (chronologie sans trou)."""
     document, warnings = service.send_quote(db, _actor(tenant, ctx), document_id)
     _, lines = service.get_document(db, tenant.company_id, document.id)
-    return DocumentIssuedOut(document=_detail_out(document, lines), warnings=warnings)
+    return DocumentIssuedOut(
+        document=_detail_out(document, lines, _lettres(db, tenant.company_id, document)),
+        warnings=warnings,
+    )
 
 
 @router.post("/sales/{document_id}/decision", responses=WRITE_ERRORS)
@@ -308,7 +350,7 @@ def decide_quote(
 ) -> DocumentDetailOut:
     decided = service.decide_quote(db, _actor(tenant, ctx), document_id, body.accepted)
     document, lines = service.get_document(db, tenant.company_id, decided.id)
-    return _detail_out(document, lines)
+    return _detail_out(document, lines, _lettres(db, tenant.company_id, document))
 
 
 @router.post(
@@ -320,7 +362,7 @@ def convert_quote(
     """Convertit un devis accepté en facture brouillon (numérotée à son émission)."""
     created = service.convert_quote(db, _actor(tenant, ctx), document_id)
     document, lines = service.get_document(db, tenant.company_id, created.id)
-    return _detail_out(document, lines)
+    return _detail_out(document, lines, _lettres(db, tenant.company_id, document))
 
 
 @router.post("/sales/{document_id}/cancel", responses=WRITE_ERRORS)
@@ -330,7 +372,7 @@ def cancel_invoice(
     """Annulation d'une facture émise sans avoir : le numéro est conservé."""
     cancelled = service.cancel_invoice(db, _actor(tenant, ctx), document_id)
     document, lines = service.get_document(db, tenant.company_id, cancelled.id)
-    return _detail_out(document, lines)
+    return _detail_out(document, lines, _lettres(db, tenant.company_id, document))
 
 
 _PDF_FILE: dict[int | str, dict[str, Any]] = {
@@ -362,4 +404,164 @@ def export_document_pdf(
             ),
             "Cache-Control": "no-store",
         },
+    )
+
+
+# --- Règlements clients et lettrage commercial (Phase 4C) ---------------------
+
+
+class AllocationIn(BaseModel):
+    document_id: uuid.UUID
+    amount: Annotated[int, Field(gt=0)]
+
+
+class PaymentIn(RequestBody):
+    """Règlement saisi : le montant n'est jamais transmis — c'est la somme des
+    affectations que le service recalcule et contrôle sous verrou."""
+
+    paid_on: date
+    method: PaymentMethodParam
+    allocations: Annotated[list[AllocationIn], Field(min_length=1, max_length=50)]
+    reference: Annotated[str | None, Field(max_length=100)] = None
+    notes: Annotated[str | None, Field(max_length=2000)] = None
+
+
+class AllocationOut(BaseModel):
+    document_id: uuid.UUID
+    amount: int
+
+
+class PaymentOut(BaseModel):
+    id: uuid.UUID
+    paid_on: str
+    method: PaymentMethodParam
+    reference: str | None
+    notes: str | None
+    amount: int
+    currency: str
+    partner_id: uuid.UUID
+    fiscal_year_id: uuid.UUID
+    created_at: str
+    allocations: list[AllocationOut]
+
+
+class PaymentsOut(BaseModel):
+    items: list[PaymentOut]
+    total: int
+
+
+class AgingBucketOut(BaseModel):
+    count: int
+    total_ttc: int
+
+
+class AgingOut(BaseModel):
+    """Balance âgée clients : créances émises non soldées par ancienneté de retard."""
+
+    as_of: str
+    buckets: dict[str, AgingBucketOut]
+    grand_total_ttc: int
+
+
+def _payment_data(body: PaymentIn) -> payments.PaymentData:
+    return payments.PaymentData(
+        paid_on=body.paid_on,
+        method=body.method,
+        allocations=tuple(
+            payments.AllocationData(document_id=a.document_id, amount=a.amount)
+            for a in body.allocations
+        ),
+        reference=body.reference,
+        notes=body.notes,
+    )
+
+
+def _payment_out(
+    payment: SalesPayment, allocations: list[SalesPaymentAllocation]
+) -> PaymentOut:
+    return PaymentOut(
+        id=payment.id,
+        paid_on=payment.paid_on.isoformat(),
+        method=payment.method,
+        reference=payment.reference,
+        notes=payment.notes,
+        amount=payment.amount,
+        currency=payment.currency,
+        partner_id=payment.partner_id,
+        fiscal_year_id=payment.fiscal_year_id,
+        created_at=payment.created_at.isoformat(),
+        allocations=[
+            AllocationOut(document_id=a.document_id, amount=a.amount)
+            for a in allocations
+        ],
+    )
+
+
+@router.get("/payments", responses={404: {"model": ErrorResponse}})
+def list_payments(
+    tenant: SalesRead,
+    db: DbSession,
+    partner_id: uuid.UUID | None = None,
+    document_id: uuid.UUID | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    limit: Limit = 50,
+    offset: Offset = 0,
+) -> PaymentsOut:
+    """Règlements du dossier (encaissements lettrés), filtrables et paginés."""
+    items, total = payments.list_payments(
+        db,
+        tenant.company_id,
+        partner_id=partner_id,
+        document_id=document_id,
+        date_from=date_from,
+        date_to=date_to,
+        limit=limit,
+        offset=offset,
+    )
+    par_reglement = payments.allocations_of_payments(db, tenant.company_id, [p.id for p in items])
+    return PaymentsOut(
+        items=[_payment_out(p, par_reglement.get(p.id, [])) for p in items],
+        total=total,
+    )
+
+
+@router.post("/payments", status_code=status.HTTP_201_CREATED, responses=WRITE_ERRORS)
+def create_payment(body: PaymentIn, tenant: SalesManage, db: DbSession, ctx: Ctx) -> PaymentOut:
+    """Enregistre un règlement client et son lettrage : le solde des factures
+    visées est contrôlé sous verrou — jamais d'affectation au-delà du restant dû."""
+    created = payments.create_payment(db, _actor(tenant, ctx), _payment_data(body))
+    payment, allocations = payments.get_payment(db, tenant.company_id, created.id)
+    return _payment_out(payment, allocations)
+
+
+@router.get("/payments/{payment_id}", responses={404: {"model": ErrorResponse}})
+def get_payment(payment_id: uuid.UUID, tenant: SalesRead, db: DbSession) -> PaymentOut:
+    payment, allocations = payments.get_payment(db, tenant.company_id, payment_id)
+    return _payment_out(payment, allocations)
+
+
+@router.delete("/payments/{payment_id}", status_code=204, responses=WRITE_ERRORS)
+def delete_payment(payment_id: uuid.UUID, tenant: SalesManage, db: DbSession, ctx: Ctx) -> None:
+    """Supprime un règlement (correction de saisie) : les soldes des factures
+    sont libérés et l'action est journalisée."""
+    payments.delete_payment(db, _actor(tenant, ctx), payment_id)
+
+
+@router.get("/receivables/aging", responses={404: {"model": ErrorResponse}})
+def receivables_aging(
+    tenant: SalesRead,
+    db: DbSession,
+    as_of: date | None = None,
+) -> AgingOut:
+    """Balance âgée clients : factures émises non soldées, par ancienneté de
+    retard au jour demandé (aujourd'hui par défaut)."""
+    body = payments.receivables_aging(db, tenant.company_id, as_of or utcnow().date())
+    return AgingOut(
+        as_of=body.as_of.isoformat(),
+        buckets={
+            cle: AgingBucketOut(count=b.count, total_ttc=b.total_ttc)
+            for cle, b in body.buckets.items()
+        },
+        grand_total_ttc=body.grand_total_ttc,
     )
