@@ -1923,6 +1923,17 @@
             ],
             "title": "Payment Status"
           },
+          "reminders_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reminders Count"
+          },
           "reverses_document_id": {
             "anyOf": [
               {
@@ -2127,6 +2138,17 @@
               }
             ],
             "title": "Payment Status"
+          },
+          "reminders_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reminders Count"
           },
           "reverses_document_id": {
             "anyOf": [
@@ -5022,6 +5044,105 @@
         "title": "OperationOut",
         "type": "object"
       },
+      "OverdueItemOut": {
+        "description": "Une facture échue candidate à la relance, avec son historique.",
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "days_late": {
+            "title": "Days Late",
+            "type": "integer"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "due_on": {
+            "title": "Due On",
+            "type": "string"
+          },
+          "next_level": {
+            "title": "Next Level",
+            "type": "integer"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "outstanding_ttc": {
+            "title": "Outstanding Ttc",
+            "type": "integer"
+          },
+          "partner_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partner Email"
+          },
+          "partner_id": {
+            "format": "uuid",
+            "title": "Partner Id",
+            "type": "string"
+          },
+          "partner_name": {
+            "title": "Partner Name",
+            "type": "string"
+          },
+          "reminders_count": {
+            "title": "Reminders Count",
+            "type": "integer"
+          },
+          "total_ttc": {
+            "title": "Total Ttc",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "document_id",
+          "number",
+          "partner_id",
+          "partner_name",
+          "partner_email",
+          "currency",
+          "total_ttc",
+          "outstanding_ttc",
+          "due_on",
+          "days_late",
+          "reminders_count",
+          "next_level"
+        ],
+        "title": "OverdueItemOut",
+        "type": "object"
+      },
+      "OverdueOut": {
+        "properties": {
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OverdueItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "items"
+        ],
+        "title": "OverdueOut",
+        "type": "object"
+      },
       "Page_AccountOut_": {
         "properties": {
           "items": {
@@ -6063,6 +6184,156 @@
           "full_name"
         ],
         "title": "RegisterRequest",
+        "type": "object"
+      },
+      "ReminderCreatedOut": {
+        "description": "Résultat d'une relance enregistrée : `email_queued` est False si la file\nd'attente était injoignable — la relance reste enregistrée et renvoyable.",
+        "properties": {
+          "email_queued": {
+            "title": "Email Queued",
+            "type": "boolean"
+          },
+          "reminder": {
+            "$ref": "#/components/schemas/ReminderOut"
+          }
+        },
+        "required": [
+          "reminder",
+          "email_queued"
+        ],
+        "title": "ReminderCreatedOut",
+        "type": "object"
+      },
+      "ReminderIn": {
+        "additionalProperties": false,
+        "description": "Relance demandée : la facture visée et la date du rappel. Le niveau est\ncompté par le service (jamais saisi) ; une même facture ne reçoit qu'une\nrelance par jour (unicité en base — doublon refusé 409).",
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reminded_on": {
+            "format": "date",
+            "title": "Reminded On",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id",
+          "reminded_on"
+        ],
+        "title": "ReminderIn",
+        "type": "object"
+      },
+      "ReminderOut": {
+        "properties": {
+          "channel": {
+            "const": "EMAIL",
+            "title": "Channel",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "email_to": {
+            "title": "Email To",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "partner_id": {
+            "format": "uuid",
+            "title": "Partner Id",
+            "type": "string"
+          },
+          "reminded_on": {
+            "title": "Reminded On",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "document_id",
+          "partner_id",
+          "level",
+          "reminded_on",
+          "channel",
+          "email_to",
+          "note",
+          "created_at"
+        ],
+        "title": "ReminderOut",
+        "type": "object"
+      },
+      "RemindersOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReminderOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "RemindersOut",
+        "type": "object"
+      },
+      "ResendOut": {
+        "properties": {
+          "email_queued": {
+            "title": "Email Queued",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "email_queued"
+        ],
+        "title": "ResendOut",
         "type": "object"
       },
       "ResetPasswordRequest": {
@@ -15795,6 +16066,440 @@
           }
         ],
         "summary": "Receivables Aging",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/receivables/overdue": {
+      "get": {
+        "description": "Factures échues non soldées, candidates à la relance : retard en jours,\nhistorique de relances et adresse email du tier (absente : la fiche du tier\ndoit être complétée avant toute relance).",
+        "operationId": "receivables_overdue_api_v1_companies__company_id__receivables_overdue_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverdueOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Receivables Overdue",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/reminders": {
+      "get": {
+        "description": "Relances du dossier (historique immuable), filtrables et paginées.",
+        "operationId": "list_reminders_api_v1_companies__company_id__reminders_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "document_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Document Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "partner_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Partner Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "description": "Taille de page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Taille de page",
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Décalage",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Décalage",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemindersOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Reminders",
+        "tags": [
+          "ventes"
+        ]
+      },
+      "post": {
+        "description": "Enregistre une relance d'une facture échue et programme l'email de\nrappel. Le niveau est compté sous verrou de la facture ; une panne de la\nfile n'annule pas l'enregistrement (`email_queued` False : la relance reste\nrenvoyable). Aucune écriture comptable.",
+        "operationId": "create_reminder_api_v1_companies__company_id__reminders_post",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReminderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderCreatedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Reminder",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/reminders/{reminder_id}/resend": {
+      "post": {
+        "description": "Re-programme l'envoi email d'une relance déjà enregistrée (après une\nfile injoignable) : journalisé, la relance reste inchangée.",
+        "operationId": "resend_reminder_api_v1_companies__company_id__reminders__reminder_id__resend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reminder_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reminder Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResendOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Resend Reminder",
         "tags": [
           "ventes"
         ]
