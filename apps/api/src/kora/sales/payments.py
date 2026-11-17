@@ -29,7 +29,7 @@ from typing import Literal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from kora.accounting.entries import Actor, _fiscal_year_for
+from kora.accounting.entries import Actor, _fiscal_year_for, reversal_id_of
 from kora.audit.service import record_event
 from kora.core.errors import BusinessRuleError, ConflictError, NotFoundError
 from kora.models.identity import Company
@@ -271,8 +271,20 @@ def delete_payment(session: Session, actor: Actor, payment_id: uuid.UUID) -> Non
     """Supprime un règlement (correction d'erreur de saisie) : les affectations
     partent avec lui (CASCADE de la base — sans relation ORM, l'ordre de
     suppression parent/enfant appartient à PostgreSQL) et les soldes des
-    factures sont libérés. Journalisé."""
+    factures sont libérés. Journalisé. Un règlement comptabilisé (4E) se
+    corrige d'abord par la contre-passation de son écriture : tant qu'elle est
+    vivante, la suppression détruirait de l'argent déjà porté au grand livre ;
+    une fois contre-passée, le grand livre est corrigé et la trace opérationnelle
+    erronée peut partir."""
     payment, _ = get_payment(session, actor.company_id, payment_id)
+    if (
+        payment.entry_id is not None
+        and reversal_id_of(session, actor.company_id, payment.entry_id) is None
+    ):
+        raise ConflictError(
+            "Ce règlement est comptabilisé : contre-passez son écriture "
+            "(grand livre) avant de le supprimer."
+        )
     montant, mode = payment.amount, payment.method
     session.delete(payment)
     record_event(

@@ -1579,3 +1579,108 @@ Branche `feature/kora-4d-relances` (base 6237354 = 4C mergée) :
 - La planification automatique des relances (rappels périodiques sans action
   humaine) est volontairement hors périmètre : chaque relance est un acte
   commercial déclenché et journalisé par un utilisateur habilité.
+
+## 37. Phase 4E — intégration comptable des ventes (2026-11-18)
+
+**Objet** — fermer le cycle de vente : les documents et règlements des phases
+4A-4D deviennent des écritures comptables validées du grand livre. La règle de
+conception tient en une phrase : **la comptabilisation est un acte explicite du
+comptable, jamais un effet de bord** — le garde-fou testé depuis la 4A (« aucun
+chemin du module ventes n'écrit en comptabilité ») reste vrai, et la phase 4E
+n'ajoute que l'action délibérée qui le rompt.
+
+### Contexte
+Le CI GitHub Actions reste bloqué par la facturation du compte ; toute la
+validation est locale, sur la même pile que la CI. La 4D venait d'être mergée
+(PR #95, main à `5fe713f`) ; le dépôt local a de nouveau été resynchronisé après
+recyclage du bac à sable (fetch + reset --hard + clean, puis reconstruction de
+la pile de test hors Docker : pgserver PG 16.2, btree_gist recompilé contre les
+binaires pgserver — `PG_CONFIG` doit être passé **en argument make**, l'option
+d'environnement était ignorée au profit du pg_config système (PG 17) —,
+fakeredis 2.34.1 en serveur TCP (le paquet 2.40 n'embarque plus de CLI),
+moto S3 + buckets, Mailpit v1.33.1 ; scripts reconstruits
+`scripts/stack.py` + `scripts/test-env.sh`, l'ancien `.secrets/gh.token` et
+`test-stack.env` restaient committés dans la pile persistée).
+
+### PR #96 — implémentation
+Branche `feature/kora-4e-comptabilisation` (base `5fe713f` = 4D mergée) :
+- **Lien opération → écriture** (migration 0020) : colonnes `entry_id`
+  NULLables sur `sales_documents` et `sales_payments`, FK composites RESTRICT
+  vers `journal_entries` — le même pattern que les mouvements de trésorerie
+  (`financial_movements.entry_id`). Rien de plus : les tables portent déjà la
+  RLS forcée (0017/0018), les colonnes suivent la table.
+- **Écritures générées** (SYSCOHADA révisé) : facture émise → journal des
+  ventes VT (débit 411x au TTC, crédit du compte de produits au HT par groupe
+  de lignes, crédit du compte collecté de chaque taux — 4431 pour la TVA
+  normale) ; avoir émis → l'inverse dans le même journal ; règlement → journal
+  de trésorerie selon le mode d'encaissement (571 caisse au journal CA,
+  521 banque aux journaux BQ ou MM, le Mobile Money garde son journal) créancier
+  du compte de tiers. Les comptes sont résolus dans le plan du dossier : compte
+  client par défaut de la fiche (411x, validé en 4A) sinon le numéro 411,
+  produits 701 sauf choix explicite, TVA = compte collecté configuré sur chaque
+  taux daté — un taux sans compte collecté refuse la comptabilisation avec un
+  message qui désigne le réglage à faire. La date de l'écriture est le fait
+  générateur (émission, encaissement) : l'exercice couvrant cette date doit
+  rester ouvert et non verrouillé — comptabiliser dans un exercice clôturé ou
+  verrouillé est refusé comme toute saisie. Les montants viennent des
+  instantanés de l'émission (jamais recalculés) ; l'exonération entre au HT du
+  compte de produits, sans ligne de TVA.
+- **Course critique** : 20 comptabilisations concurrentes de la même facture =
+  **1 écriture + 19 refus 409** — le verrou FOR UPDATE du document sérialise,
+  la seconde lecture voit `entry_id` rempli et refuse avant tout INSERT (même
+  protocole que la course des relances en 4D).
+- **Interlocks symétriques** : un règlement comptabilisé ne se supprime qu'une
+  fois son écriture contre-passée (sinon la suppression détruirait de l'argent
+  déjà porté au grand livre) ; une facture comptabilisée ne s'annule qu'une
+  fois son écriture contre-passée (sinon la créance disparaîtrait sans jamais
+  avoir été créditée). Après contre-passation, le grand livre est corrigé et la
+  trace opérationnelle erronée peut partir (audit complet conservé).
+- **API** : `POST /companies/{id}/sales/{document_id}/entry` et
+  `POST /companies/{id}/payments/{payment_id}/entry`, permission
+  `entries:post` (le comptable et le dirigeant ; le lecteur est refusé 403) ;
+  audit `sales_document.posted` / `sales_payment.posted` ; `DocumentOut`/
+  `PaymentOut` enrichis additivement (`entry_id`).
+- **Front fr/en** : colonne « Compta » avec badge « Comptabilisée » sur les
+  documents émis et « Comptabilisé » sur les encaissements, bouton
+  Comptabiliser (confirmations explicites, actes définitifs) visible seulement
+  avec `entries:post` ; l'avis d'en-tête de la page est réécrit (l'intégration
+  existe désormais).
+- **Contrat OpenAPI** : 102 → 104 chemins, 168 → 170 schémas — **pur ajout**
+  (les seuls changements sur l'existant : champ `entry_id` nullable ajouté à
+  trois schémas de réponse et une description enrichie), types TS régénérés.
+
+### Validation (locale, pile hors Docker)
+- **18 tests nouveaux** dans `tests/test_sales_accounting.py` : écriture de
+  facture équilibrée (411/701/4431), facture exonérée (2 lignes), avoir
+  inverse, devis refusé, brouillon et annulée refusés, double
+  comptabilisation 409, course 20 fils (1×200 + 19×409 + une seule écriture
+  au grand livre), règlement caisse (CA/571) et Mobile Money (MM/521), double
+  comptabilisation de règlement, suppression refusée puis libérée après
+  contre-passation, annulation refusée puis permise après contre-passation,
+  exercice verrouillé refusé, compte de regroupement (70) refusé / sous-compte
+  (701) choisi accepté, compte inconnu, taux sans compte collecté, garde-fou
+  (cycle complet sans action → grand livre vide), isolation RLS, lecteur 403 ;
+- régression par tranches sur PostgreSQL réel : contrat/migrations/permissions/
+  garde-fous 31 ; ventes 4B/4C/4D 60 ; grand livre/lettrage/clôture 78 ;
+  compta/trésorerie/cashflow 100 ; auth/emails/invitations/dossiers 95 ;
+  rapports/relevés/dashboard/exports 85 ; pièces/audit/tiers/saisie guidée 100 ;
+  rôles DB 4 ; backups/worker/runtime/divers 65 ; xlsx 1 — plus la suite
+  d'isolation (2 routes nouvelles ajoutent leurs sondes automatiques) ;
+- ruff 0 ; mypy strict 0 ; ESLint 0 ; tsc 0 ; Vitest 69/69 ; build Next.js OK ;
+- migrations aller-retour 0020 → 0019 → 0020 ; `alembic check` : « No new
+  upgrade operations detected ».
+
+### Points d'honnêteté
+- CI GitHub Actions **toujours bloquée par la facturation** du compte : aucune
+  exécution GitHub n'a validé cette phase ; à rejouer après régularisation.
+- Le compte de produits est unique pour toute la facture (701 par défaut, choix
+  explicite possible) : l'imputation par famille de produits (plusieurs comptes
+  70x par document) est une évolution future — les lignes d'écriture restent
+  regroupées par taux, et un document dégénéré ne peut pas dépasser le plafond
+  de lignes d'une écriture du grand livre.
+- Les acomptes (règlement non lettré) restent hors périmètre (convention 4C) :
+  le règlement est toujours lettré à au moins une facture, l'écriture d'encaissement
+  crédite donc toujours un 411 identifié.
+- Le journal des ventes des règlements est le journal de trésorerie : pas
+  d'écriture de lettrage (débit 411 / crédit 411) — le lettrage commercial
+  (4C) et le lettrage comptable restent deux vues du même lien.

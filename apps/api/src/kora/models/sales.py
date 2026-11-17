@@ -12,7 +12,8 @@ comptables (`JournalSequence`) : verrou de ligne FOR UPDATE, incrément dans la
 même transaction que l'émission, compteur restauré par le ROLLBACK en cas d'échec.
 
 Aucune écriture comptable n'est générée par ce module : l'intégration comptable
-est la Phase 4E, avec validation humaine (garde-fou testé, comme en 4A).
+est un acte explicite de la Phase 4E (permission `entries:post`), qui lie
+l'écriture validée au document via `entry_id` (NULL tant que non comptabilisé).
 """
 
 import uuid
@@ -160,6 +161,9 @@ class SalesDocument(Base):
     # Avoir annulant totalement une facture (unique : une facture ne peut être
     # annulée qu'une fois, par un seul avoir de contrepassation totale).
     reverses_document_id: Mapped[uuid.UUID | None] = mapped_column(unique=True)
+    # Écriture validée qui porte le document en comptabilité (Phase 4E) : NULL
+    # tant que le comptable n'a pas comptabilisé — jamais automatique.
+    entry_id: Mapped[uuid.UUID | None]
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     issued_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = created_at_column()
@@ -205,6 +209,11 @@ class SalesDocument(Base):
         ForeignKeyConstraint(
             ["tenant_id", "reverses_document_id"],
             ["sales_documents.tenant_id", "sales_documents.id"],
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "entry_id"],
+            ["journal_entries.tenant_id", "journal_entries.id"],
             ondelete="RESTRICT",
         ),
         Index("ix_sales_documents_tenant_kind", "tenant_id", "doc_kind"),
@@ -298,9 +307,9 @@ class SalesPayment(Base):
     flottant non lettré à cette phase (le trop-perçu est une évolution future).
 
     Le règlement est immuable après création : une erreur se corrige en
-    supprimant le règlement (journalisé) puis en le re-saisissant. Aucune
-    écriture comptable n'est générée ici : l'intégration comptable est la
-    Phase 4E, avec validation humaine."""
+    supprimant le règlement (journalisé) puis en le re-saisissant — une fois
+    comptabilisé, la suppression exige d'abord la contre-passation de son
+    écriture (Phase 4E, permission `entries:post`)."""
 
     __tablename__ = "sales_payments"
 
@@ -319,6 +328,9 @@ class SalesPayment(Base):
     amount: Mapped[int] = mapped_column(BigInteger)
     currency: Mapped[str] = mapped_column(String(3), server_default="GNF")
     partner_id: Mapped[uuid.UUID]
+    # Écriture validée qui porte l'encaissement en comptabilité (Phase 4E) :
+    # NULL tant que non comptabilisé — jamais automatique.
+    entry_id: Mapped[uuid.UUID | None]
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = created_at_column()
     updated_at: Mapped[datetime] = updated_at_column()
@@ -347,6 +359,11 @@ class SalesPayment(Base):
         ),
         ForeignKeyConstraint(["tenant_id"], ["companies.id"], ondelete="CASCADE"),
         ForeignKeyConstraint(["created_by_user_id"], ["users.id"]),
+        ForeignKeyConstraint(
+            ["tenant_id", "entry_id"],
+            ["journal_entries.tenant_id", "journal_entries.id"],
+            ondelete="RESTRICT",
+        ),
         Index("ix_sales_payments_tenant_partner", "tenant_id", "partner_id"),
         Index("ix_sales_payments_tenant_date", "tenant_id", "paid_on"),
     )

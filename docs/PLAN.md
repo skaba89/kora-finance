@@ -122,6 +122,29 @@ email/WhatsApp, relances, balance âgée.
   borné à EMAIL par CHECK) ; zéro écriture comptable (4E à venir) ; page Ventes
   fr/en : factures échues candidates, formulaire de relance (message
   personnalisé facultatif), historique avec renvoi).
+- **4E — Intégration comptable des ventes** ✅ (2026-11-18, branche
+  `feature/kora-4e-comptabilisation` : migration 0020 colonnes de liaison
+  `sales_documents.entry_id` et `sales_payments.entry_id` (FK composites RESTRICT
+  vers `journal_entries`, NULL tant que non comptabilisé) ; la comptabilisation
+  est un **acte explicite du comptable** (permission `entries:post`), jamais
+  automatique — aucune émission, aucun règlement, aucune relance n'écrit en
+  comptabilité (garde-fou maintenu et retesté) ; facture émise → écriture
+  validée du journal des ventes (débit 411x au TTC, crédit du compte de produits
+  701 choisi au HT, crédit du compte collecté de chaque taux — 4431 pour la TVA
+  normale), avoir → écriture inverse, règlement → écriture du journal de
+  trésorerie selon le mode (571 caisse au journal CA, 521 banque aux journaux
+  BQ/MM) créditée au compte de tiers ; comptes résolus dans le plan du dossier :
+  compte client par défaut de la fiche (411x), sinon 411 ; la date de l'écriture
+  est le fait générateur (issued_on / paid_on) — exercice ouvert exigé (refus
+  dans un exercice clôturé ou verrouillé) ; montants issus des instantanés
+  d'émission, jamais recalculés ; 20 comptabilisations concurrentes de la même
+  facture = 1 écriture + 19 refus 409 (verrou du document) ; interlocks : un
+  règlement comptabilisé ne se supprime qu'après contre-passation de son
+  écriture, une facture comptabilisée ne s'annule qu'après contre-passation ;
+  routes `POST /sales/{id}/entry` et `POST /payments/{id}/entry`, `DocumentOut`/
+  `PaymentOut` enrichis additivement (`entry_id`) ; taux sans compte collecté
+  refusé avec un message clair ; page Ventes fr/en : badge « Comptabilisée » et
+  bouton Comptabiliser sur les documents émis et les encaissements).
 
 ## Phase 5 — Import et migration
 FEC, Excel, balance d'ouverture en tâche de fond, rapport de contrôle.

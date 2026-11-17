@@ -564,7 +564,7 @@ export const en: typeof fr = {
     subtitle:
       "Quotes, invoices and credit notes of the company, numbered sequentially without gaps (OHADA).",
     noPostingNotice:
-      "Creating or editing a document writes nothing to accounting: accounting integration is a dedicated phase, with human validation.",
+      "Creating or issuing a document posts nothing to the ledger: posting is an explicit act of the accountant (the « Post to ledger » button), which creates the validated entry and links it to the document.",
     filterAll: "All documents",
     filterStatus: "Status",
     listTitle: "Documents",
@@ -703,6 +703,17 @@ export const en: typeof fr = {
       CARD: "Card",
       OTHER: "Other",
     },
+    postedBadge: "Posted",
+    postEntry: "Post to ledger",
+    confirmPosting:
+      "Final action: the validated entry will be numbered in the sales journal and linked to the document. Continue?",
+    posted: "Document posted: the entry is linked to the document (ledger).",
+    paymentPost: "Post to ledger",
+    paymentPostedBadge: "Posted",
+    paymentPosted: "Payment posted: the entry is linked to the receipt (ledger).",
+    paymentConfirmPosting:
+      "Final action: the validated entry will be numbered in the cash journal and linked to the receipt. Continue?",
+    postedColumn: "Ledger",
   },
   partners: {
     title: "Third-party directory",
