@@ -1810,6 +1810,18 @@
             ],
             "title": "Due On"
           },
+          "entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Id"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -2006,6 +2018,26 @@
         "title": "DocumentDetailOut",
         "type": "object"
       },
+      "DocumentEntryIn": {
+        "additionalProperties": false,
+        "description": "Comptabilisation d'un document émis : le compte de produits est choisi par\nle comptable (défaut : numéro 701 du plan du dossier) ; la TVA suit les\ncomptes collectés des taux figés à l'émission.",
+        "properties": {
+          "sales_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sales Account Id"
+          }
+        },
+        "title": "DocumentEntryIn",
+        "type": "object"
+      },
       "DocumentIssuedOut": {
         "description": "Résultat d'une numérotation définitive : document émis et mentions légales\nmanquantes signalées (non bloquant en 4B, règle dure avec le PDF en 4B-bis).",
         "properties": {
@@ -2056,6 +2088,18 @@
               }
             ],
             "title": "Due On"
+          },
+          "entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Id"
           },
           "id": {
             "format": "uuid",
@@ -5752,6 +5796,26 @@
         "title": "PasswordRequest",
         "type": "object"
       },
+      "PaymentEntryIn": {
+        "additionalProperties": false,
+        "description": "Comptabilisation d'un règlement : le compte de trésorerie est choisi par\nle comptable (défaut : 571 pour la caisse, 521 pour les autres modes).",
+        "properties": {
+          "cash_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cash Account Id"
+          }
+        },
+        "title": "PaymentEntryIn",
+        "type": "object"
+      },
       "PaymentIn": {
         "additionalProperties": false,
         "description": "Règlement saisi : le montant n'est jamais transmis — c'est la somme des\naffectations que le service recalcule et contrôle sous verrou.",
@@ -5835,6 +5899,18 @@
           "currency": {
             "title": "Currency",
             "type": "string"
+          },
+          "entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Id"
           },
           "fiscal_year_id": {
             "format": "uuid",
@@ -15833,7 +15909,7 @@
     },
     "/api/v1/companies/{company_id}/payments/{payment_id}": {
       "delete": {
-        "description": "Supprime un règlement (correction de saisie) : les soldes des factures\nsont libérés et l'action est journalisée.",
+        "description": "Supprime un règlement (correction de saisie) : les soldes des factures\nsont libérés et l'action est journalisée. Refusé tant que le règlement est\ncomptabilisé : l'écriture se contre-passe d'abord au grand livre.",
         "operationId": "delete_payment_api_v1_companies__company_id__payments__payment_id__delete",
         "parameters": [
           {
@@ -15988,6 +16064,117 @@
           }
         ],
         "summary": "Get Payment",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/payments/{payment_id}/entry": {
+      "post": {
+        "description": "Comptabilise un règlement : écriture validée du journal de trésorerie\n(débit du compte de trésorerie, crédit du compte de tiers), liée au\nrèglement. Idempotence refusée : un règlement déjà comptabilisé répond 409.",
+        "operationId": "post_payment_entry_api_v1_companies__company_id__payments__payment_id__entry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Payment Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentEntryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Payment Entry",
         "tags": [
           "ventes"
         ]
@@ -17346,6 +17533,117 @@
           }
         ],
         "summary": "Decide Quote",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/sales/{document_id}/entry": {
+      "post": {
+        "description": "Comptabilise une facture ou un avoir émis : écriture validée du journal des\nventes (débit 411x au TTC, crédit du compte de produits au HT, crédit des\ncomptes collectés par taux — inversée pour un avoir), liée au document.\nIdempotence refusée : un document déjà comptabilisé répond 409.",
+        "operationId": "post_document_entry_api_v1_companies__company_id__sales__document_id__entry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentEntryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Document Entry",
         "tags": [
           "ventes"
         ]

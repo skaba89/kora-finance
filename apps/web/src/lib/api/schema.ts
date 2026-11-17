@@ -1266,9 +1266,32 @@ export interface paths {
         /**
          * Delete Payment
          * @description Supprime un règlement (correction de saisie) : les soldes des factures
-         *     sont libérés et l'action est journalisée.
+         *     sont libérés et l'action est journalisée. Refusé tant que le règlement est
+         *     comptabilisé : l'écriture se contre-passe d'abord au grand livre.
          */
         delete: operations["delete_payment_api_v1_companies__company_id__payments__payment_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/payments/{payment_id}/entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Payment Entry
+         * @description Comptabilise un règlement : écriture validée du journal de trésorerie
+         *     (débit du compte de trésorerie, crédit du compte de tiers), liée au
+         *     règlement. Idempotence refusée : un règlement déjà comptabilisé répond 409.
+         */
+        post: operations["post_payment_entry_api_v1_companies__company_id__payments__payment_id__entry_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1456,6 +1479,29 @@ export interface paths {
         put?: never;
         /** Decide Quote */
         post: operations["decide_quote_api_v1_companies__company_id__sales__document_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/sales/{document_id}/entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Document Entry
+         * @description Comptabilise une facture ou un avoir émis : écriture validée du journal des
+         *     ventes (débit 411x au TTC, crédit du compte de produits au HT, crédit des
+         *     comptes collectés par taux — inversée pour un avoir), liée au document.
+         *     Idempotence refusée : un document déjà comptabilisé répond 409.
+         */
+        post: operations["post_document_entry_api_v1_companies__company_id__sales__document_id__entry_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2735,6 +2781,8 @@ export interface components {
             doc_kind: "quote" | "invoice" | "credit_note";
             /** Due On */
             due_on: string | null;
+            /** Entry Id */
+            entry_id?: string | null;
             /**
              * Id
              * Format: uuid
@@ -2786,6 +2834,16 @@ export interface components {
             valid_until: string | null;
         };
         /**
+         * DocumentEntryIn
+         * @description Comptabilisation d'un document émis : le compte de produits est choisi par
+         *     le comptable (défaut : numéro 701 du plan du dossier) ; la TVA suit les
+         *     comptes collectés des taux figés à l'émission.
+         */
+        DocumentEntryIn: {
+            /** Sales Account Id */
+            sales_account_id?: string | null;
+        };
+        /**
          * DocumentIssuedOut
          * @description Résultat d'une numérotation définitive : document émis et mentions légales
          *     manquantes signalées (non bloquant en 4B, règle dure avec le PDF en 4B-bis).
@@ -2808,6 +2866,8 @@ export interface components {
             doc_kind: "quote" | "invoice" | "credit_note";
             /** Due On */
             due_on: string | null;
+            /** Entry Id */
+            entry_id?: string | null;
             /**
              * Id
              * Format: uuid
@@ -4251,6 +4311,15 @@ export interface components {
             password: string;
         };
         /**
+         * PaymentEntryIn
+         * @description Comptabilisation d'un règlement : le compte de trésorerie est choisi par
+         *     le comptable (défaut : 571 pour la caisse, 521 pour les autres modes).
+         */
+        PaymentEntryIn: {
+            /** Cash Account Id */
+            cash_account_id?: string | null;
+        };
+        /**
          * PaymentIn
          * @description Règlement saisi : le montant n'est jamais transmis — c'est la somme des
          *     affectations que le service recalcule et contrôle sous verrou.
@@ -4283,6 +4352,8 @@ export interface components {
             created_at: string;
             /** Currency */
             currency: string;
+            /** Entry Id */
+            entry_id?: string | null;
             /**
              * Fiscal Year Id
              * Format: uuid
@@ -10483,6 +10554,79 @@ export interface operations {
             };
         };
     };
+    post_payment_entry_api_v1_companies__company_id__payments__payment_id__entry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentEntryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     receivables_aging_api_v1_companies__company_id__receivables_aging_get: {
         parameters: {
             query?: {
@@ -11216,6 +11360,79 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["DecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentDetailOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_document_entry_api_v1_companies__company_id__sales__document_id__entry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentEntryIn"];
             };
         };
         responses: {
