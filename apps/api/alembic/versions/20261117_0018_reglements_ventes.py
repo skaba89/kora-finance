@@ -123,9 +123,7 @@ def upgrade() -> None:
         sa.Column("payment_id", sa.Uuid(), nullable=False),
         sa.Column("document_id", sa.Uuid(), nullable=False),
         sa.Column("amount", sa.BigInteger(), nullable=False),
-        sa.CheckConstraint(
-            "amount > 0", name=op.f("ck_sales_payment_allocations_amount_positive")
-        ),
+        sa.CheckConstraint("amount > 0", name=op.f("ck_sales_payment_allocations_amount_positive")),
         sa.ForeignKeyConstraint(
             ["tenant_id", "payment_id"],
             ["sales_payments.tenant_id", "sales_payments.id"],

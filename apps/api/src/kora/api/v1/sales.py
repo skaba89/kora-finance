@@ -23,18 +23,19 @@ from kora.models.sales import (
     SalesDocumentLine,
     SalesPayment,
     SalesPaymentAllocation,
+    SalesReminder,
 )
-from kora.sales import payments, service
+from kora.sales import payments, reminders, service
 from kora.sales.service import DocumentData, LineData
 from kora.tenancy.deps import SalesManage, SalesRead, TenantContext
+from kora.worker.enqueue import enqueue_best_effort
+from kora.worker.tasks import send_sales_reminder
 
 router = APIRouter(prefix="/companies/{company_id}", tags=["ventes"])
 
 DocKindParam = Literal["quote", "invoice", "credit_note"]
 DocStatusParam = Literal["DRAFT", "SENT", "ACCEPTED", "REJECTED", "ISSUED", "CANCELLED"]
-PaymentMethodParam = Literal[
-    "CASH", "BANK_TRANSFER", "MOBILE_MONEY", "CHECK", "CARD", "OTHER"
-]
+PaymentMethodParam = Literal["CASH", "BANK_TRANSFER", "MOBILE_MONEY", "CHECK", "CARD", "OTHER"]
 PaymentStatusParam = Literal["none", "partial", "paid"]
 
 
@@ -88,6 +89,9 @@ class DocumentOut(BaseModel):
     # facture émise ; None ailleurs (brouillon, devis, avoir, facture annulée).
     outstanding_ttc: int | None = None
     payment_status: PaymentStatusParam | None = None
+    # Nombre de relances déjà envoyées (4D) : rempli uniquement pour une facture
+    # émise dans les routes de lecture (calcul en lecture, jamais stocké).
+    reminders_count: int | None = None
 
 
 class DocumentDetailOut(DocumentOut):
@@ -186,13 +190,19 @@ def _line_out(line: SalesDocumentLine) -> LineOut:
     )
 
 
-def _out(document: SalesDocument, lettres: dict[uuid.UUID, int] | None = None) -> DocumentOut:
+def _out(
+    document: SalesDocument,
+    lettres: dict[uuid.UUID, int] | None = None,
+    relances: dict[uuid.UUID, int] | None = None,
+) -> DocumentOut:
     outstanding: int | None = None
     payment_status: payments.PaymentStatus | None = None
+    nombre_relances: int | None = None
     if document.doc_kind == "invoice" and document.status == "ISSUED":
         credited = (lettres or {}).get(document.id, 0)
         outstanding = document.total_ttc - credited
         payment_status = payments.payment_status_for(outstanding, document.total_ttc)
+        nombre_relances = (relances or {}).get(document.id, 0)
     return DocumentOut(
         id=document.id,
         doc_kind=document.doc_kind,
@@ -212,6 +222,7 @@ def _out(document: SalesDocument, lettres: dict[uuid.UUID, int] | None = None) -
         created_at=document.created_at.isoformat(),
         outstanding_ttc=outstanding,
         payment_status=payment_status,
+        reminders_count=nombre_relances,
     )
 
 
@@ -219,9 +230,10 @@ def _detail_out(
     document: SalesDocument,
     lines: list[SalesDocumentLine],
     lettres: dict[uuid.UUID, int] | None = None,
+    relances: dict[uuid.UUID, int] | None = None,
 ) -> DocumentDetailOut:
     return DocumentDetailOut(
-        **_out(document, lettres).model_dump(),
+        **_out(document, lettres, relances).model_dump(),
         lines=[_line_out(line) for line in lines],
         partner_snapshot=document.partner_snapshot,
         issuer_snapshot=document.issuer_snapshot,
@@ -255,10 +267,9 @@ def list_documents(
         limit=limit,
         offset=offset,
     )
-    lettres = payments.outstanding_for_documents(
-        db, tenant.company_id, [d.id for d in items]
-    )
-    return DocumentsOut(items=[_out(d, lettres) for d in items], total=total)
+    lettres = payments.outstanding_for_documents(db, tenant.company_id, [d.id for d in items])
+    relances = reminders.reminders_count_for_documents(db, tenant.company_id, [d.id for d in items])
+    return DocumentsOut(items=[_out(d, lettres, relances) for d in items], total=total)
 
 
 @router.post("/sales", status_code=status.HTTP_201_CREATED, responses=WRITE_ERRORS)
@@ -273,7 +284,12 @@ def create_document(
 @router.get("/sales/{document_id}", responses={404: {"model": ErrorResponse}})
 def get_document(document_id: uuid.UUID, tenant: SalesRead, db: DbSession) -> DocumentDetailOut:
     document, lines = service.get_document(db, tenant.company_id, document_id)
-    return _detail_out(document, lines, _lettres(db, tenant.company_id, document))
+    return _detail_out(
+        document,
+        lines,
+        _lettres(db, tenant.company_id, document),
+        reminders.reminders_count_for_documents(db, tenant.company_id, [document.id]),
+    )
 
 
 @router.patch("/sales/{document_id}", responses=WRITE_ERRORS)
@@ -476,9 +492,7 @@ def _payment_data(body: PaymentIn) -> payments.PaymentData:
     )
 
 
-def _payment_out(
-    payment: SalesPayment, allocations: list[SalesPaymentAllocation]
-) -> PaymentOut:
+def _payment_out(payment: SalesPayment, allocations: list[SalesPaymentAllocation]) -> PaymentOut:
     return PaymentOut(
         id=payment.id,
         paid_on=payment.paid_on.isoformat(),
@@ -491,8 +505,7 @@ def _payment_out(
         fiscal_year_id=payment.fiscal_year_id,
         created_at=payment.created_at.isoformat(),
         allocations=[
-            AllocationOut(document_id=a.document_id, amount=a.amount)
-            for a in allocations
+            AllocationOut(document_id=a.document_id, amount=a.amount) for a in allocations
         ],
     )
 
@@ -565,3 +578,172 @@ def receivables_aging(
         },
         grand_total_ttc=body.grand_total_ttc,
     )
+
+
+# --- Relances de factures échues (Phase 4D) -----------------------------------
+
+
+class ReminderIn(RequestBody):
+    """Relance demandée : la facture visée et la date du rappel. Le niveau est
+    compté par le service (jamais saisi) ; une même facture ne reçoit qu'une
+    relance par jour (unicité en base — doublon refusé 409)."""
+
+    document_id: uuid.UUID
+    reminded_on: date
+    note: Annotated[str | None, Field(max_length=2000)] = None
+
+
+class ReminderOut(BaseModel):
+    id: uuid.UUID
+    document_id: uuid.UUID
+    partner_id: uuid.UUID
+    level: int
+    reminded_on: str
+    channel: Literal["EMAIL"]
+    email_to: str
+    note: str | None
+    created_at: str
+
+
+class ReminderCreatedOut(BaseModel):
+    """Résultat d'une relance enregistrée : `email_queued` est False si la file
+    d'attente était injoignable — la relance reste enregistrée et renvoyable."""
+
+    reminder: ReminderOut
+    email_queued: bool
+
+
+class RemindersOut(BaseModel):
+    items: list[ReminderOut]
+    total: int
+
+
+class ResendOut(BaseModel):
+    email_queued: bool
+
+
+class OverdueItemOut(BaseModel):
+    """Une facture échue candidate à la relance, avec son historique."""
+
+    document_id: uuid.UUID
+    number: int
+    partner_id: uuid.UUID
+    partner_name: str
+    partner_email: str | None
+    currency: str
+    total_ttc: int
+    outstanding_ttc: int
+    due_on: str
+    days_late: int
+    reminders_count: int
+    next_level: int
+
+
+class OverdueOut(BaseModel):
+    as_of: str
+    items: list[OverdueItemOut]
+
+
+def _reminder_out(reminder: SalesReminder) -> ReminderOut:
+    return ReminderOut(
+        id=reminder.id,
+        document_id=reminder.document_id,
+        partner_id=reminder.partner_id,
+        level=reminder.level,
+        reminded_on=reminder.reminded_on.isoformat(),
+        channel="EMAIL",
+        email_to=reminder.email_to,
+        note=reminder.note,
+        created_at=reminder.created_at.isoformat(),
+    )
+
+
+@router.get("/receivables/overdue", responses={404: {"model": ErrorResponse}})
+def receivables_overdue(
+    tenant: SalesRead,
+    db: DbSession,
+    as_of: date | None = None,
+) -> OverdueOut:
+    """Factures échues non soldées, candidates à la relance : retard en jours,
+    historique de relances et adresse email du tier (absente : la fiche du tier
+    doit être complétée avant toute relance)."""
+    items = reminders.overdue_invoices(db, tenant.company_id, as_of or utcnow().date())
+    return OverdueOut(
+        as_of=(as_of or utcnow().date()).isoformat(),
+        items=[
+            OverdueItemOut(
+                document_id=c.document.id,
+                number=c.document.number or 0,
+                partner_id=c.document.partner_id,
+                partner_name=c.partner_name,
+                partner_email=c.partner_email,
+                currency=c.document.currency,
+                total_ttc=c.document.total_ttc,
+                outstanding_ttc=c.outstanding_ttc,
+                due_on=(
+                    c.document.due_on or c.document.issued_on or c.document.created_at.date()
+                ).isoformat(),
+                days_late=c.days_late,
+                reminders_count=c.reminders_count,
+                next_level=c.next_level,
+            )
+            for c in items
+        ],
+    )
+
+
+@router.get("/reminders", responses={404: {"model": ErrorResponse}})
+def list_reminders(
+    tenant: SalesRead,
+    db: DbSession,
+    document_id: uuid.UUID | None = None,
+    partner_id: uuid.UUID | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    limit: Limit = 50,
+    offset: Offset = 0,
+) -> RemindersOut:
+    """Relances du dossier (historique immuable), filtrables et paginées."""
+    items, total = reminders.list_reminders(
+        db,
+        tenant.company_id,
+        document_id=document_id,
+        partner_id=partner_id,
+        date_from=date_from,
+        date_to=date_to,
+        limit=limit,
+        offset=offset,
+    )
+    return RemindersOut(items=[_reminder_out(r) for r in items], total=total)
+
+
+@router.post("/reminders", status_code=status.HTTP_201_CREATED, responses=WRITE_ERRORS)
+def create_reminder(
+    body: ReminderIn, tenant: SalesManage, db: DbSession, ctx: Ctx
+) -> ReminderCreatedOut:
+    """Enregistre une relance d'une facture échue et programme l'email de
+    rappel. Le niveau est compté sous verrou de la facture ; une panne de la
+    file n'annule pas l'enregistrement (`email_queued` False : la relance reste
+    renvoyable). Aucune écriture comptable."""
+    created = reminders.create_reminder(
+        db,
+        _actor(tenant, ctx),
+        reminders.ReminderData(
+            document_id=body.document_id,
+            reminded_on=body.reminded_on,
+            note=body.note,
+        ),
+    )
+    queued = enqueue_best_effort(send_sales_reminder, str(tenant.company_id), str(created.id))
+    return ReminderCreatedOut(reminder=_reminder_out(created), email_queued=queued)
+
+
+@router.post("/reminders/{reminder_id}/resend", responses=WRITE_ERRORS)
+def resend_reminder(
+    reminder_id: uuid.UUID, tenant: SalesManage, db: DbSession, ctx: Ctx
+) -> ResendOut:
+    """Re-programme l'envoi email d'une relance déjà enregistrée (après une
+    file injoignable) : journalisé, la relance reste inchangée."""
+    reminders.resend_reminder(db, _actor(tenant, ctx), reminder_id)
+    queued = enqueue_best_effort(send_sales_reminder, str(tenant.company_id), str(reminder_id))
+    return ResendOut(email_queued=queued)

@@ -111,10 +111,7 @@ def outstanding_for_documents(
             .group_by(SalesDocument.origin_document_id)
         )
     }
-    return {
-        doc_id: paid.get(doc_id, 0) + credited.get(doc_id, 0)
-        for doc_id in document_ids
-    }
+    return {doc_id: paid.get(doc_id, 0) + credited.get(doc_id, 0) for doc_id in document_ids}
 
 
 def payment_status_for(outstanding: int, total_ttc: int) -> PaymentStatus:
@@ -183,20 +180,14 @@ def _controlle_factures(
     montant ≤ solde restant dû (affectations + avoirs partiels déjà comptés)."""
     par_facture = {row.document_id: row.amount for row in allocations}
     if len(par_facture) != len(allocations):
-        raise BusinessRuleError(
-            "Un règlement ne s'affecte qu'une fois à une même facture."
-        )
+        raise BusinessRuleError("Un règlement ne s'affecte qu'une fois à une même facture.")
     partners = {invoice.partner_id for invoice in invoices}
     if len(partners) != 1:
-        raise BusinessRuleError(
-            "Un règlement s'affecte aux factures d'un seul tier."
-        )
+        raise BusinessRuleError("Un règlement s'affecte aux factures d'un seul tier.")
     company = session.get_one(Company, actor.company_id)
     currencies = {invoice.currency for invoice in invoices}
     if currencies != {company.currency}:
-        raise BusinessRuleError(
-            "Un règlement s'affecte à des factures de la devise du dossier."
-        )
+        raise BusinessRuleError("Un règlement s'affecte à des factures de la devise du dossier.")
     lettres = outstanding_for_documents(
         session, actor.company_id, [invoice.id for invoice in invoices]
     )
@@ -231,9 +222,7 @@ def create_payment(session: Session, actor: Actor, data: PaymentData) -> SalesPa
     if method not in {m.value for m in PaymentMethod}:
         raise BusinessRuleError("Mode de paiement inconnu.")
     fiscal_year = _fiscal_year_for(session, actor.company_id, data.paid_on)
-    invoices = _lock_invoices(
-        session, actor.company_id, [a.document_id for a in data.allocations]
-    )
+    invoices = _lock_invoices(session, actor.company_id, [a.document_id for a in data.allocations])
     _controlle_factures(session, actor, invoices, data.allocations)
     partner_id = invoices[0].partner_id
     company = session.get_one(Company, actor.company_id)
@@ -381,9 +370,7 @@ class AgingReport:
     grand_total_ttc: int
 
 
-def receivables_aging(
-    session: Session, company_id: uuid.UUID, as_of: date
-) -> AgingReport:
+def receivables_aging(session: Session, company_id: uuid.UUID, as_of: date) -> AgingReport:
     """Balance âgée clients (Phase 4C) : factures émises non soldées, réparties
     par ancienneté de retard (échéance passée) au {as_of}. Un solde nul ou
     négatif (avoir excédentaire) n'entre pas."""
@@ -417,9 +404,7 @@ def receivables_aging(
         else:
             cle = "d90_plus"
         precedent = buckets[cle]
-        buckets[cle] = AgingBucket(
-            count=precedent.count + 1, total_ttc=precedent.total_ttc + solde
-        )
+        buckets[cle] = AgingBucket(count=precedent.count + 1, total_ttc=precedent.total_ttc + solde)
     return AgingReport(
         as_of=as_of,
         buckets=buckets,

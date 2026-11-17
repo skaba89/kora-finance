@@ -386,3 +386,66 @@ class SalesPaymentAllocation(Base):
         Index("ix_sales_payment_allocations_tenant_document", "tenant_id", "document_id"),
         Index("ix_sales_payment_allocations_tenant_payment", "tenant_id", "payment_id"),
     )
+
+
+class ReminderChannel(StrEnum):
+    """Canal d'envoi d'une relance. EMAIL seul pour cette phase : le canal est
+    borné par une CHECK SQL ; WhatsApp (API Business) est une évolution future
+    qui ajoutera sa valeur à l'énumération et à la CHECK."""
+
+    EMAIL = "EMAIL"
+
+
+class SalesReminder(Base):
+    """Relance d'une facture échue adressée au client (Phase 4D) : un rappel
+    documenté, immuable (un email envoyé ne se « désend » pas — aucune
+    suppression ni modification), d'un niveau compté par le service (1re, 2e,
+    3e relance…) sous verrou de la facture — jamais saisi par l'appelant. Une
+    même facture ne reçoit qu'une relance par jour (unicité en base) : pas de
+    bombardement du client, et une course concurrente ne crée pas de doublon.
+    L'adresse destinataire est figée au moment de l'envoi (traçabilité). Aucune
+    écriture comptable : la relance est un acte commercial, pas un fait
+    financier."""
+
+    __tablename__ = "sales_reminders"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    document_id: Mapped[uuid.UUID]
+    partner_id: Mapped[uuid.UUID]
+    level: Mapped[int] = mapped_column(SmallInteger)
+    reminded_on: Mapped[date] = mapped_column(Date)
+    channel: Mapped[str] = mapped_column(String(16))
+    email_to: Mapped[str] = mapped_column(String(254))
+    note: Mapped[str | None] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = created_at_column()
+    updated_at: Mapped[datetime] = updated_at_column()
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        # Une même facture ne reçoit qu'une relance par jour : la course
+        # concurrente se sérialise sur ce contraignant (traduit en 409).
+        UniqueConstraint("tenant_id", "document_id", "reminded_on"),
+        CheckConstraint("level >= 1", name="level_valid"),
+        CheckConstraint("channel IN ('EMAIL')", name="channel_valid"),
+        CheckConstraint("length(trim(email_to)) > 0", name="email_to_not_blank"),
+        CheckConstraint("note IS NULL OR length(trim(note)) > 0", name="note_not_blank"),
+        ForeignKeyConstraint(
+            ["tenant_id", "document_id"],
+            ["sales_documents.tenant_id", "sales_documents.id"],
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "partner_id"],
+            ["partners.tenant_id", "partners.id"],
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(["tenant_id"], ["companies.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["created_by_user_id"], ["users.id"]),
+        Index("ix_sales_reminders_tenant_document", "tenant_id", "document_id"),
+        Index("ix_sales_reminders_tenant_partner", "tenant_id", "partner_id"),
+        Index("ix_sales_reminders_tenant_date", "tenant_id", "reminded_on"),
+    )
