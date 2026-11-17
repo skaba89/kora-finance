@@ -182,3 +182,58 @@ export async function deleteDocumentAction(
   refresh();
   return { status: "success", message: t.sales.deleted };
 }
+
+/** Enregistre un règlement client sur une facture émise (lettrage commercial 4C).
+ * Le montant est contrôlé côté serveur : jamais au-delà du solde restant dû. */
+export async function createPaymentAction(
+  companyId: string,
+  _: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const documentId = field(formData, "document_id");
+  const amount = Number(field(formData, "amount") || "0");
+  const method = field(formData, "method") || "CASH";
+  if (!documentId || !Number.isFinite(amount) || amount <= 0) {
+    const t = await actionDictionary();
+    return { status: "error", message: t.sales.paymentAmountRequired };
+  }
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/payments",
+    {
+      params: { path: { company_id: companyId } },
+      body: {
+        paid_on: field(formData, "paid_on") || new Date().toISOString().slice(0, 10),
+        method: method as
+          | "CASH"
+          | "BANK_TRANSFER"
+          | "MOBILE_MONEY"
+          | "CHECK"
+          | "CARD"
+          | "OTHER",
+        allocations: [{ document_id: documentId, amount: Math.round(amount) }],
+        reference: field(formData, "reference") || undefined,
+        notes: field(formData, "notes") || undefined,
+      },
+    },
+  );
+  if (!response.ok) return failure(error);
+  const t = await actionDictionary();
+  refresh();
+  return { status: "success", message: t.sales.paymentRecorded };
+}
+
+/** Supprime un règlement (correction de saisie) : les soldes sont libérés. */
+export async function deletePaymentAction(
+  companyId: string,
+  paymentId: string,
+  _: ActionState,
+): Promise<ActionState> {
+  const { error, response } = await (await api()).DELETE(
+    "/api/v1/companies/{company_id}/payments/{payment_id}",
+    { params: { path: { company_id: companyId, payment_id: paymentId } } },
+  );
+  if (!response.ok) return failure(error);
+  const t = await actionDictionary();
+  refresh();
+  return { status: "success", message: t.sales.paymentDeleted };
+}

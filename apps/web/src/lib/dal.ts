@@ -363,3 +363,34 @@ export type Company = Awaited<ReturnType<typeof getCompany>>;
 export function can(company: Company, permission: string): boolean {
   return company.permissions.includes(permission);
 }
+
+/** Règlements clients du dossier (Phase 4C), filtrables et paginés. */
+export async function getSalesPayments(
+  companyId: string,
+  query: {
+    partner_id?: string;
+    document_id?: string;
+    date_from?: string;
+    date_to?: string;
+    limit: number;
+    offset: number;
+  },
+) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/payments", {
+      params: { path: { company_id: companyId }, query },
+    }),
+  );
+}
+
+/** Balance âgée clients à une date donnée (Phase 4C) : créances par ancienneté. */
+export async function getSalesAging(companyId: string, asOf?: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/receivables/aging", {
+      params: {
+        path: { company_id: companyId },
+        query: asOf ? { as_of: asOf } : undefined,
+      },
+    }),
+  );
+}
