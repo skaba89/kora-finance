@@ -1539,3 +1539,59 @@ ESLint 0 ; tsc 0 ; Vitest 69/69 ; migrations aller-retour 0018 → 0017 → 0018
 rejouer après régularisation du compte ; PDF de bordereau de règlement (4C-bis
 éventuel), envoi par email/WhatsApp, relances (4D), intégration comptable (4E).
 - Suivi : `AUDIT_SUIVI_20261109.md` §35.
+
+## 2026-11-17 — Phase 4D : relances de factures échues
+
+**Objet** — compléter le cycle commercial : les factures échues non soldées
+(4B/4C) deviennent relançables, avec un historique immuable et un email réel au
+client — exigence du cahier des charges (relances), cœur du suivi de recouvrement.
+
+**Livré** :
+- `kora/sales/reminders.py` : une relance vise une facture ÉMISE, ÉCHUE
+  (échéance strictement passée à la date du rappel ; sans échéance = jamais
+  échue, convention balance âgée) et NON SOLDÉE (solde 4C : TTC − affectations −
+  avoirs partiels émis). Le niveau (1re, 2e relance…) est compté sous verrou
+  FOR UPDATE de la facture — jamais saisi. Doublon du jour intercepté par
+  relecture sous verrou + unicité (dossier, facture, jour) en base : deux
+  courses concurrentes se sérialisent, traduites en 409. Relance immuable :
+  aucune suppression ni modification ; adresse destinataire figée à l'envoi.
+- Migration 0019 `sales_reminders` : RLS `tenant_isolation` forcée, FK
+  composites (facture, tier) RESTRICT, canal borné à EMAIL par CHECK (WhatsApp
+  = évolution après contrat opérateur, même discipline que la 3D).
+- Worker : `send_sales_reminder` compose l'email depuis l'état persisté (tenant
+  lié explicitement — RLS ferme toute session sans tenant) puis le confie à
+  `deliver_email` ; gabarit `invoice_reminder` fr/en (montant, retard, échéance,
+  message personnalisé). La panne de la file n'annule pas la relance :
+  `email_queued` porté par la réponse, renvoi journalisé
+  (`sales_reminder.resent`) via `POST /reminders/{id}/resend`.
+- Routes : `GET /receivables/overdue` (candidates à date arbitraire : solde dû,
+  retard, historique, email du tier), `GET/POST /reminders` (filtres facture,
+  tier, fenêtre de dates, pagination) ; `DocumentOut` enrichi additivement
+  (`reminders_count`). Contrat régénéré : **102 chemins** (3 ajoutés, 0
+  supprimés), 168 schémas (7 ajoutés, 0 supprimés) — diff strictement additif.
+- Permissions `sales:read`/`sales:manage` réutilisées ; audit
+  `sales_reminder.created` / `sales_reminder.resent` dans la chaîne SHA-256 ;
+  zéro écriture comptable (garde-fou testé — 4E à venir).
+- Front fr/en : page Ventes avec carte « Relances de factures échues »
+  (candidates : retard, relances déjà envoyées, avertissement email manquant),
+  formulaire de relance (facture échue, message personnalisé facultatif),
+  historique immuable avec renvoi confirmé ; actions via BFF, 33 clés i18n,
+  types TS régénérés.
+
+**Validation** : pytest **934 verts** en tranches sur la pile réelle hors Docker
+(PG 16.2 + btree_gist, fakeredis, Moto S3, Mailpit) = **12 nouveaux** dans
+`test_sales_reminders.py` ; course critique : **20 relances concurrentes le
+même jour → 1 × 201 + 19 × 409**, historique à une ligne ; le test de
+synchronisation modèles/migrations a intercepté le contraignant d'unicité
+absent du modèle (corrigé avant merge) ; ruff 0 ; mypy strict 0 (185 fichiers) ;
+ESLint 0 ; tsc 0 ; Vitest 69/69 ; build Next.js OK ; migrations aller-retour
+0019 → 0018 → 0019 + `alembic check` propre ; contrat et types TS committés.
+`test_isolation_tenants` (313 paramètres = toutes les routes) scindé en 7 lots
+sous la limite de 10 min du sandbox — vert intégralement.
+
+**Reste** : CI toujours bloquée (facturation GitHub) : à rejouer après
+régularisation du compte ; planification automatique des relances hors périmètre
+(acte commercial humain et journalisé) ; intégration comptable (4E) avec
+validation humaine, envoi des documents par email/WhatsApp (4D-bis éventuel),
+achats (phase suivante).
+- Suivi : `AUDIT_SUIVI_20261109.md` §36.

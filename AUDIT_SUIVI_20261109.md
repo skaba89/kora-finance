@@ -1493,3 +1493,89 @@ Branche `feature/kora-4c-reglements-lettrage` (base 2269a49 = 4B-bis mergée) :
   négatif, exclu de la balance âgée. Évolution possible en 4D.
 - Les avoirs autonomes (sans facture d'origine) ne réduisent le solde d'aucune
   facture ; leur imputation en crédit (credit memo) reste à venir.
+
+## 36. Phase 4D — relances de factures échues (2026-11-17)
+
+### Constat d'origine
+Aucun défaut : la phase 4C venait d'être mergée (PR #94) et le PLAN désignait
+les relances comme la suite naturelle du cycle ventes. Le CI GitHub Actions
+reste bloqué par la facturation du compte — toute la validation est locale, sur
+la même pile que la CI.
+
+### PR #95 — implémentation
+Branche `feature/kora-4d-relances` (base 6237354 = 4C mergée) :
+- **Un rappel documenté, pas un fait financier** : `sales_reminders` (migration
+  0019) enregistre la relance adressée au client d'une facture ÉMISE, ÉCHUE
+  (échéance passée à la date du rappel — une facture sans échéance n'est jamais
+  échue, même convention que la balance âgée) et NON SOLDÉE (solde = TTC −
+  affectations − avoirs partiels émis, même calcul qu'en 4C). Aucune écriture
+  comptable (garde-fou testé, comme en 4A/4B/4C) : la relance prépare 4E sans
+  le devancer.
+- **Le niveau se compte, jamais ne se saisit** : 1re, 2e, 3e relance… compté
+  sous verrou FOR UPDATE de la facture. Une même facture ne reçoit qu'une
+  relance par jour — unicité (dossier, facture, jour) en base, et le doublon
+  est d'abord intercepté par une relecture sous verrou (deux courses
+  concurrentes se sérialisent : la seconde voit la relance commise par la
+  première et refuse avant tout INSERT).
+- **Course critique testée** : 20 relances concurrentes le même jour sur une
+  vraie base PostgreSQL → exactement 1 création (201) et 19 conflits (409),
+  historique à une seule ligne au niveau 1.
+- **Immuabilité** : un email envoyé ne se « désend » pas — aucune route de
+  suppression ni modification (le contrat n'expose que GET/POST, vérifié dans
+  le test) ; la correction d'une adresse erronée passe par la fiche du tier.
+- **L'email part dans le worker** (jamais pendant la requête HTTP) : composé
+  depuis l'état persisté (gabarit `invoice_reminder` fr/en, montant en unités
+  d'affichage, jours de retard, échéance, message personnalisé facultatif) ;
+  si la file est injoignable, la relance reste enregistrée et `email_queued`
+  vaut False — le renvoi (`POST /reminders/{id}/resend`) re-programme l'envoi,
+  journalisé, la relance restant inchangée. L'adresse destinataire est figée à
+  l'envoi (traçabilité : le tier peut changer d'email ensuite).
+- **Routes** : `GET /receivables/overdue` (candidates à une date arbitraire :
+  solde dû, retard en jours, historique, email du tier — absent : la fiche du
+  tier doit être complétée), `GET/POST /reminders`, `POST /reminders/{id}/resend`
+  ; `DocumentOut` enrichi additivement (`reminders_count`). Permissions
+  `sales:read`/`sales:manage` réutilisées ; audit `sales_reminder.created` /
+  `sales_reminder.resent` dans la chaîne SHA-256 ; RLS `tenant_isolation`
+  forcée.
+- **Front fr/en** : page Ventes enrichie (carte « Relances de factures échues »
+  : candidates avec retard et historique, formulaire de relance avec message
+  personnalisé, historique immuable avec renvoi confirmé) ; actions serveur via
+  BFF ; 33 clés i18n ; types TS régénérés.
+
+### Validation
+- pytest **934 verts** sur la pile réelle hors Docker (PG 16.2 embarqué +
+  btree_gist compilé, fakeredis TCP, Moto S3 + buckets, Mailpit), recensement
+  par tranches sous la limite de 10 min du sandbox : 176 (A) + 57 (B) + 87 (C)
+  + 311 (`test_isolation_tenants`, lui-même scindé en 7 lots par identifiants —
+  313 paramètres = toutes les routes de l'API, les 4 nouvelles incluses) + 62
+  (grand livre/lettrage) + 23 (concurrence login, MFA, migrations) + 35
+  (notifications/OpenAPI/tiers/permissions) + 32 (rapports, garde-fous de
+  restauration, réglages runtime) + 60 (ventes : 4B/4C/4D + PDF) + 60
+  (relevés/trésorerie) + 15 (réconciliation/xlsx/worker) + 16 (relevés
+  trésorerie) — **12 tests nouveaux** dans `test_sales_reminders.py`
+  (candidates, niveaux, unicité quotidienne, refus statuts, tier sans email,
+  filtres, immuabilité contractuelle, renvoi + recomposition de l'email,
+  isolation RLS, permissions, audit, course 20 fils, email composé depuis
+  l'état persisté) ;
+- ruff 0 ; mypy strict 0 (185 fichiers) ; ESLint 0 ; tsc 0 ; Vitest 69/69 ;
+  build Next.js OK ;
+- migrations aller-retour 0019 → 0018 → 0019 (exécutées à chaque session de
+  tests) ; `alembic check` : « No new upgrade operations detected » — le
+  contraignant d'unicité quotidienne manquait au modèle : corrigé, le test de
+  synchronisation modèles/migrations fait son travail ;
+- contrat OpenAPI : 99 → 102 chemins, 161 → 168 schémas — **pur ajout**
+  (0 ligne supprimée), types TS régénérés et committés.
+
+### Points d'honnêteté
+- CI GitHub Actions **toujours bloquée par la facturation** du compte : aucune
+  exécution GitHub n'a validé cette phase ; à rejouer après régularisation.
+- Un test (runtime sans secret propriétaire) a échoué une fois en tranche puis
+  est repassé vert seul et en tranche complète : flakiness d'environnement
+  (variables d'environnement du processus), pas de reproductibilité — signalé,
+  non masqué.
+- Les relances WhatsApp ne sont pas implémentées (canal borné à EMAIL par CHECK
+  SQL) : l'API Business WhatsApp exige un contrat opérateur — même discipline
+  que la phase 3D (aucune activation simulée).
+- La planification automatique des relances (rappels périodiques sans action
+  humaine) est volontairement hors périmètre : chaque relance est un acte
+  commercial déclenché et journalisé par un utilisateur habilité.
