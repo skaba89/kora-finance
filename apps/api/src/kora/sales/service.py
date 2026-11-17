@@ -19,8 +19,10 @@ Règles portées par le service (et la base quand possible) :
 - l'ordre de verrous est « document puis exercice puis compteur », aligné sur le
   grand livre (« écriture puis exercice puis numérotation ») : pas d'interblocage
   possible entre les deux modules ;
-- aucune écriture comptable n'est générée ici : l'intégration comptable est la
-  Phase 4E, avec validation humaine (garde-fou testé, comme en 4A).
+- aucune écriture comptable n'est générée ici : l'intégration comptable est un
+  acte explicite de la Phase 4E (permission `entries:post`) — mais une facture
+  déjà comptabilisée ne s'annule pas sans contre-passation préalable de son
+  écriture (interlock symétrique de celui des règlements).
 """
 
 import uuid
@@ -32,7 +34,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from kora.accounting.entries import Actor, _fiscal_year_for
+from kora.accounting.entries import Actor, _fiscal_year_for, reversal_id_of
 from kora.audit.service import record_event
 from kora.core import quota
 from kora.core.config import get_settings
@@ -708,7 +710,10 @@ def convert_quote(session: Session, actor: Actor, quote_id: uuid.UUID) -> SalesD
 def cancel_invoice(session: Session, actor: Actor, invoice_id: uuid.UUID) -> SalesDocument:
     """Annulation sans avoir (facture jamais envoyée, erreur de saisie) : le numéro
     est conservé, jamais réutilisé. Une facture envoyée au client s'annule par un
-    avoir (émission de l'avoir annulateur → facture CANCELLED automatiquement)."""
+    avoir (émission de l'avoir annulateur → facture CANCELLED automatiquement).
+    Une facture comptabilisée (4E) refuse de s'annuler tant que son écriture est
+    vivante : elle se contre-passe d'abord au grand livre, sinon la créance
+    disparaîtrait des comptes sans jamais avoir été créditée."""
     document = _lock_document(session, actor.company_id, invoice_id)
     if document.doc_kind != DocKind.INVOICE.value:
         raise BusinessRuleError("Cette action s'applique aux factures.")
@@ -716,6 +721,15 @@ def cancel_invoice(session: Session, actor: Actor, invoice_id: uuid.UUID) -> Sal
         raise ConflictError("Seule une facture émise peut être annulée.")
     # Une facture déjà lettrée par des règlements (4C) ne s'annule pas.
     _exige_facture_sans_reglement(session, actor.company_id, document.id)
+    # Une facture comptabilisée (4E) s'annule après contre-passation de son écriture.
+    if (
+        document.entry_id is not None
+        and reversal_id_of(session, actor.company_id, document.entry_id) is None
+    ):
+        raise ConflictError(
+            "Cette facture est comptabilisée : contre-passez son écriture "
+            "(grand livre) avant de l'annuler."
+        )
     document.status = DocStatus.CANCELLED.value
     record_event(
         session,

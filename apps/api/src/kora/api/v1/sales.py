@@ -3,7 +3,9 @@
 Le PDF conforme d'un document numéroté (4B-bis) est servi en fichier binaire avec
 les mentions légales figées à la numérotation. Les règlements clients et leur
 lettrage commercial (4C) portent le solde restant dû des factures ; la balance
-âgée répartit les créances par ancienneté de retard."""
+âgée répartit les créances par ancienneté de retard. La comptabilisation (4E)
+est un acte explicite du comptable : elle crée et valide l'écriture du grand
+livre qui porte le document ou le règlement (permission `entries:post`)."""
 
 import uuid
 from datetime import date
@@ -25,9 +27,9 @@ from kora.models.sales import (
     SalesPaymentAllocation,
     SalesReminder,
 )
-from kora.sales import payments, reminders, service
+from kora.sales import accounting, payments, reminders, service
 from kora.sales.service import DocumentData, LineData
-from kora.tenancy.deps import SalesManage, SalesRead, TenantContext
+from kora.tenancy.deps import EntriesPost, SalesManage, SalesRead, TenantContext
 from kora.worker.enqueue import enqueue_best_effort
 from kora.worker.tasks import send_sales_reminder
 
@@ -92,6 +94,9 @@ class DocumentOut(BaseModel):
     # Nombre de relances déjà envoyées (4D) : rempli uniquement pour une facture
     # émise dans les routes de lecture (calcul en lecture, jamais stocké).
     reminders_count: int | None = None
+    # Écriture validée qui porte le document en comptabilité (4E) : NULL tant
+    # que le comptable n'a pas comptabilisé — jamais automatique.
+    entry_id: uuid.UUID | None = None
 
 
 class DocumentDetailOut(DocumentOut):
@@ -149,6 +154,21 @@ class IssueIn(RequestBody):
 
 class DecisionIn(RequestBody):
     accepted: bool
+
+
+class DocumentEntryIn(RequestBody):
+    """Comptabilisation d'un document émis : le compte de produits est choisi par
+    le comptable (défaut : numéro 701 du plan du dossier) ; la TVA suit les
+    comptes collectés des taux figés à l'émission."""
+
+    sales_account_id: uuid.UUID | None = None
+
+
+class PaymentEntryIn(RequestBody):
+    """Comptabilisation d'un règlement : le compte de trésorerie est choisi par
+    le comptable (défaut : 571 pour la caisse, 521 pour les autres modes)."""
+
+    cash_account_id: uuid.UUID | None = None
 
 
 def _data(body: DocumentCreate) -> DocumentData:
@@ -223,6 +243,7 @@ def _out(
         outstanding_ttc=outstanding,
         payment_status=payment_status,
         reminders_count=nombre_relances,
+        entry_id=document.entry_id,
     )
 
 
@@ -459,6 +480,8 @@ class PaymentOut(BaseModel):
     fiscal_year_id: uuid.UUID
     created_at: str
     allocations: list[AllocationOut]
+    # Écriture validée qui porte l'encaissement en comptabilité (4E).
+    entry_id: uuid.UUID | None = None
 
 
 class PaymentsOut(BaseModel):
@@ -507,6 +530,7 @@ def _payment_out(payment: SalesPayment, allocations: list[SalesPaymentAllocation
         allocations=[
             AllocationOut(document_id=a.document_id, amount=a.amount) for a in allocations
         ],
+        entry_id=payment.entry_id,
     )
 
 
@@ -557,8 +581,57 @@ def get_payment(payment_id: uuid.UUID, tenant: SalesRead, db: DbSession) -> Paym
 @router.delete("/payments/{payment_id}", status_code=204, responses=WRITE_ERRORS)
 def delete_payment(payment_id: uuid.UUID, tenant: SalesManage, db: DbSession, ctx: Ctx) -> None:
     """Supprime un règlement (correction de saisie) : les soldes des factures
-    sont libérés et l'action est journalisée."""
+    sont libérés et l'action est journalisée. Refusé tant que le règlement est
+    comptabilisé : l'écriture se contre-passe d'abord au grand livre."""
     payments.delete_payment(db, _actor(tenant, ctx), payment_id)
+
+
+@router.post("/sales/{document_id}/entry", responses=WRITE_ERRORS)
+def post_document_entry(
+    document_id: uuid.UUID,
+    body: DocumentEntryIn,
+    tenant: EntriesPost,
+    db: DbSession,
+    ctx: Ctx,
+) -> DocumentDetailOut:
+    """Comptabilise une facture ou un avoir émis : écriture validée du journal des
+    ventes (débit 411x au TTC, crédit du compte de produits au HT, crédit des
+    comptes collectés par taux — inversée pour un avoir), liée au document.
+    Idempotence refusée : un document déjà comptabilisé répond 409."""
+    accounting.post_document(
+        db,
+        _actor(tenant, ctx),
+        document_id,
+        sales_account_id=body.sales_account_id,
+    )
+    document, lines = service.get_document(db, tenant.company_id, document_id)
+    return _detail_out(
+        document,
+        lines,
+        _lettres(db, tenant.company_id, document),
+        reminders.reminders_count_for_documents(db, tenant.company_id, [document.id]),
+    )
+
+
+@router.post("/payments/{payment_id}/entry", responses=WRITE_ERRORS)
+def post_payment_entry(
+    payment_id: uuid.UUID,
+    body: PaymentEntryIn,
+    tenant: EntriesPost,
+    db: DbSession,
+    ctx: Ctx,
+) -> PaymentOut:
+    """Comptabilise un règlement : écriture validée du journal de trésorerie
+    (débit du compte de trésorerie, crédit du compte de tiers), liée au
+    règlement. Idempotence refusée : un règlement déjà comptabilisé répond 409."""
+    accounting.post_payment(
+        db,
+        _actor(tenant, ctx),
+        payment_id,
+        cash_account_id=body.cash_account_id,
+    )
+    payment, allocations = payments.get_payment(db, tenant.company_id, payment_id)
+    return _payment_out(payment, allocations)
 
 
 @router.get("/receivables/aging", responses={404: {"model": ErrorResponse}})
