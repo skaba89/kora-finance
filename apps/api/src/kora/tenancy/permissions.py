@@ -39,6 +39,8 @@ class Permission(StrEnum):
     PARTNERS_MANAGE = "partners:manage"
     SALES_READ = "sales:read"
     SALES_MANAGE = "sales:manage"
+    PURCHASES_READ = "purchases:read"
+    PURCHASES_MANAGE = "purchases:manage"
 
 
 DESCRIPTIONS: dict[Permission, str] = {
@@ -72,6 +74,10 @@ DESCRIPTIONS: dict[Permission, str] = {
     Permission.SALES_MANAGE: (
         "Créer, émettre (numérotation définitive), convertir et annuler devis, factures et avoirs"
     ),
+    Permission.PURCHASES_READ: "Consulter les factures et avoirs fournisseurs",
+    Permission.PURCHASES_MANAGE: (
+        "Créer, émettre (numérotation définitive), annuler et payer factures et avoirs fournisseurs"
+    ),
 }
 
 _READ = frozenset(
@@ -84,6 +90,7 @@ _READ = frozenset(
         Permission.TREASURY_READ,
         Permission.PARTNERS_READ,
         Permission.SALES_READ,
+        Permission.PURCHASES_READ,
     }
 )
 _ACCOUNTING = _READ | {
@@ -98,6 +105,7 @@ _ACCOUNTING = _READ | {
     Permission.TREASURY_MANAGE,
     Permission.PARTNERS_MANAGE,
     Permission.SALES_MANAGE,
+    Permission.PURCHASES_MANAGE,
 }
 _FULL = frozenset(Permission)
 

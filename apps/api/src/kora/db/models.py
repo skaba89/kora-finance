@@ -10,6 +10,7 @@ from kora.models import (
     ledger,
     organization,
     partners,
+    purchases,
     sales,
     treasury,
 )
@@ -23,6 +24,7 @@ __all__ = [
     "ledger",
     "organization",
     "partners",
+    "purchases",
     "sales",
     "treasury",
 ]
