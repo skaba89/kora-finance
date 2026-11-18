@@ -1227,6 +1227,27 @@ export interface paths {
         patch: operations["update_partner_api_v1_companies__company_id__partners__partner_id__patch"];
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/payables/aging": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Payables Aging
+         * @description Échéancier fournisseurs : factures d'achat émises non soldées, par
+         *     ancienneté de retard au jour demandé (aujourd'hui par défaut).
+         */
+        get: operations["payables_aging_api_v1_companies__company_id__payables_aging_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/payments": {
         parameters: {
             query?: never;
@@ -1291,6 +1312,184 @@ export interface paths {
          *     règlement. Idempotence refusée : un règlement déjà comptabilisé répond 409.
          */
         post: operations["post_payment_entry_api_v1_companies__company_id__payments__payment_id__entry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/purchase-payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Payments
+         * @description Décaissements du dossier (règlements fournisseurs lettrés), filtrables
+         *     et paginés.
+         */
+        get: operations["list_payments_api_v1_companies__company_id__purchase_payments_get"];
+        put?: never;
+        /**
+         * Create Payment
+         * @description Enregistre un décaissement fournisseur et son lettrage : le solde des
+         *     factures visées est contrôlé sous verrou — jamais d'affectation au-delà du
+         *     restant dû.
+         */
+        post: operations["create_payment_api_v1_companies__company_id__purchase_payments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/purchase-payments/{payment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Payment */
+        get: operations["get_payment_api_v1_companies__company_id__purchase_payments__payment_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Payment
+         * @description Supprime un décaissement (correction de saisie) : les soldes des factures
+         *     sont libérés et l'action est journalisée. Refusé tant que le règlement est
+         *     comptabilisé : l'écriture se contre-passe d'abord au grand livre.
+         */
+        delete: operations["delete_payment_api_v1_companies__company_id__purchase_payments__payment_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/purchase-payments/{payment_id}/entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Payment Entry
+         * @description Comptabilise un décaissement : écriture validée du journal de trésorerie
+         *     (débit du compte de tiers, crédit du compte de trésorerie), liée au
+         *     règlement. Idempotence refusée : un règlement déjà comptabilisé répond 409.
+         */
+        post: operations["post_payment_entry_api_v1_companies__company_id__purchase_payments__payment_id__entry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/purchases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Documents
+         * @description Factures et avoirs fournisseurs du dossier, filtrables et paginés.
+         */
+        get: operations["list_documents_api_v1_companies__company_id__purchases_get"];
+        put?: never;
+        /** Create Document */
+        post: operations["create_document_api_v1_companies__company_id__purchases_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/purchases/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Document */
+        get: operations["get_document_api_v1_companies__company_id__purchases__document_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Document */
+        delete: operations["delete_document_api_v1_companies__company_id__purchases__document_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Document */
+        patch: operations["update_document_api_v1_companies__company_id__purchases__document_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/purchases/{document_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Invoice
+         * @description Annulation d'une facture fournisseur émise sans avoir : le numéro est
+         *     conservé.
+         */
+        post: operations["cancel_invoice_api_v1_companies__company_id__purchases__document_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/purchases/{document_id}/entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Document Entry
+         * @description Comptabilise une facture ou un avoir fournisseur émis : écriture validée
+         *     du journal des achats (débit du compte de charge au HT, débit des comptes
+         *     récupérables par taux, crédit du compte de tiers au TTC — inversée pour un
+         *     avoir), liée au document. Idempotence refusée : un document déjà
+         *     comptabilisé répond 409.
+         */
+        post: operations["post_document_entry_api_v1_companies__company_id__purchases__document_id__entry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/purchases/{document_id}/issue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue Document
+         * @description Numérotation définitive d'une facture ou d'un avoir fournisseur :
+         *     irréversible, sans trou.
+         */
+        post: operations["issue_document_api_v1_companies__company_id__purchases__document_id__issue_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4310,6 +4509,28 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** PayablesAgingBucketOut */
+        PayablesAgingBucketOut: {
+            /** Count */
+            count: number;
+            /** Total Ttc */
+            total_ttc: number;
+        };
+        /**
+         * PayablesAgingOut
+         * @description Échéancier fournisseurs : dettes d'achat émises non soldées par
+         *     ancienneté de retard.
+         */
+        PayablesAgingOut: {
+            /** As Of */
+            as_of: string;
+            /** Buckets */
+            buckets: {
+                [key: string]: components["schemas"]["PayablesAgingBucketOut"];
+            };
+            /** Grand Total Ttc */
+            grand_total_ttc: number;
+        };
         /**
          * PaymentEntryIn
          * @description Comptabilisation d'un règlement : le compte de trésorerie est choisi par
@@ -4445,6 +4666,339 @@ export interface components {
              * @description Montant entier en unités mineures, sous forme de chaîne
              */
             debit: string;
+        };
+        /** PurchaseAllocationIn */
+        PurchaseAllocationIn: {
+            /** Amount */
+            amount: number;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+        };
+        /** PurchaseAllocationOut */
+        PurchaseAllocationOut: {
+            /** Amount */
+            amount: number;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+        };
+        /** PurchaseDocumentCreate */
+        PurchaseDocumentCreate: {
+            /**
+             * Doc Kind
+             * @enum {string}
+             */
+            doc_kind: "supplier_invoice" | "supplier_credit_note";
+            /** Due On */
+            due_on?: string | null;
+            /** Lines */
+            lines: components["schemas"]["PurchaseLineIn"][];
+            /** Notes */
+            notes?: string | null;
+            /** Origin Document Id */
+            origin_document_id?: string | null;
+            /**
+             * Partner Id
+             * Format: uuid
+             */
+            partner_id: string;
+            /** Reference */
+            reference?: string | null;
+            /** Reverses Document Id */
+            reverses_document_id?: string | null;
+        };
+        /** PurchaseDocumentDetailOut */
+        PurchaseDocumentDetailOut: {
+            /** Created At */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Doc Kind
+             * @enum {string}
+             */
+            doc_kind: "supplier_invoice" | "supplier_credit_note";
+            /** Due On */
+            due_on: string | null;
+            /** Entry Id */
+            entry_id?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issued On */
+            issued_on: string | null;
+            /** Issuer Snapshot */
+            issuer_snapshot: {
+                [key: string]: unknown;
+            } | null;
+            /** Lines */
+            lines: components["schemas"]["PurchaseLineOut"][];
+            /** Notes */
+            notes: string | null;
+            /** Number */
+            number: number | null;
+            /** Origin Document Id */
+            origin_document_id: string | null;
+            /** Outstanding Ttc */
+            outstanding_ttc?: number | null;
+            /**
+             * Partner Id
+             * Format: uuid
+             */
+            partner_id: string;
+            /** Partner Snapshot */
+            partner_snapshot: {
+                [key: string]: unknown;
+            } | null;
+            /** Payment Status */
+            payment_status?: ("none" | "partial" | "paid") | null;
+            /** Reference */
+            reference: string | null;
+            /** Reverses Document Id */
+            reverses_document_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "DRAFT" | "ISSUED" | "CANCELLED";
+            /** Total Ht */
+            total_ht: number;
+            /** Total Tax */
+            total_tax: number;
+            /** Total Ttc */
+            total_ttc: number;
+        };
+        /**
+         * PurchaseDocumentEntryIn
+         * @description Comptabilisation d'un document émis : le compte de charge est choisi par
+         *     le comptable (défaut : numéro 601 du plan du dossier) ; la TVA suit les
+         *     comptes récupérables des taux figés à l'émission.
+         */
+        PurchaseDocumentEntryIn: {
+            /** Expense Account Id */
+            expense_account_id?: string | null;
+        };
+        /**
+         * PurchaseDocumentIssuedOut
+         * @description Résultat d'une numérotation définitive : document émis et mentions
+         *     complémentaires manquantes signalées (non bloquant).
+         */
+        PurchaseDocumentIssuedOut: {
+            document: components["schemas"]["PurchaseDocumentDetailOut"];
+            /** Warnings */
+            warnings: string[];
+        };
+        /** PurchaseDocumentOut */
+        PurchaseDocumentOut: {
+            /** Created At */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Doc Kind
+             * @enum {string}
+             */
+            doc_kind: "supplier_invoice" | "supplier_credit_note";
+            /** Due On */
+            due_on: string | null;
+            /** Entry Id */
+            entry_id?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Issued On */
+            issued_on: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Number */
+            number: number | null;
+            /** Origin Document Id */
+            origin_document_id: string | null;
+            /** Outstanding Ttc */
+            outstanding_ttc?: number | null;
+            /**
+             * Partner Id
+             * Format: uuid
+             */
+            partner_id: string;
+            /** Payment Status */
+            payment_status?: ("none" | "partial" | "paid") | null;
+            /** Reference */
+            reference: string | null;
+            /** Reverses Document Id */
+            reverses_document_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "DRAFT" | "ISSUED" | "CANCELLED";
+            /** Total Ht */
+            total_ht: number;
+            /** Total Tax */
+            total_tax: number;
+            /** Total Ttc */
+            total_ttc: number;
+        };
+        /**
+         * PurchaseDocumentUpdate
+         * @description PATCH partiel d'un brouillon : seuls les champs fournis sont modifiés ;
+         *     « lines » remplace intégralement les lignes.
+         */
+        PurchaseDocumentUpdate: {
+            /** Due On */
+            due_on?: string | null;
+            /** Lines */
+            lines?: components["schemas"]["PurchaseLineIn"][] | null;
+            /** Notes */
+            notes?: string | null;
+            /** Reference */
+            reference?: string | null;
+        };
+        /** PurchaseDocumentsOut */
+        PurchaseDocumentsOut: {
+            /** Items */
+            items: components["schemas"]["PurchaseDocumentOut"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * PurchaseIssueIn
+         * @description Émission avec date explicite facultative (rattrapage de saisie) : la date
+         *     doit tomber dans un exercice ouvert, hors période verrouillée.
+         */
+        PurchaseIssueIn: {
+            /** Issued On */
+            issued_on?: string | null;
+        };
+        /** PurchaseLineIn */
+        PurchaseLineIn: {
+            /**
+             * Discount Bp
+             * @default 0
+             */
+            discount_bp: number;
+            /** Label */
+            label: string;
+            /** Quantity */
+            quantity: number;
+            /** Tax Exempt Reason */
+            tax_exempt_reason?: string | null;
+            /** Tax Rate Id */
+            tax_rate_id?: string | null;
+            /** Unit Price Ht */
+            unit_price_ht: number;
+        };
+        /** PurchaseLineOut */
+        PurchaseLineOut: {
+            /** Discount Bp */
+            discount_bp: number;
+            /** Label */
+            label: string;
+            /** Line Ht */
+            line_ht: number;
+            /** Line No */
+            line_no: number;
+            /** Line Tax */
+            line_tax: number;
+            /** Line Ttc */
+            line_ttc: number;
+            /** Quantity */
+            quantity: number;
+            /** Tax Bp Snapshot */
+            tax_bp_snapshot: number | null;
+            /** Tax Exempt Reason */
+            tax_exempt_reason: string | null;
+            /** Tax Rate Id */
+            tax_rate_id: string | null;
+            /** Unit Price Ht */
+            unit_price_ht: number;
+        };
+        /**
+         * PurchasePaymentEntryIn
+         * @description Comptabilisation d'un décaissement : le compte de trésorerie est choisi
+         *     par le comptable (défaut : 571 pour la caisse, 521 pour les autres modes).
+         */
+        PurchasePaymentEntryIn: {
+            /** Cash Account Id */
+            cash_account_id?: string | null;
+        };
+        /**
+         * PurchasePaymentIn
+         * @description Décaissement saisi : le montant n'est jamais transmis — c'est la somme
+         *     des affectations que le service recalcule et contrôle sous verrou.
+         */
+        PurchasePaymentIn: {
+            /** Allocations */
+            allocations: components["schemas"]["PurchaseAllocationIn"][];
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "CASH" | "BANK_TRANSFER" | "MOBILE_MONEY" | "CHECK" | "CARD" | "OTHER";
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Paid On
+             * Format: date
+             */
+            paid_on: string;
+            /** Reference */
+            reference?: string | null;
+        };
+        /** PurchasePaymentOut */
+        PurchasePaymentOut: {
+            /** Allocations */
+            allocations: components["schemas"]["PurchaseAllocationOut"][];
+            /** Amount */
+            amount: number;
+            /** Created At */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /** Entry Id */
+            entry_id?: string | null;
+            /**
+             * Fiscal Year Id
+             * Format: uuid
+             */
+            fiscal_year_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "CASH" | "BANK_TRANSFER" | "MOBILE_MONEY" | "CHECK" | "CARD" | "OTHER";
+            /** Notes */
+            notes: string | null;
+            /** Paid On */
+            paid_on: string;
+            /**
+             * Partner Id
+             * Format: uuid
+             */
+            partner_id: string;
+            /** Reference */
+            reference: string | null;
+        };
+        /** PurchasePaymentsOut */
+        PurchasePaymentsOut: {
+            /** Items */
+            items: components["schemas"]["PurchasePaymentOut"][];
+            /** Total */
+            total: number;
         };
         /** ReadyResponse */
         ReadyResponse: {
@@ -10323,6 +10877,49 @@ export interface operations {
             };
         };
     };
+    payables_aging_api_v1_companies__company_id__payables_aging_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayablesAgingOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_payments_api_v1_companies__company_id__payments_get: {
         parameters: {
             query?: {
@@ -10578,6 +11175,829 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_payments_api_v1_companies__company_id__purchase_payments_get: {
+        parameters: {
+            query?: {
+                partner_id?: string | null;
+                document_id?: string | null;
+                date_from?: string | null;
+                date_to?: string | null;
+                /** @description Taille de page */
+                limit?: number;
+                /** @description Décalage */
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchasePaymentsOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_payment_api_v1_companies__company_id__purchase_payments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchasePaymentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchasePaymentOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_payment_api_v1_companies__company_id__purchase_payments__payment_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchasePaymentOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_payment_api_v1_companies__company_id__purchase_payments__payment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_payment_entry_api_v1_companies__company_id__purchase_payments__payment_id__entry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchasePaymentEntryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchasePaymentOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_documents_api_v1_companies__company_id__purchases_get: {
+        parameters: {
+            query?: {
+                kind?: ("supplier_invoice" | "supplier_credit_note") | null;
+                status?: ("DRAFT" | "ISSUED" | "CANCELLED") | null;
+                partner_id?: string | null;
+                q?: string | null;
+                /** @description Taille de page */
+                limit?: number;
+                /** @description Décalage */
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseDocumentsOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_document_api_v1_companies__company_id__purchases_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseDocumentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseDocumentDetailOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_document_api_v1_companies__company_id__purchases__document_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseDocumentDetailOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_document_api_v1_companies__company_id__purchases__document_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_document_api_v1_companies__company_id__purchases__document_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseDocumentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseDocumentDetailOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel_invoice_api_v1_companies__company_id__purchases__document_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseDocumentDetailOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_document_entry_api_v1_companies__company_id__purchases__document_id__entry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseDocumentEntryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseDocumentDetailOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    issue_document_api_v1_companies__company_id__purchases__document_id__issue_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PurchaseIssueIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseDocumentIssuedOut"];
                 };
             };
             /** @description Unauthorized */
