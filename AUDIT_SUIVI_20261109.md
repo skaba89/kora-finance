@@ -1787,3 +1787,57 @@ définition existante modifiée, aucun renommage.
   défaut du dossier) : aucune logique de prorata de déductibilité à ce stade.
 - Les Photos de pièces justificatives hors connexion (2g3b) restent ouvertes au
   plan ; le scan des pièces fournisseurs s'y raccordera naturellement.
+
+## 39. Audit de sécurité Phase A de la mission (2026-11-18)
+
+Audit d'entrée de la mission DataSphere Innovation Guinée (maturité 99/100 et
+commercialisation), exécuté sur `main` = `43a4cf2` (merge PR #97) après
+resynchronisation du clone. Aucun code modifié par cet audit : uniquement des
+vérifications exécutées le jour même, chacune appuyée par une preuve, et la mise
+à jour du tableau d'avancement de `CLAUDE.md` (anomalie documentée ci-dessous).
+
+### Vérifications exécutées
+
+| # | Vérification | Résultat |
+|---|---|---|
+| 1 | État du dépôt | `main` = `origin/main` = `43a4cf2`, arbre propre après normalisation LF (356 « changements » de la session précédente = pures bascules de mode 644↔755 du bac à sable, 0 insertion / 0 suppression) |
+| 2 | PR #97 | Fusionnée (« Phase 4F — achats fournisseurs ») ; aucun PR ouvert |
+| 3 | Migrations | 0001 → 0021 présentes et complètes |
+| 4 | Contrat d'API | `openapi.json` : **113 chemins / 144 opérations** ; code : 142 décorateurs v1 + 2 endpoints health = 144 — synchronisé |
+| 5 | Secrets — historique | `gitleaks` 8.24.3 sur 136 commits : 5 trouvailles toutes fausses (fixtures de mots de passe factices en forme JSONB, allowlist trop étroite) — **aucun vrai secret** |
+| 6 | Secrets — fichiers | `.env.example` seul fichier d'environnement commis (placeholders `__GENERATE__`) ; docker-compose exige une injection (`${KORA_POSTGRES_ADMIN_PASSWORD:?…}`) |
+| 7 | CI GitHub Actions | Run du jour 10:42 UTC : 8 jobs, **0 step exécutée chacun**, échec immédiat — signature inchangée du **blocage de facturation** du compte (depuis le 11/11) ; aucun contournement appliqué |
+| 8 | Pages frontend | 15 pages métier sous `dossiers/[companyId]` ; navigation conditionnée à la permission correspondante |
+| 9 | Rôles et permissions | 7 rôles RBAC / 27 permissions ; `docs/PERMISSIONS.md` régénéré en 4F ; isolation 359 tests verts |
+| 10 | Gouvernance | CLAUDE.md, PLAN.md, CAHIER_DES_CHARGES.md, worklog, AUDIT_SUIVI relus intégralement |
+
+### Anomalies relevées (aucune bloquante pour le code)
+
+1. **Tableau « État d'avancement » de `CLAUDE.md` figé à la phase 2h** — corrigé
+   dans le lot docs de ce jour (lignes 2/3/4 mises à jour + note de durcissement
+   KF-03/05/07/09/11/12/13/20/23 et N-B6).
+2. **Allowlist `.gitleaks.toml` trop étroite** pour les chaînes JSONB des
+   fixtures — 5 faux positifs à chaque run ; lot d'hygiène à prévoir (resserrer
+   sur les valeurs littérales des fixtures), non bloquant.
+3. **CI bloquée par la facturation GitHub** depuis le 11/11 — aucune exécution
+   GitHub ne valide les phases ; toutes les validations restent locales. P0
+   utilisateur : Settings → Billing → spending limits, puis re-run sur `main`.
+
+### Secrets et révocation
+
+Les tokens personnels GitHub ayant transité en clair dans les échanges de session
+(le token actif inclus) sont **à révoquer après la mission** (Settings →
+Developer settings → Tokens). Aucun de ces tokens n'apparaît dans l'historique
+git (vérification §5) ; le mot de passe admin PostgreSQL n'a jamais été commis.
+
+### Décision
+
+**GO** pour l'exécution des phases suivantes avec le protocole établi (branches
+`feature/kora-*`, validations locales complètes sur la pile réelle hors Docker,
+PRs avec preuves collées, mention explicite « CI non confirmée » tant que la
+facturation n'est pas régularisée). **NO-GO** sur tout contournement du blocage
+CI et sur toute intégration externe simulée présentée comme opérationnelle.
+Prochaine étape : Phase B lot 1 (envoi du document de vente par email), puis
+relances automatiques, puis acomptes/avances (migration 0022), puis phase 5
+import. Score de maturité maintenu à **84,5/100** (aucun point crédité ni
+décrédité sans preuve nouvelle).

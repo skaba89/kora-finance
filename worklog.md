@@ -1757,3 +1757,45 @@ et de charges (plusieurs comptes 60x par document) = évolution future ;
 phase 5 (import FEC/Excel, balance d'ouverture) ; arbitrage expert-comptable
 KF-15/16 avant données réelles.
 - Suivi : `AUDIT_SUIVI_20261109.md` §38.
+
+## 2026-11-18 — Audit de sécurité Phase A de la mission (post-4F)
+
+Audit d'entrée de la mission DataSphere Innovation Guinée, exécuté sur le `main`
+réel `43a4cf2` (merge PR #97) après synchronisation du clone. Objectif : état
+des lieux complet avant les phases B (finalisation du cycle commercial) et 5
+(import/migration). Douze vérifications exécutées le jour même, chacune appuyée
+par une preuve :
+
+- Dépôt : `main` = `origin/main` = `43a4cf2`, arbre propre ; PR #97 confirmée
+  fusionnée (API GitHub) ; aucun PR ouvert ; migrations 0001 → 0021 complètes.
+- Contrat d'API : `openapi.json` à **113 chemins / 144 opérations**, synchronisé
+  avec le code (142 décorateurs v1 + 2 endpoints health).
+- Secrets : `gitleaks` 8.24.3 sur les **136 commits** — 5 trouvailles, toutes des
+  faux positifs de fixtures (mots de passe factices : `test_mfa.py` ×3,
+  `test_auth.py`, `emails.spec.ts`) ; allowlist trop étroite pour la forme JSONB
+  de ces chaînes (lot d'hygiène à prévoir) ; **aucun vrai secret dans
+  l'historique** ; `.env.example` seul fichier d'environnement jamais commis
+  (placeholders `__GENERATE__`).
+- CI GitHub Actions : run du jour 10:42 UTC — 8 jobs, **0 step exécutée**,
+  échec immédiat : signature inchangée du **blocage de facturation** du compte.
+  Aucun contournement appliqué ; régularisation côté Settings → Billing
+  attendue (P0 utilisateur).
+- Front : 15 pages métier sous `dossiers/[companyId]`, chaque entrée de
+  navigation conditionnée à sa permission ; RBAC **7 rôles / 27 permissions**
+  (`docs/PERMISSIONS.md` régénéré en 4F).
+- Documentation de gouvernance relue intégralement (CLAUDE.md, PLAN.md,
+  CAHIER_DES_CHARGES.md, worklog, AUDIT_SUIVI) ; anomalie relevée : le tableau
+  « État d'avancement » de `CLAUDE.md` était figé à la phase 2h — **corrigé dans
+  ce même lot** (lignes 2/3/4 à jour + note de durcissement KF/N-B6).
+- Score de maturité maintenu à **84,5/100** (discipline « preuve avant points » :
+  la CI GitHub restant indisponible, aucun point crédité ni décrédité).
+- Décision : **GO** pour les phases suivantes (branches `feature/kora-*`,
+  validations locales complètes hors Docker, PRs avec preuves) ; **NO-GO** sur
+  tout contournement de la CI et sur toute intégration externe simulée
+  présentée comme opérationnelle. Tokens personnels ayant transité en clair
+  dans les échanges : **à révoquer après la mission**.
+
+**Prochaine étape** : Phase B lot 1 — envoi du document de vente par email
+(PDF en pièce jointe, worker, audit, page fr/en) ; puis relances automatiques
+configurables ; puis acomptes/avances (migration 0022) ; puis phase 5 import.
+- Suivi : `AUDIT_SUIVI_20261109.md` §39.
