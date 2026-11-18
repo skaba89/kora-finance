@@ -27,5 +27,7 @@
 | `partners:manage` | Créer, modifier et désactiver des tiers | — | ✅ | ✅ | ✅ | ✅ | — | — |
 | `sales:read` | Consulter les devis, factures et avoirs | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | `sales:manage` | Créer, émettre (numérotation définitive), convertir et annuler devis, factures et avoirs | — | ✅ | ✅ | ✅ | ✅ | — | — |
+| `purchases:read` | Consulter les factures et avoirs fournisseurs | — | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| `purchases:manage` | Créer, émettre (numérotation définitive), annuler et payer factures et avoirs fournisseurs | — | ✅ | ✅ | ✅ | ✅ | — | — |
 
 SUPER_ADMIN : aucune permission sur les dossiers (administration de la plateforme uniquement). PARTENAIRE_FINANCIER : accès limité aux dossiers de financement partagés (phase 6).

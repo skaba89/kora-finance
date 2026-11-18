@@ -1656,3 +1656,104 @@ régularisation du compte ; envoi des documents par email/WhatsApp (4D-bis
 document) = évolution future ; achats (phase suivante) ; arbitrage
 expert-comptable KF-15/16 avant données réelles.
 - Suivi : `AUDIT_SUIVI_20261109.md` §37.
+
+## 2026-11-18 — Phase 4F : achats fournisseurs (factures, décaissements, lettrage, comptabilisation)
+
+**Objet** — fermer le titre « Ventes et achats » de la Phase 4 : porter aux
+dépenses le cycle éprouvé côté recettes. Un miroir délibéré du module ventes
+(4B/4C/4E), pas une réinvention : mêmes protocoles de verrous, même sans-trou,
+même règle de mentions fiscales, même comptabilisation explicite du comptable.
+
+**Livré** :
+- Migration 0021 : `purchase_documents`/`purchase_document_lines` (factures et
+  avoirs fournisseurs), `purchase_payments`/`purchase_payment_allocations`
+  (décaissements et lettrage fournisseurs) — RLS `tenant_isolation` forcée sur
+  les quatre tables, FK composites partout, `entry_id` (FK RESTRICT vers
+  `journal_entries`) créé d'emblée sur le modèle 0020 (NULL tant que le
+  comptable n'a pas comptabilisé). Le compteur `document_sequences` s'ouvre aux
+  types d'achat : CHECK élargie et colonne `doc_kind` passée de 16 à 24
+  caractères (`supplier_credit_note` = 20) — le downgrade purge les compteurs
+  d'achat (RLS levée le temps du DELETE : le rôle de migration ne voit rien
+  sous FORCE RLS, la validation de la CHECK scanne physiquement la table) et
+  rétablit la largeur d'origine.
+- `kora/purchases/service.py` : brouillon jamais numéroté, émission
+  transactionnelle (verrou document → verrou exercice FOR UPDATE → verrou
+  compteur → numéro → instantanés), numérotation interne sans trou FACH/AVF
+  partagée avec les ventes (types distincts de la même table) ; le numéro
+  imprimé du fournisseur est conservé séparément (`reference`, pièce
+  justificative du classeur d'achats) ; règle dure des mentions fiscales
+  (4B-bis étendue) : NIU/NCC et adresse du fournisseur, NIF et adresse du
+  dossier exigés avant le compteur ; le tier doit être fournisseur ; annulation
+  conserve le numéro ; avoir annulateur clôt la facture dans la même
+  transaction (unicité de `reverses_document_id`).
+- `kora/purchases/payments.py` : décaissement = somme stricte des affectations
+  (recalculée, jamais saisie), factures verrouillées FOR UPDATE triées par id
+  avant contrôle des soldes, solde restant dû calculé en lecture (TTC −
+  affectations − avoirs partiels émis), règlement immuable (correction =
+  suppression journalisée puis re-saisie), échéancier fournisseurs `payables_aging`
+  en cinq buckets (à-échoir, 1-30, 31-60, 61-90, 90+).
+- `kora/purchases/accounting.py` : comptabilisation explicite du comptable
+  (`entries:post`) — facture → écriture validée du journal des achats AC (débit
+  du compte de charge 601 choisi au HT par groupe de taux, débit du compte
+  récupérable de chaque taux daté — 4452 pour la TVA normale, crédit du compte
+  de tiers 401x au TTC), avoir → écriture inverse, décaissement → écriture du
+  journal de trésorerie selon le mode (571 caisse au journal CA, 521 banque au
+  journal BQ ou MM) débitée au crédit du compte de tiers ; comptes résolus dans
+  le plan du dossier (401x par défaut de la fiche sinon 401, 601 sinon choix
+  explicite 60x) ; taux sans compte récupérable refusé avec un message clair ;
+  date de l'écriture = fait générateur (date du document fournisseur / date de
+  décaissement), exercice ouvert et non verrouillé exigé ; montants issus des
+  instantanés d'émission, jamais recalculés ; 20 comptabilisations concurrentes
+  = 1 écriture + 19 refus 409 (verrou du document/règlement).
+- Interlocks symétriques de la 4E : un décaissement comptabilisé ne se supprime
+  qu'après contre-passation de son écriture ; une facture comptabilisée ne
+  s'annule qu'après contre-passation ; une facture lettrée par des décaissements
+  ne s'annule pas (décaissements à supprimer d'abord, journalisés).
+- Routes `api/v1/purchases.py` (tag « achats ») : `/purchases` CRUD + `issue` +
+  `cancel` + `entry`, `/purchase-payments` CRUD + `entry`, `/payables/aging` —
+  9 nouveaux chemins ; permissions `purchases:read`/`purchases:manage` (matrice
+  mise à jour, `docs/PERMISSIONS.md` régénéré), `entries:post` pour la
+  comptabilisation. Contrat : **113 chemins** (+9), **188 schémas** (+18) —
+  vérifié par script : aucune définition existante modifiée (les classes
+  Pydantic des achats sont préfixées `Purchase*`/`Payables*` pour éviter tout
+  re-préfixage FastAPI des schémas homonymes des ventes) ; types TS régénérés.
+- Front fr/en : page Achats (`dossiers/[companyId]/achats`) — liste filtrable
+  (badge « Comptabilisée », solde dû, n° fournisseur), émission, annulation,
+  suppression de brouillon, formulaire de décaissement en tête, historique des
+  décaissements avec comptabilisation, échéancier fournisseurs, formulaire de
+  création (3 lignes, taux actifs datés) ; Server Actions `lib/actions/purchases.ts`,
+  lecteurs `dal.ts`, entrée de navigation conditionnée par `purchases:read`.
+
+**Validation** : pytest **30 nouveaux** (`test_purchases.py` : 100 émissions
+concurrentes = numéros 1..100, échec post-incrément restauré, mentions
+bloquantes avant le compteur, tier client refusé, avoir annulateur, lecteur 403,
+isolation RLS, référence figée ; `test_purchases_payments.py` : 20 décaissements
+concurrents de 1 000 sur TTC 10 000 = 10 succès + 10 refus 422, somme lettrée
+exacte, avoir partiel réduit le solde, facture lettrée non annulable puis
+libérée, échéancier ; `test_purchases_accounting.py` : écritures attendues au
+compte près (601/4452/401 au journal AC, FACH/AVF en référence), exonéré sans
+ligne TVA, avoir inverse, compte de charge 602 explicite, taux sans compte
+récupérable, garde-fou « grand livre vide sans action », double
+comptabilisation 409, course 20 fils, décaissements CA/BQ/MM, interlocks avec
+contre-passation, exercice verrouillé, lecteur 403) ; matrice des permissions
+étendue aux deux nouvelles permissions (sondes achats) et correction d'une
+annotation mypy défaillante préexistante (`test_sales_accounting.py`,
+`Callable[..., UserFixture]`) ; régression par tranches sur la pile réelle hors
+Docker (PG 16.2 + btree_gist recompilé, fakeredis 2.34.1, Moto S3 + buckets,
+Mailpit v1.34.0 — pile reconstruite après recyclage du bac à sable :
+`scripts/stack.py`, venv, Mailpit, répertoires PGDATA manquants) : ventes
+78/78, auth/audit/emails/worker 86/86, comptabilité et grand livre 117/117,
+tableau de bord/trésorerie/cashflow/rapports 120/120, pièces/exports/états/tiers
+153/153, sauvegardes 22/22, isolation des tenants 359/359 (toutes les routes,
+y compris les 14 nouvelles instances achats), garde-fous/rôles 21/21 —
+**654 préexistants verts + 30 nouveaux** ; ruff 0 ; mypy strict 0 (196 fichiers) ;
+ESLint 0 ; tsc 0 ; Vitest 69/69 ; build Next.js OK (route `/achats` fr/en) ;
+migrations aller-retour 0021 → 0020 → 0021 + `alembic check` propre.
+
+**Reste** : CI toujours bloquée (facturation GitHub) : à rejouer après
+régularisation du compte ; envoi des documents de vente par email/WhatsApp
+(4D-bis éventuel) ; imputation par famille de produits (plusieurs comptes 70x)
+et de charges (plusieurs comptes 60x par document) = évolution future ;
+phase 5 (import FEC/Excel, balance d'ouverture) ; arbitrage expert-comptable
+KF-15/16 avant données réelles.
+- Suivi : `AUDIT_SUIVI_20261109.md` §38.

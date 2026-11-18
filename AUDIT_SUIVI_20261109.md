@@ -1684,3 +1684,106 @@ Branche `feature/kora-4e-comptabilisation` (base `5fe713f` = 4D mergée) :
 - Le journal des ventes des règlements est le journal de trésorerie : pas
   d'écriture de lettrage (débit 411 / crédit 411) — le lettrage commercial
   (4C) et le lettrage comptable restent deux vues du même lien.
+
+## 38. Phase 4F — achats fournisseurs (2026-11-18)
+
+**Objet** — fermer le titre « Ventes et achats » de la Phase 4 : porter aux
+dépenses le cycle éprouvé côté recettes. Conception assumée : **un miroir du
+module ventes** (4B/4C/4E), pas une réinvention — mêmes protocoles de verrous,
+même numérotation sans trou, même règle dure des mentions fiscales, même
+comptabilisation explicite du comptable.
+
+### Contexte
+CI GitHub Actions toujours bloquée par la facturation du compte : toute la
+validation est locale, sur la même pile que la CI. Le bac à sable ayant de
+nouveau été recyclé, le dépôt a été resynchronisé depuis origin/main
+(fetch + reset --hard + clean) et la pile de test reconstruite : venv pgserver
+(PG 16.2), btree_gist recompilé (`PG_CONFIG` en argument de make), fakeredis
+2.34.1 en serveur TCP, Moto S3 (buckets recréés), Mailpit v1.34.0 (les assets
+Linux sont passés de `.zip` à `.tar.gz` depuis v1.34.0 ; l'URL v1.33.1 n'existe
+plus), et répertoires PGDATA standards recréés (`pg_notify`, `pg_twophase`,
+`pg_commit_ts`, `pg_tblspc`…) — un `git clean` côté bac à sable peut les vider
+sans casser le cluster lui-même.
+
+### Conception et règles livrées
+- Migration 0021 : quatre tables d'achat (documents, lignes, décaissements,
+  affectations) avec RLS forcée, FK composites et `entry_id` dès la création ;
+  compteur `document_sequences` élargi aux types d'achat (CHECK et colonne
+  `doc_kind` 16 → 24 caractères). **Piège documenté dans la migration** : sous
+  FORCE RLS, le rôle de migration ne voit aucune ligne de `document_sequences`
+  — le DELETE du downgrade doit lever la RLS le temps de purger les compteurs
+  d'achat, sinon la CHECK d'origine (dont la validation scanne physiquement la
+  table) est violée par des lignes invisibles.
+- `doc_kind` dépasse 16 caractères pour un type réel (`supplier_credit_note`) :
+  la largeur a été relevée dans le modèle partagé ET la migration, à l'aller et
+  au retour (le rétrécissement en downgrade est sûr après purge des compteurs).
+- Numérotation interne sans trou FACH/AVF partagée avec les ventes (types
+  distincts de la même table `document_sequences`) ; le numéro imprimé par le
+  fournisseur vit dans `reference` : la traçabilité pièce à pièce ne dépend pas
+  du sans-trou interne.
+- Comptabilisation des achats : débit du compte de charge (601 par défaut, choix
+  explicite), débit de la TVA récupérable du taux daté (4452), crédit du tiers
+  (401x) ; avoir en écriture inverse ; décaissement au journal de trésorerie
+  selon le mode (CA/BQ/MM). Garde-fou retesté : aucun chemin automatique
+  n'écrit au grand livre.
+
+### Discipline du contrat — leçon de la phase
+Le premier jet des routes achats réutilisait les noms de classes Pydantic des
+ventes (`DocumentOut`, `PaymentIn`…) : FastAPI préfixe alors **tous** les schémas
+homonymes par leur module, ce qui renommait les définitions existantes du
+contrat (ventes) — un changement destructif déguisé. Correction : classes des
+achats préfixées (`PurchaseDocumentOut`, `PayablesAgingOut`…) ; le diff final est
+vérifié par script : 104 → 113 chemins (+9), 170 → 188 schémas (+18), **aucune**
+définition existante modifiée, aucun renommage.
+
+### Recette (tests nouveaux et régression)
+- `test_purchases.py` : 100 émissions concurrentes = numéros 1..100, échec
+  post-incrément restauré par ROLLBACK, mentions bloquantes avant le compteur,
+  tier non fournisseur refusé, avoir annulateur (facture CANCELLED, second avoir
+  refusé), numéro conservé à l'annulation, lecteur lit mais ne numérote pas,
+  isolation RLS, référence modifiable en brouillon et figée à l'émission,
+  instantanés NIU/NIF remplis.
+- `test_purchases_payments.py` : montant recalculé = somme des affectations,
+  20 décaissements concurrents de 1 000 sur TTC 10 000 = 10 succès + 10 refus
+  422 et somme lettrée exacte, excédent refusé, avoir partiel réduit le solde,
+  facture lettrée non annulable puis libérée après suppression du décaissement,
+  fournisseur unique exigé, échéancier (not_due / d31_60) aux bons buckets.
+- `test_purchases_accounting.py` : écriture AC attendue au compte près
+  (601/4452/401, référence FACH-2026-…), exonéré sans ligne TVA, avoir inverse,
+  compte de charge 602 choisi explicitement, taux sans compte récupérable refusé,
+  garde-fou « cycle complet sans action → grand livre vide », double
+  comptabilisation 409, course de 20 fils = 1 écriture + 19 refus, décaissements
+  CA/571, BQ/521, MM/521, suppression refusée puis permise après contre-passation,
+  annulation refusée puis permise après contre-passation, exercice verrouillé
+  refusé, lecteur 403.
+- Matrice des permissions : sondes `purchases:read` (GET) et `purchases:manage`
+  (création facture fournisseur brouillon) ajoutées aux rôles × permissions ;
+  `docs/PERMISSIONS.md` régénéré (+2 lignes).
+- Régression par tranches sur PostgreSQL réel (chiffres : ventes 78, auth/audit/
+  emails/worker 86, comptabilité et grand livre 117, dashboard/trésorerie/
+  cashflow/rapports 120, pièces/exports/états/dossiers/tiers 153, backups 22,
+  isolation des tenants 359 — les 14 instances achats de chaque test paramétré
+  incluses —, rôles/garde-fous 21, migrations/permissions/contrat 43) :
+  **654 préexistants verts + 30 nouveaux**.
+- ruff 0 ; mypy strict 0 (196 fichiers) ; ESLint 0 ; tsc 0 ; Vitest 69/69 ;
+  build Next.js OK (route `/achats` fr/en) ; migrations aller-retour
+  0021 → 0020 → 0021 ; `alembic check` : « No new upgrade operations detected ».
+
+### Points d'honnêteté
+- CI GitHub Actions **toujours bloquée par la facturation** du compte : aucune
+  exécution GitHub n'a validé cette phase ; à rejouer après régularisation.
+- Le coût d'une société de test a doublé après le dernier recyclage du bac à
+  sable (~5 s : argon2 + seed du plan comptable + journal d'audit chaîné) : les
+  suites paramétrées d'isolation sont découpées en sous-runs par préfixe de
+  route pour tenir dans la fenêtre d'exécution locale — le contenu des tests
+  n'a pas été touché.
+- Le compte de charge est unique pour toute la facture d'achat (601 par défaut,
+  choix explicite possible) : l'imputation par famille de charges (plusieurs
+  comptes 60x par document) est une évolution future, comme côté produits (70x).
+- Les avances aux fournisseurs (décaissement non lettré) restent hors périmètre
+  (convention 4C symétrique) : le décaissement est toujours lettré à au moins
+  une facture, l'écriture débite donc toujours un 401 identifié.
+- La TVA récupérable suit le compte configuré sur chaque taux daté (4452 par
+  défaut du dossier) : aucune logique de prorata de déductibilité à ce stade.
+- Les Photos de pièces justificatives hors connexion (2g3b) restent ouvertes au
+  plan ; le scan des pièces fournisseurs s'y raccordera naturellement.

@@ -145,6 +145,32 @@ email/WhatsApp, relances, balance âgée.
   `PaymentOut` enrichis additivement (`entry_id`) ; taux sans compte collecté
   refusé avec un message clair ; page Ventes fr/en : badge « Comptabilisée » et
   bouton Comptabiliser sur les documents émis et les encaissements).
+- **4F — Achats : factures fournisseurs, décaissements et lettrage** ✅ (2026-11-18,
+  branche `feature/kora-4f-achats` : miroir complet du cycle de vente appliqué aux
+  dépenses — migration 0021 `purchase_documents`/`purchase_document_lines`/
+  `purchase_payments`/`purchase_payment_allocations` (RLS forcée, FK composites,
+  `entry_id` dès la création sur le modèle 0020) ; le compteur `document_sequences`
+  s'élargit aux types `supplier_invoice`/`supplier_credit_note` (doc_kind 16→24
+  caractères), même numérotation sans trou (FACH/AVF) : 100 émissions concurrentes =
+  100 numéros consécutifs, ROLLBACK après échec = compteur restauré ; le numéro
+  imprimé par le fournisseur est conservé séparément (`reference`, pièce
+  justificative) ; règle dure des mentions fiscales étendue aux achats (NIU/NCC et
+  adresse du fournisseur, NIF et adresse du dossier) ; le tier doit être
+  fournisseur ; décaissements = somme stricte des affectations, solde restant dû
+  TTC − affectations − avoirs partiels émis calculé en lecture, échéancier
+  fournisseurs en cinq buckets ; comptabilisation explicite du comptable
+  (`entries:post`) : facture → journal des achats AC (débit du compte de charge
+  601 choisi au HT, débit du compte récupérable de chaque taux — 4452, crédit du
+  compte de tiers 401x au TTC), avoir → écriture inverse, décaissement → journal
+  de trésorerie selon le mode (CA/BQ/MM) débité au crédit du compte de tiers ;
+  20 comptabilisations concurrentes = 1 écriture + 19 refus 409 ; interlocks
+  symétriques avec contre-passation ; routes `/purchases`, `/purchase-payments`,
+  `/payables/aging`, `/purchases/{id}/entry`, `/purchase-payments/{id}/entry`
+  (contrat 104→113 chemins, 170→188 schémas, pur ajout strict : aucune définition
+  existante modifiée) ; permissions `purchases:read`/`purchases:manage` réutilisant
+  le modèle des ventes ; page Achats fr/en (documents, décaissements, échéancier,
+  bouton Comptabiliser avec `entries:post`) ; garde-fou retesté : aucun chemin
+  d'émission ni de décaissement n'écrit en comptabilité).
 
 ## Phase 5 — Import et migration
 FEC, Excel, balance d'ouverture en tâche de fond, rapport de contrôle.
