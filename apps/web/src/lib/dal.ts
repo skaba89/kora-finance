@@ -365,6 +365,48 @@ export function can(company: Company, permission: string): boolean {
 }
 
 /** Règlements clients du dossier (Phase 4C), filtrables et paginés. */
+export async function getPurchaseDocuments(
+  companyId: string,
+  query: {
+    kind?: "supplier_invoice" | "supplier_credit_note";
+    status?: "DRAFT" | "ISSUED" | "CANCELLED";
+    limit: number;
+    offset: number;
+  },
+) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/purchases", {
+      params: { path: { company_id: companyId }, query },
+    }),
+  );
+}
+export async function getPurchasePayments(
+  companyId: string,
+  query: {
+    partner_id?: string;
+    document_id?: string;
+    date_from?: string;
+    date_to?: string;
+    limit: number;
+    offset: number;
+  },
+) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/purchase-payments", {
+      params: { path: { company_id: companyId }, query },
+    }),
+  );
+}
+export async function getPayablesAging(companyId: string, asOf?: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/payables/aging", {
+      params: {
+        path: { company_id: companyId },
+        query: asOf ? { as_of: asOf } : undefined,
+      },
+    }),
+  );
+}
 export async function getSalesPayments(
   companyId: string,
   query: {
