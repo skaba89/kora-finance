@@ -172,6 +172,10 @@ def _probe(permission: Permission, client: TestClient, s: Scenario, make_user: M
         ),
         Permission.SALES_READ: lambda: client.get(f"{base}/sales", headers=s.headers).status_code,
         Permission.SALES_MANAGE: lambda: _sales_manage_probe(client, base, s),
+        Permission.PURCHASES_READ: lambda: (
+            client.get(f"{base}/purchases", headers=s.headers).status_code
+        ),
+        Permission.PURCHASES_MANAGE: lambda: _purchases_manage_probe(client, base, s),
     }
     return calls[permission]()
 
@@ -193,6 +197,36 @@ def _sales_manage_probe(client: TestClient, base: str, s: Scenario) -> int:
         json={
             "doc_kind": "invoice",
             "partner_id": tier.json()["id"],
+            "lines": [
+                {
+                    "label": "Sonde de matrice",
+                    "quantity": 1000,
+                    "unit_price_ht": 100,
+                    "tax_exempt_reason": "Sonde hors champ de la TVA",
+                }
+            ],
+        },
+    ).status_code
+
+
+def _purchases_manage_probe(client: TestClient, base: str, s: Scenario) -> int:
+    """Sonde de création d'une facture fournisseur brouillon. Le tier est créé
+    d'abord via l'API : dans la matrice, partners:manage et purchases:manage sont
+    accordées aux mêmes rôles, donc un 403 sur le fournisseur est bien le 403
+    attendu pour purchases:manage."""
+    fournisseur = client.post(
+        f"{base}/partners",
+        headers=s.headers,
+        json={"name": f"Fournisseur sonde {uuid.uuid4().hex[:6]}", "is_supplier": True},
+    )
+    if fournisseur.status_code != 201:
+        return fournisseur.status_code
+    return client.post(
+        f"{base}/purchases",
+        headers=s.headers,
+        json={
+            "doc_kind": "supplier_invoice",
+            "partner_id": fournisseur.json()["id"],
             "lines": [
                 {
                     "label": "Sonde de matrice",
