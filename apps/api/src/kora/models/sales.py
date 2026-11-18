@@ -113,7 +113,7 @@ class DocumentSequence(Base):
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("companies.id", ondelete="CASCADE"), primary_key=True
     )
-    doc_kind: Mapped[str] = mapped_column(String(16), primary_key=True)
+    doc_kind: Mapped[str] = mapped_column(String(24), primary_key=True)
     fiscal_year_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     last_number: Mapped[int] = mapped_column(Integer, server_default="0")
 

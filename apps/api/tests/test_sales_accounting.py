@@ -21,7 +21,7 @@ from collections.abc import Callable
 from fastapi.testclient import TestClient
 from httpx2 import Response
 
-from tests.conftest import CompanyFixture
+from tests.conftest import CompanyFixture, UserFixture
 from tests.test_sales import (
     Sales,
     _creer_tier,
@@ -527,7 +527,7 @@ def test_isolation_comptabilisation_entre_dossiers(
 
 
 def test_lecteur_ne_comptabilise_pas(
-    client: TestClient, make_company: MakeCompany, make_user: Callable[..., object]
+    client: TestClient, make_company: MakeCompany, make_user: Callable[..., UserFixture]
 ) -> None:
     company = _dossier(make_company)
     sales = Sales(client, company)
@@ -541,7 +541,7 @@ def test_lecteur_ne_comptabilise_pas(
     assert invited.status_code in (200, 201), invited.text
     response = client.post(
         f"/api/v1/companies/{company.id}/sales/{invoice_id}/entry",
-        headers=lecteur.headers(client),  # type: ignore[attr-defined]
+        headers=lecteur.headers(client),
         json={},
     )
     assert response.status_code == 403, response.text
