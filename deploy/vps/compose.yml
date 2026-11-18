@@ -133,6 +133,21 @@ services:
       resources:
         limits: { memory: 512m, cpus: "1.0" }
 
+  # Planificateur des relances automatiques (Phase B, lot 2) : horloge séparée du
+  # worker (un redémarrage du worker ne la touche pas), idempotence en base.
+  scheduler:
+    image: kora-api:${KORA_IMAGE_TAG:-prod}
+    restart: unless-stopped
+    logging: *logging
+    command: ["python", "-m", "kora.worker.scheduler"]
+    environment: *api-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { memory: 128m, cpus: "0.25" }
+
   # Sauvegardes (KF-09) : bucket et identifiants DÉDIÉS, jamais présents dans les
   # conteneurs api/worker/web. One-shot sous profil, exécuté à la demande par
   # backup.sh / restore.sh.

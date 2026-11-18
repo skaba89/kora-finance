@@ -95,6 +95,12 @@ class Settings(BaseSettings):
     exports_per_user_per_hour: int = Field(default=30, ge=1)
     exports_per_company_per_hour: int = Field(default=120, ge=1)
 
+    # --- Relances automatiques (Phase B, lot 2) : le planificateur
+    # (`python -m kora.worker.scheduler`) enfile un balayage toutes les N
+    # secondes. Le balayage et l'exécution sont idempotents (unicité quotidienne
+    # en base) : un tick doublé ou manqué est sans effet.
+    reminder_scan_interval_seconds: int = Field(default=3600, ge=60)
+
     # --- Stockage des pièces justificatives (S3 compatible : Garage en local, fournisseur
     # S3 en production). Les objets sont chiffrés par l'application avant l'envoi.
     s3_endpoint_url: str

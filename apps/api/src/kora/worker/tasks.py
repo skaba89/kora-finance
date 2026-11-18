@@ -121,3 +121,66 @@ def send_sales_document_email(tenant_id: str, document_email_id: str) -> None:
         logger.info("envoi abandonné : %s", exc, extra={"envoi": document_email_id})
         return
     deliver_email.send(email.to_dict())
+
+
+# --- Relances automatiques (Phase B, lot 2) ------------------------------------
+# Le balayage et l'exécution sont idempotents (unicité quotidienne en base,
+# même contrat que la relance 4D) : max_retries=0 — un échec transitoire attend
+# le balayage suivant au lieu de multiplier les réessais.
+
+
+@dramatiq.actor(max_retries=0)
+def scan_automatic_reminders() -> None:
+    """Balayage périodique : enfile une exécution de politique par dossier. La
+    sélection des dossiers passe par `companies` (racine du tenant, hors RLS) ;
+    chaque exécution lie explicitement son tenant — les tables de vente sont
+    sous RLS forcée et une session sans tenant n'y voit aucune ligne (échec
+    fermé). Un dossier sans politique active termine immédiatement."""
+    from sqlalchemy import select  # noqa: PLC0415
+
+    from kora.models.identity import Company  # noqa: PLC0415
+
+    with get_sessionmaker()() as session:
+        ids = list(session.execute(select(Company.id)).scalars())
+    for company_id in ids:
+        run_reminder_policy.send(str(company_id))
+    logger.info("balayage des relances automatiques enfilé", extra={"dossiers": len(ids)})
+
+
+@dramatiq.actor(max_retries=0)
+def run_reminder_policy(tenant_id: str, as_of_iso: str | None = None) -> None:
+    """Exécute la politique de relance automatique d'un dossier (lot 2) :
+    crée les relances dues (règles 4D : facture émise, échue, non soldée ;
+    une par facture et par jour) puis enfile l'envoi email de chacune. Un
+    échec de file laisse la relance enregistrée (renvoi depuis l'historique)."""
+    # Import local obligatoire (même cycle que send_sales_reminder).
+    from datetime import date  # noqa: PLC0415
+
+    from kora.models.common import utcnow  # noqa: PLC0415
+    from kora.sales import auto_reminders  # noqa: PLC0415
+
+    as_of = date.fromisoformat(as_of_iso) if as_of_iso else utcnow().date()
+    with get_sessionmaker()() as session:
+        bind_tenant(session, uuid.UUID(tenant_id))
+        run = auto_reminders.run_policy(session, uuid.UUID(tenant_id), as_of)
+    if not run.enabled:
+        logger.info("politique de relance inactive", extra={"dossier": tenant_id})
+        return
+    for reminder_id in run.created:
+        try:
+            send_sales_reminder.send(tenant_id, str(reminder_id))
+            run.emails_queued += 1
+        except Exception:
+            logger.exception("mise en file de l'email de relance impossible")
+    logger.info(
+        "politique de relance exécutée",
+        extra={
+            "dossier": tenant_id,
+            "jour": as_of.isoformat(),
+            "relances": len(run.created),
+            "emails_en_file": run.emails_queued,
+            "a_jour": run.a_jour,
+            "sans_email": run.sans_email,
+            "doublons": run.doublons,
+        },
+    )

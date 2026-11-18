@@ -141,6 +141,28 @@ email/WhatsApp, relances, balance âgée.
   gabarit d'email fr/en ; aucune écriture comptable (garde-fou retesté) ; page
   Ventes fr/en : carte « Envoyer un document par email » (document, destinataire
   facultatif, message facultatif) avec renvoi possible).
+- **B2 — Relances automatiques configurables** ✅ (2026-11-19, branche
+  `feature/kora-b2-relances-auto` : Phase B lot 2 de la mission DataSphere ;
+  migration 0023 `sales_reminder_policies` (RLS forcée, UNE politique par
+  dossier — upsert audité `sales_reminder_policy.updated`) et
+  `sales_reminders.created_by_user_id` rendu nullable (origine système) ;
+  échéancier d'escalade `offsets_days` — 1 à 6 seuils, entiers 1..365,
+  strictement croissants, ex. [1, 7, 15] = 1re relance à J+1, 2e à J+7, 3e à
+  J+15 ; le planificateur (`python -m kora.worker.scheduler`, service compose
+  `scheduler`, `KORA_REMINDER_SCAN_INTERVAL_SECONDS` 3 600 s) enfile un
+  balayage (`scan_automatic_reminders`, fan-out depuis `companies` hors RLS)
+  qui exécute la politique de chaque dossier sous tenant lié
+  (`run_reminder_policy`, échec fermé) ; réutilise TOUTES les règles 4D :
+  facture ÉMISE/ÉCHUE/non soldée, niveau compté sous verrou FOR UPDATE,
+  unicité (dossier, facture, jour) — un balayage doublé ou une relance
+  manuelle du même jour ne crée jamais de doublon, rattrapage d'un niveau par
+  jour, arrêt au dernier seuil ; re-contrôles sous verrou (statut, échéance,
+  solde, email) avec points de sauvegarde par relance ; audit
+  `sales_reminder.auto_created` (origine "automatique", auteur NULL) ;
+  routes `GET/PUT /reminders/policy` (contrat 115→116 chemins, 146→148
+  opérations, 192→194 schémas, pur ajout) ; aucune écriture comptable
+  (garde-fou retesté) ; page Ventes fr/en : carte « Relances automatiques »
+  (lecture pour tous, réglage `sales:manage`).
 - **4E — Intégration comptable des ventes** ✅ (2026-11-18, branche
   `feature/kora-4e-comptabilisation` : migration 0020 colonnes de liaison
   `sales_documents.entry_id` et `sales_payments.entry_id` (FK composites RESTRICT

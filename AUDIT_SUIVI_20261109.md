@@ -1917,3 +1917,41 @@ branche issue du `main` `0506cb6` (merge PR #98), avec le protocole établi.
   aucune intégration simulée n'est présentée comme opérationnelle.
 - Le prorata de déductibilité TVA reste lié à l'arbitrage expert-comptable
   KF-15/16 (hors code, avant données réelles).
+## 41. Phase B lot 2 — relances automatiques configurables (2026-11-19)
+
+Branche `feature/kora-b2-relances-auto` (base `8dd412a` = PR #99). Chantier :
+rendre les relances périodiques sans jamais dupliquer l'acte commercial 4D.
+
+| # | Vérification | Méthode | Résultat |
+|---|---|---|---|
+| 1 | Migration 0023 aller-retour | pytest `test_migrations` + downgrade manuel 0023→base→0023 | 3/3 + OK |
+| 2 | Synchro modèles/migrations | `alembic check` après suppression d'un index redondant détecté par autogenerate | « No new upgrade operations detected » |
+| 3 | Politique : upsert audité, refus d'échéanciers invalides, défauts effectifs, permissions, RLS | 15 tests dédiés (`test_sales_reminders_auto.py`) | 15/15 |
+| 4 | Exécution : niveau compté sous verrou, unicité quotidienne (doublon balayage + relance manuelle du jour), rattrapage un niveau/jour, arrêt au dernier seuil, soldée/sans email ignorées | même suite (worker réel StubBroker, `as_of` explicite) | 15/15 |
+| 5 | Chaîne complète balayage → fan-out → exécution → email reçu | time-machine J+30 + Mailbox | email « Relance n°1 » au client |
+| 6 | Garde-fou comptable | GET /entries après exécution | 0 écriture |
+| 7 | Immutabilité du contrat | contrôle openapi (aucun DELETE/PATCH sur /reminders*) | OK (PUT réservé à /policy) |
+| 8 | Isolation des tenants (RLS) | suite complète sur cluster reconstruit | 371/371 |
+| 9 | Rôles de la base de tests conformes au protocole | `test_db_roles` 4/4 après correction du bootstrap (superuser dédié `kora_bootstrap`, `kora_owner` rôle ordinaire propriétaire, extension installée par le propriétaire) | 4/4 |
+| 10 | Contrat, static, front | openapi réexporté = committé ; ruff ; mypy strict (src+tests) ; ESLint ; tsc ; Vitest ; build 115 pages | tous verts |
+
+Anomalies corrigées à cette occasion :
+
+1. **Index redondant** sur `sales_reminder_policies` : la contrainte UNIQUE
+   (tenant_id) fournit déjà l'index de filtrage — autogenerate l'a signalé,
+   migration corrigée (aucun index séparé).
+2. **Downgrade sous RLS forcée** : un DELETE nu depuis la session de migration
+   (sans tenant) ne voit aucune ligne d'une table RLS FORCÉE (le FORCE lie le
+   propriétaire) — le FORCE est levé le temps du nettoyage puis rétabli ;
+   commenté dans la migration.
+3. **Rôles du cluster de tests** : `kora_owner` était superutilisateur
+   (initdb), en contradiction avec `init-roles.sh` et
+   `test_role_de_migration_n_est_pas_superutilisateur` (échec préexistant
+   d'environnement, hors produit) — bootstrap corrigé, cluster reconstruit,
+   tranches RLS-critiques et sauvegardes revalidées.
+
+Limites inchangées : CI GitHub Actions toujours bloquée par la facturation du
+compte (aucune exécution GitHub n'a validé cette phase) ; WhatsApp hors
+périmètre tant que le compte Business officiel n'est pas obtenu. Décision :
+**GO** pour le lot suivant (acomptes/avances, migration 0024).
+

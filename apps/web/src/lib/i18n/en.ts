@@ -702,6 +702,18 @@ export const en: typeof fr = {
       "The attached PDF is rendered from the data frozen at issuance (legal mentions, amounts). The email is sent from the worker: a queue outage does not cancel the recorded send. A cancelled invoice is never sent. Emailing a document writes nothing to accounting.",
     emailDocRequired: "Pick a numbered document to send.",
     emailQueued: "Send recorded: the email with the attached PDF is on its way to the client.",
+    autoTitle: "Automatic reminders",
+    autoState: "Policy",
+    autoEnabled: "Enable automatic reminders for overdue invoices",
+    autoOffsets: "Escalation schedule (days overdue)",
+    autoOffsetsPlaceholder: "Example: 1, 7, 15",
+    autoOffsetsHint:
+      "A reminder is due when the delay reaches each threshold: “1, 7, 15” = 1st reminder at D+1, 2nd at D+7, 3rd at D+15. 1 to 6 thresholds, strictly increasing. The scan is periodic (worker): one reminder per invoice per day, no duplicate with a same-day manual reminder, stop at the last threshold. Nothing is written to accounting.",
+    autoUnconfigured: "Not configured — automatic reminders are off.",
+    autoUpdated: "Last change",
+    autoSave: "Save the policy",
+    autoSaved: "Automatic reminder policy saved (audited).",
+    autoOffsetsRequired: "Enter the schedule (days overdue, e.g. “1, 7, 15”).",
     reminderLevels: {
       1: "1st reminder",
       2: "2nd reminder",

@@ -32,6 +32,7 @@ import {
   resendReminderAction,
   sendDocumentEmailAction,
   sendQuoteAction,
+  updateReminderPolicyAction,
 } from "@/lib/actions/sales";
 import {
   can,
@@ -41,6 +42,7 @@ import {
   getSalesDocuments,
   getSalesOverdue,
   getSalesPayments,
+  getSalesReminderPolicy,
   getSalesReminders,
   getTaxRates,
 } from "@/lib/dal";
@@ -74,18 +76,29 @@ export default async function SalesPage({
     typeof statut === "string" && STATUSES.includes(statut as (typeof STATUSES)[number])
       ? (statut as (typeof STATUSES)[number])
       : undefined;
-  const [{ t }, company, documents, partners, taxRates, payments, aging, overdue, reminders] =
-    await Promise.all([
-      getDictionary(),
-      getCompany(companyId),
-      getSalesDocuments(companyId, { kind: kindParam, status: statusParam, limit: 100, offset: 0 }),
-      getPartners(companyId, { active: true, limit: 200, offset: 0 }),
-      getTaxRates(companyId),
-      getSalesPayments(companyId, { limit: 50, offset: 0 }),
-      getSalesAging(companyId),
-      getSalesOverdue(companyId),
-      getSalesReminders(companyId, { limit: 50, offset: 0 }),
-    ]);
+  const [
+    { t },
+    company,
+    documents,
+    partners,
+    taxRates,
+    payments,
+    aging,
+    overdue,
+    reminders,
+    policy,
+  ] = await Promise.all([
+    getDictionary(),
+    getCompany(companyId),
+    getSalesDocuments(companyId, { kind: kindParam, status: statusParam, limit: 100, offset: 0 }),
+    getPartners(companyId, { active: true, limit: 200, offset: 0 }),
+    getTaxRates(companyId),
+    getSalesPayments(companyId, { limit: 50, offset: 0 }),
+    getSalesAging(companyId),
+    getSalesOverdue(companyId),
+    getSalesReminders(companyId, { limit: 50, offset: 0 }),
+    getSalesReminderPolicy(companyId),
+  ]);
   const manage = can(company, "sales:manage");
   // La comptabilisation (4E) est un acte comptable : permission entries:post.
   const canPost = can(company, "entries:post");
@@ -614,6 +627,59 @@ export default async function SalesPage({
                 ))}
               </TableBody>
             </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Relances automatiques (Phase B, lot 2) : politique par dossier,
+          exécution périodique côté worker — une relance par facture et par jour,
+          aucune écriture comptable. La carte est visible des lecteurs ; le
+          réglage exige sales:manage (PUT audité). */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>{t.sales.autoTitle}</CardTitle>
+          <p className="text-muted-foreground text-sm">
+            {policy.updated_at
+              ? `${t.sales.autoUpdated} : ${policy.updated_at.slice(0, 10)}`
+              : t.sales.autoUnconfigured}
+          </p>
+        </CardHeader>
+        <CardContent>
+          {manage ? (
+            <ActionForm
+              action={updateReminderPolicyAction.bind(null, companyId)}
+              className="space-y-4"
+              submitLabel={t.sales.autoSave}
+              pendingLabel={t.common.pending}
+            >
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="enabled"
+                  defaultChecked={policy.enabled}
+                  className="h-4 w-4"
+                />
+                {t.sales.autoEnabled}
+              </label>
+              <div className="max-w-sm">
+                <Field
+                  label={t.sales.autoOffsets}
+                  name="offsets_days"
+                  defaultValue={policy.offsets_days.join(", ")}
+                  placeholder={t.sales.autoOffsetsPlaceholder}
+                  inputMode="numeric"
+                  required
+                />
+              </div>
+              <p className="text-muted-foreground text-xs">{t.sales.autoOffsetsHint}</p>
+            </ActionForm>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              {t.sales.autoState} :{" "}
+              {policy.enabled
+                ? `${policy.offsets_days.join(" / ")} j`
+                : "—"}
+            </p>
           )}
         </CardContent>
       </Card>
