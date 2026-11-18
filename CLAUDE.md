@@ -13,13 +13,20 @@ Journal daté des sessions : `worklog.md`. Le lire en début de session.
 |---|---|---|
 | 0 | Fondations du dépôt : monorepo, Docker, CI, harnais de tests | ✅ livrée (2026-10-23) |
 | 1 | Socle : auth, multi-tenant + RLS, RBAC, organisation, plan comptable, taxes, audit chaîné, PWA | ✅ livrée (2026-10-23) ; 1g emails ✅ (2026-10-24) — reste listé dans `worklog.md` |
-| 2 | Comptabilité générale + états financiers | en cours : 2a saisie ✅, 2b balance et grand livre ✅, 2c lettrage ✅, 2d clôture ✅, 2e bilan et CR ✅, 2f exports ✅ (2026-10-24), 2g1 pièces justificatives ✅, 2g2 saisie guidée ✅ (2026-10-25), 2g3a saisie hors connexion ✅ (2026-10-26), 2h tableau de bord ✅ (2026-10-27) ; 2g3b photos de pièces hors connexion, 2e-bis TFT à venir (`docs/PLAN.md`) |
-| 3 | Trésorerie, Mobile Money, rapprochement | — |
-| 4 | Ventes et achats | — |
+| 2 | Comptabilité générale + états financiers | ✅ livrée — 2a saisie, 2b balance/grand livre, 2c lettrage, 2d clôture, 2e bilan et CR, 2f exports, 2g1 pièces, 2g2 saisie guidée, 2g3a hors connexion, 2h tableau de bord (2026-10-27) ; 2e-bis TFT en méthode directe ✅ (2026-11-11) ; reste 2g3b photos de pièces hors connexion (`docs/PLAN.md`) |
+| 3 | Trésorerie, Mobile Money, rapprochement | ✅ livrée — 3A comptes financiers ✅ (2026-11-11), 3B import relevés OFX/CSV ✅ (2026-11-11), 3E prévisionnel 30/60/90 ✅ (2026-11-12), 3C rapprochement assisté ✅ (2026-11-12), 3D import Mobile Money étiqueté ✅ (2026-11-13) |
+| 4 | Ventes et achats | ✅ livrée — 4A référentiel tiers ✅ (2026-11-13), 4B devis/factures/avoirs sans trou ✅ (2026-11-14), 4B-bis PDF conforme ✅ (2026-11-15), 4C règlements/lettrage/balance âgée ✅ (2026-11-17), 4D relances ✅ (2026-11-17), 4E comptabilisation des ventes ✅ (2026-11-18), 4F achats/décaissements/échéancier/comptabilisation ✅ (2026-11-18) ; reste 4D-bis envoi email/WhatsApp, acomptes et avances, imputation multi-comptes (`docs/PLAN.md`) |
 | 5 | Import et migration | — |
 | 6 | Dossier de financement partageable | — |
 | 7 | Assistant IA | — |
 | 8 | Espace cabinet et abonnements | — |
+
+Durcissement production livré du 2026-11-09 au 2026-11-11 (KF-03 verrou d'exercice,
+KF-05 instantanés REPEATABLE READ, KF-07 verrou de société, KF-09 bucket de sauvegarde
+séparé, KF-11 déploiement versionné + sauvegarde pré-migration, KF-12 supervision des
+sauvegardes, KF-13 budgets de ressources et quotas d'exports, KF-23 contrôles de taille
+et de chemin des sauvegardes, KF-20 SCA/SBOM/scan d'images en CI, N-B6 plafonds de
+session PostgreSQL) — détails dans `worklog.md` et `AUDIT_SUIVI_20261109.md`.
 
 Le cahier des charges complet et les critères d'acceptation de chaque phase sont dans
 `docs/PLAN.md`.
