@@ -691,6 +691,17 @@ export const fr = {
     reminderOn: "Date du rappel",
     reminderLevel: "Niveau",
     reminderTo: "Destinataire (figé à l'envoi)",
+    emailTitle: "Envoyer un document par email",
+    emailDoc: "Document numéroté",
+    emailDocPlaceholder: "Choisir un document numéroté (facture, avoir, devis envoyé)",
+    emailTo: "Destinataire (facultatif)",
+    emailToPlaceholder: "Sinon : email de la fiche du tier",
+    emailNote: "Message personnalisé (facultatif)",
+    emailSend: "Enregistrer l'envoi et envoyer le PDF",
+    emailHint:
+      "Le PDF joint est rendu depuis les données figées à l'émission (mentions légales, montants). L'email part depuis le worker : une panne de la file n'annule pas l'envoi enregistré. Une facture annulée ne part jamais. Envoyer un document n'écrit rien en comptabilité.",
+    emailDocRequired: "Choisissez un document numéroté à envoyer.",
+    emailQueued: "Envoi enregistré : l'email avec le PDF en pièce jointe est parti au client.",
     reminderLevels: {
       1: "1re relance",
       2: "2e relance",

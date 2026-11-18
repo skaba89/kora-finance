@@ -13,7 +13,7 @@ from kora.core.logging import configure_logging
 from kora.db.session import get_sessionmaker
 from kora.db.tenant import bind_tenant
 from kora.email import sender
-from kora.email.sender import OutgoingEmail
+from kora.email.sender import OutgoingEmail, SerializedEmail
 from kora.organization import invitations
 from kora.storage import objects
 from kora.worker import broker as _broker  # noqa: F401  (enregistre le broker)
@@ -35,10 +35,10 @@ def ping(token: str) -> str:
 
 
 @dramatiq.actor(max_retries=_RETRIES, min_backoff=_MIN_BACKOFF_MS, max_backoff=_MAX_BACKOFF_MS)
-def deliver_email(message: dict[str, str]) -> None:
-    email = OutgoingEmail(**message)
+def deliver_email(message: SerializedEmail) -> None:
+    email = OutgoingEmail.from_dict(message)
     sender.send(email)
-    # Jamais le contenu : il contient des liens à usage unique.
+    # Jamais le contenu : il contient des liens à usage unique ou des données client.
     logger.info("email envoyé", extra={"sujet": email.subject})
 
 
@@ -94,5 +94,30 @@ def send_sales_reminder(tenant_id: str, reminder_id: str) -> None:
     except LookupError:
         # La relance a disparu (dossier supprimé) : aucun envoi, aucun réessai.
         logger.info("relance disparue, envoi abandonné", extra={"relance": reminder_id})
+        return
+    deliver_email.send(email.to_dict())
+
+
+@dramatiq.actor(max_retries=_RETRIES, min_backoff=_MIN_BACKOFF_MS, max_backoff=_MAX_BACKOFF_MS)
+def send_sales_document_email(tenant_id: str, document_email_id: str) -> None:
+    """Envoi d'un document de vente par email avec son PDF en pièce jointe
+    (4D-bis). Même discipline que la relance : l'email est composé depuis l'état
+    persisté (tenant lié explicitement pour la RLS), le PDF est rendu depuis les
+    instantanés figés à l'émission — jamais depuis les fiches vivantes."""
+    # Import local obligatoire (même cycle que ci-dessus).
+    from kora.sales import document_emails  # noqa: PLC0415
+
+    try:
+        with get_sessionmaker()() as session:
+            bind_tenant(session, uuid.UUID(tenant_id))
+            email = document_emails.prepare_email(session, uuid.UUID(document_email_id))
+    except LookupError:
+        # L'envoi a disparu (dossier supprimé) : aucun envoi, aucun réessai.
+        logger.info("envoi disparu, abandon", extra={"envoi": document_email_id})
+        return
+    except ValueError as exc:
+        # État devenu non envoyable entre la mise en file et le traitement
+        # (facture annulée…) : abandon sans réessai — renvoyer serait trompeur.
+        logger.info("envoi abandonné : %s", exc, extra={"envoi": document_email_id})
         return
     deliver_email.send(email.to_dict())

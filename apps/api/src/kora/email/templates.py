@@ -151,6 +151,41 @@ _TEMPLATES: dict[str, dict[Locale, _Template]] = {
             ),
         ),
     },
+    # Envoi d'un document de vente avec son PDF (4D-bis) : email adressé AU
+    # CLIENT du dossier, comme la relance. Langue commerciale des clients visés :
+    # le français — un gabarit par locale du tier est une évolution future.
+    "sales_document": {
+        "fr": _Template(
+            subject="Votre {kind} {number} — {company}",
+            intro=(
+                "Bonjour {partner_name},\n\nVeuillez trouver en pièce jointe votre "
+                "{kind} {number}, émis le {issued_on} par « {company} », d'un montant "
+                "de {amount} {currency}.{note_extra}\n\nCe document fait foi : les "
+                "mentions légales y sont figées et le PDF joint est celui conservé "
+                "dans notre comptabilité."
+            ),
+            action=None,
+            outro=(
+                "Pour toute question sur ce document, contactez « {company} ». Cet "
+                "email vous a été adressé via Kora Finance."
+            ),
+        ),
+        "en": _Template(
+            subject="Your {kind} {number} — {company}",
+            intro=(
+                "Hello {partner_name},\n\nPlease find attached your {kind} {number}, "
+                "issued on {issued_on} by “{company}”, for the amount of {amount} "
+                "{currency}.{note_extra}\n\nThis document is authoritative: its legal "
+                "mentions are frozen and the attached PDF is the one kept in our "
+                "accounting."
+            ),
+            action=None,
+            outro=(
+                "For any question about this document, please contact “{company}”. "
+                "This email was sent to you via Kora Finance."
+            ),
+        ),
+    },
 }
 
 ROLE_LABELS: dict[Locale, dict[str, str]] = {

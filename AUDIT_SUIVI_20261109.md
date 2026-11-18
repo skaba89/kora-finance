@@ -1841,3 +1841,79 @@ Prochaine étape : Phase B lot 1 (envoi du document de vente par email), puis
 relances automatiques, puis acomptes/avances (migration 0022), puis phase 5
 import. Score de maturité maintenu à **84,5/100** (aucun point crédité ni
 décrédité sans preuve nouvelle).
+
+## 40. Phase 4D-bis — envoi du document de vente par email avec son PDF (2026-11-18)
+
+Dernier manque majeur du cycle commercial confirmé à l'audit Phase A (§39) :
+l'envoi du document au client. Livraison sur `feature/kora-4d-bis-email-document`,
+branche issue du `main` `0506cb6` (merge PR #98), avec le protocole établi.
+
+### Contenu vérifié
+
+- Migration **0022** `sales_document_emails` : RLS `tenant_isolation` forcée,
+  FK composites (dossier/document/tier), envoi immuable, adresse destinataire
+  figée à la demande, note facultative, auteur. Pas d'unicité quotidienne
+  (contrairement à la relance 4D) : chaque envoi est enregistré et journalisé.
+- Règles de service : document numéroté exigé (brouillon 409, annulée 409) ;
+  envoi en file pour une facture annulée entre-temps **abandonné sans réessai**
+  dans le worker ; destinataire explicite sinon fiche du tier, sans l'un ni
+  l'autre refus clair ; plusieurs envois le même jour autorisés (le client
+  redemande l'exemplaire).
+- Pièces jointes : `OutgoingAttachment` (base64 dans la file JSON Dramatiq),
+  réhydratation dans le worker (`OutgoingEmail.from_dict`), composition MIME
+  testée (disposition attachment, nom de fichier, contenu). Rétrocompatible :
+  les messages sans pièces jointes restent valides.
+- PDF rendu dans le worker depuis les instantanés figés à l'émission (même
+  moteur que le téléchargement 4B-bis) : test de dérive de fiche (email du tier
+  modifié après la mise en file → l'envoi reste à l'adresse d'origine).
+- Contrat : **115 chemins / 146 opérations / 192 schémas** (113/144/188 → pur
+  ajout : `POST /sales/{id}/email`, `GET /sales/{id}/emails`,
+  `DocumentEmail*`) — vérifié par réexport et diff avec le fichier committé ;
+  types TS régénérés.
+- Permissions : réutilisation de `sales:manage` (envoi) et `sales:read`
+  (historique) — aucune nouvelle permission, matrice inchangée.
+- Front fr/en : carte « Envoyer un document par email » sur la page Ventes
+  (sélecteur de documents numérotés non annulés, destinataire facultatif,
+  message facultatif, hints), Server Action dédiée, gabarit d'email fr/en
+  (« Votre facture FAC-2026-00001 — {dossier} »).
+- Garde-fou retesté : aucun chemin des envois n'écrit en comptabilité.
+
+### Validation
+
+- `test_sales_emails.py` : **11 nouveaux tests** (chemin heureux avec PDF vérifié
+  au contenu, priorité du destinataire explicite, envois multiples le même jour,
+  refus brouillon/annulée, tier sans email, isolation RLS, lecteur, annulation
+  après mise en file avec worker différé, état persisté, audit, garde-fou,
+  MIME).
+- Régression par tranches sur PostgreSQL réel (pile locale reconstruite après
+  recyclage) : ventes 89, emails/worker/audit/notify/migrations 44,
+  auth/MFA/permissions/garde-fous/dossiers/tiers 100, **isolation des tenants
+  365** (359 + les instances des 2 nouvelles routes), achats 29,
+  comptabilité/grand livre/guidée/lettrage/clôture 94,
+  dashboard/trésorerie/cashflow 39, pièces/exports/états/rapports/sauvegardes/
+  santé 115 — **675 verts**, aucun échec.
+- ruff 0 ; mypy strict 0 (198 fichiers) ; ESLint 0 ; tsc 0 ; Vitest 69/69 ;
+  build Next.js OK (115 pages) ; migrations aller-retour 0022 → 0021 → 0022 ;
+  `alembic check` propre.
+
+### Points d'honnêteté
+
+- **CI GitHub Actions toujours bloquée par la facturation** du compte : aucune
+  exécution GitHub n'a validé cette phase ; toutes les validations restent
+  locales (pile réelle PG 16.2 / fakeredis / Moto / Mailpit).
+- **Correction du harnais local découverte à cette occasion** : le bootstrap du
+  bac à sable créait `kora_app` SUPERUSER, ce qui contournait la RLS et faisait
+  échouer 5 tests d'audit d'isolation — corrigé selon le protocole
+  `infra/postgres/init-roles.sh` (NOSUPERUSER/NOBYPASSRLS + privilèges DML) ;
+  `btree_gist` recompilé contre la distribution pgserver (contrib absent du
+  binaire) ; Mailpit configuré avec l'AUTH accept-any du compose. Ces correctifs
+  ne touchent pas le code du produit, uniquement la pile de tests locale.
+- L'historique des envois est consultable par document (`GET /sales/{id}/emails`)
+  mais pas encore agrégé par dossier dans une vue dédiée : la page Ventes
+  affiche le formulaire d'envoi, l'historique complet reste dans le journal
+  d'audit — une vue d'historique par document est une évolution naturelle de la
+  fiche document.
+- WhatsApp reste hors périmètre (compte Business officiel requis côté client) :
+  aucune intégration simulée n'est présentée comme opérationnelle.
+- Le prorata de déductibilité TVA reste lié à l'arbitrage expert-comptable
+  KF-15/16 (hors code, avant données réelles).

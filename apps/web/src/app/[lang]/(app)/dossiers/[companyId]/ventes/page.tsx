@@ -30,6 +30,7 @@ import {
   postDocumentEntryAction,
   postPaymentEntryAction,
   resendReminderAction,
+  sendDocumentEmailAction,
   sendQuoteAction,
 } from "@/lib/actions/sales";
 import {
@@ -616,6 +617,50 @@ export default async function SalesPage({
           )}
         </CardContent>
       </Card>
+
+      {manage && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>{t.sales.emailTitle}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ActionForm
+              action={sendDocumentEmailAction.bind(null, companyId)}
+              className="space-y-4"
+              submitLabel={t.sales.emailSend}
+              pendingLabel={t.common.pending}
+            >
+              <div className="grid gap-4 sm:grid-cols-3">
+                <SelectField
+                  label={t.sales.emailDoc}
+                  name="document_id"
+                  required
+                  options={[
+                    { value: "", label: t.sales.emailDocPlaceholder },
+                    ...documents.items
+                      .filter(
+                        (document) =>
+                          document.number != null && document.status !== "CANCELLED",
+                      )
+                      .map((document) => ({
+                        value: document.id,
+                        label: `${document.doc_kind === "quote" ? "DEV" : document.doc_kind === "credit_note" ? "AV" : "FAC"}-${document.number} — ${kindLabel(document.doc_kind)} · ${formatMoney(document.total_ttc, document.currency)}`,
+                      })),
+                  ]}
+                />
+                <Field
+                  label={t.sales.emailTo}
+                  name="to"
+                  type="email"
+                  placeholder={t.sales.emailToPlaceholder}
+                />
+                <Field label={t.sales.emailNote} name="note" />
+              </div>
+              <p className="text-muted-foreground text-xs">{t.sales.emailHint}</p>
+            </ActionForm>
+          </CardContent>
+        </Card>
+      )}
 
       {manage && (
         <Card className="mt-6">
