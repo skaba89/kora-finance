@@ -195,6 +195,21 @@ services:
       resources:
         limits: { memory: 512m, cpus: "1.0" }
 
+  # Planificateur des relances automatiques (Phase B, lot 2) : simple horloge qui
+  # enfile le balayage dans la même file que le worker (KORA_REMINDER_SCAN_INTERVAL_
+  # SECONDS). Séparé du worker : un redémarrage du worker ne touche pas l'horloge.
+  # Idempotent de bout en bout (une relance par facture et par jour, en base).
+  scheduler:
+    image: kora-api:local
+    command: ["python", "-m", "kora.worker.scheduler"]
+    environment: *api-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { memory: 128m, cpus: "0.25" }
+
   # Sauvegardes (KF-09) : conteneur one-shot sous profil, exécuté à la demande —
   # docker compose --profile backup run --rm --no-deps backup python -m kora.scripts.backup …
   # Il ne reçoit que les identifiants de sauvegarde, jamais ceux des pièces ; les

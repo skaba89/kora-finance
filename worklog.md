@@ -1877,3 +1877,92 @@ simulée ne sera présentée comme opérationnelle) ; phase 5 import/migration ;
 CI GitHub Actions toujours bloquée par la facturation du compte (aucune
 exécution GitHub n'a validé cette phase).
 - Suivi : `AUDIT_SUIVI_20261109.md` §40.
+## 2026-11-19 — Phase B lot 2 : relances automatiques configurables
+
+Chantier suivant de la mission (après 4D-bis lot 1, PR #99) : les relances
+restaient manuelles. Désormais chaque dossier porte une politique d'escalade
+activable : le planificateur balaye périodiquement et le worker crée les
+relances dues — dans la discipline 4D (acte documenté, immuable, aucun doublon,
+aucune écriture comptable), avec l'origine système tracée.
+
+- Migration **0023** : table `sales_reminder_policies` (RLS forcée, une
+  politique au plus par dossier, upsert audité `sales_reminder_policy.updated`)
+  et `sales_reminders.created_by_user_id` rendu nullable — la relance
+  automatique n'a pas d'auteur humain (distinction structurelle) ; le
+  downgrade retire la fonctionnalité et ses données (relances auto supprimées,
+  explicite et assumé), après levure temporaire du FORCE RLS — le FORCE
+  s'applique aussi au propriétaire et un DELETE nu depuis la session de
+  migration (sans tenant) ne verrait rien : échec silencieux puis NOT NULL
+  refusé (découvert en aller-retour, corrigé et commenté).
+- Politique : `enabled` + `offsets_days` (1 à 6 seuils, entiers 1..365,
+  strictement croissants — chaque seuil déclenche le niveau suivant, ex.
+  [1, 7, 15]). Validation service (BusinessRuleError) + contraintes SQL
+  (tableau, taille bornée) ; GET renvoie les défauts d'affichage tant que rien
+  n'est enregistré (jamais appliqués sans PUT explicite).
+- Exécution : le balayage (`scan_automatic_reminders`, max_retries=0, idempotent)
+  enfile une exécution par dossier depuis `companies` (racine, hors RLS) ;
+  `run_reminder_policy` lie explicitement le tenant (RLS, échec fermé) puis
+  réutilise les règles 4D via `overdue_invoices` : facture ÉMISE, échue et non
+  soldée ; niveau compté sous verrou FOR UPDATE ; unicité (dossier, facture,
+  jour) — le rattrapage progresse d'un niveau par jour et s'arrête au dernier
+  seuil ; re-contrôles à l'instant du verrou (statut, échéance, solde, email)
+  avec point de sauvegarde par relance (une course perdue n'abîme pas les
+  autres) ; audit `sales_reminder.auto_created` (origine « automatique ») ;
+  emails enfilés après commit (`send_sales_reminder`, 4D) — une panne de file
+  laisse la relance enregistrée (renvoi depuis l'historique).
+- Planificateur : `python -m kora.worker.scheduler` — boucle horloge séparée
+  du worker (un redémarrage du worker ne la touche pas), tick
+  `KORA_REMINDER_SCAN_INTERVAL_SECONDS` (3 600 s par défaut), file injoignable
+  journalisée (réessai au tick suivant). Service compose `scheduler` ajouté
+  (128 m / 0.25 CPU) dans les deux Compose + budgets KF-13 déclarés
+  (check-compose-budgets vert).
+- Routes `GET /reminders/policy` (lecture) et `PUT /reminders/policy` (upsert,
+  `sales:manage`, audité) : contrat **116 chemins / 148 opérations / 194
+  schémas** (115/146/192 → +1/+2/+2, pur ajout) ; le test d'immutabilité 4D
+  est étendu explicitement (PUT réservé au chemin policy, DELETE/PATCH
+  toujours interdits partout).
+- Front fr/en : carte « Relances automatiques » sur la page Ventes — état
+  courant pour tous (défauts si jamais réglé), formulaire activation +
+  échéancier (`sales:manage`) avec aide explicite ; Server Action
+  `updateReminderPolicyAction` (parsing « 1, 7, 15 », erreur claire si vide).
+
+**Hygiène de la pile de tests (hors produit)** : le cluster local violait le
+protocole des rôles — `initdb -U kora_owner` fait du rôle de migration le
+superutilisateur du cluster (`test_role_de_migration_n_est_pas_superutilisateur`
+échouait). Bootstrap corrigé : superuser dédié `kora_bootstrap` (cluster
+uniquement), `kora_owner` recréé rôle ORDINAIRE propriétaire de la base et du
+schéma (DDL par propriété), `kora_app` inchangé (DML, NOBYPASSRLS), extension
+`btree_gist` installée PAR `kora_owner` (extension trusted, propriété requise —
+`ALTER EXTENSION ... OWNER` n'existe pas). Cluster reconstruit ; les tranches
+RLS-critiques et les sauvegardes revalidées dessus.
+
+**Validation** : pytest **15 nouveaux** (`test_sales_reminders_auto.py` :
+défauts effectifs, création/mise à jour auditées, refus d'échéanciers
+invalides (vide, décroissant, doublon, 0, >365, >6 seuils, non entier),
+lecteur lit mais ne règle pas, isolation RLS de la politique, création niveau
+1 avec audit origine système, rattrapage un niveau par jour jusqu'au dernier
+seuil, doublon balayage redoublé, relance manuelle du jour bloque l'auto
+(aucune `auto_created` au journal), facture soldée ignorée, tier sans email
+compté, politique absente/désactivée sans effet, chaîne complète balayage →
+worker → email reçu (time-machine), garde-fou comptable, contrat immuable) ;
+régression par tranches sur la pile réelle : ventes 104/104 (48+56),
+isolation des tenants **371/371** (dont revalidation complète sur le cluster
+reconstruit), auth/MFA/permissions/garde-fous 64/64, dossiers/tiers/
+invitations/IP 53/53, achats 29/29, comptabilité/grand livre/saisie guidée
+85/85, lettrage/clôture/dashboard/trésorerie 50/50, cashflow/trésorerie 89/89,
+pièces/exports/rapports/worker 75/75, relevés/sauvegardes/santé/emails/audit
+102/102, transverse (rôles, config, concurrences, migrations, outils) 59/59 —
+migrations aller-retour 0023 → base → 0023 + `alembic check` propre ; ruff 0 ;
+mypy strict 0 (137 fichiers + 64 tests) ; ESLint 0 ; tsc 0 ; Vitest 69/69 ;
+build Next.js OK (115 pages, `/ventes` fr/en) ; contrat OpenAPI réexporté =
+committé (diff nul).
+
+**Reste** : acomptes clients, avances fournisseurs, trop-perçus,
+remboursements et affectation ultérieure (lot 3, migration 0024) ; échéanciers
+clients et export PDF/Excel de la balance âgée ; indicateurs de recouvrement
+et DSO ; imputation multi-comptes ; phase 5 import Excel/CSV/FEC (100 000
+lignes) ; WhatsApp (compte Business officiel requis — aucune intégration
+simulée) ; CI GitHub Actions toujours bloquée par la facturation du compte
+(aucune exécution GitHub n'a validé cette phase).
+- Suivi : `AUDIT_SUIVI_20261109.md` §41.
+

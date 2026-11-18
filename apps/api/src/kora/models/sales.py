@@ -24,6 +24,7 @@ from typing import Any
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     Date,
     ForeignKey,
@@ -437,7 +438,10 @@ class SalesReminder(Base):
     channel: Mapped[str] = mapped_column(String(16))
     email_to: Mapped[str] = mapped_column(String(254))
     note: Mapped[str | None] = mapped_column(Text)
-    created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    # Auteur humain des relances manuelles (4D) uniquement : une relance
+    # automatique (lot 2) est créée par le planificateur — origine système,
+    # NULL. Le NULL distingue structurellement les deux origines.
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = created_at_column()
     updated_at: Mapped[datetime] = updated_at_column()
 
@@ -465,6 +469,37 @@ class SalesReminder(Base):
         Index("ix_sales_reminders_tenant_document", "tenant_id", "document_id"),
         Index("ix_sales_reminders_tenant_partner", "tenant_id", "partner_id"),
         Index("ix_sales_reminders_tenant_date", "tenant_id", "reminded_on"),
+    )
+
+
+class SalesReminderPolicy(Base):
+    """Politique de relance automatique du dossier (Phase B, lot 2) : une ligne
+    au plus par dossier (upsert — même patron que les réglages de trésorerie).
+    `offsets_days` porte l'échéancier d'escalade : les retards (jours après
+    l'échéance) auxquels une relance est due — ex. [1, 7, 15] = 1re relance à
+    J+1, 2e à J+7, 3e à J+15. Le planificateur (worker) balaye les dossiers et
+    crée les relances dues ; la sémantique fine (entiers >= 1, strictement
+    croissants, 1 à 6 seuils) est validée par le service. Aucune écriture
+    comptable : une relance reste un acte commercial, pas un fait financier."""
+
+    __tablename__ = "sales_reminder_policies"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), unique=True
+    )
+    enabled: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    offsets_days: Mapped[list[Any]] = mapped_column(JSONB)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = created_at_column()
+    updated_at: Mapped[datetime] = updated_at_column()
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        CheckConstraint("jsonb_typeof(offsets_days) = 'array'", name="offsets_array"),
+        CheckConstraint("jsonb_array_length(offsets_days) BETWEEN 1 AND 6", name="offsets_count"),
+        ForeignKeyConstraint(["tenant_id"], ["companies.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["created_by_user_id"], ["users.id"]),
     )
 
 

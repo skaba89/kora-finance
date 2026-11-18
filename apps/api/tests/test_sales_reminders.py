@@ -331,7 +331,13 @@ def test_historique_filtre_et_immutabilite(client: TestClient, make_company: Mak
     }
     assert chemins_relances, "aucune route relance dans le contrat"
     for chemin, methods in chemins_relances.items():
-        assert methods <= {"get", "post"}, (chemin, methods)
+        # La politique de relance automatique (lot 2) est un réglage upsert :
+        # PUT autorisé sur ce seul chemin — les relances elles-mêmes restent
+        # en création seule, et DELETE/PATCH sont interdits partout.
+        attendu = (
+            {"get", "post", "put"} if chemin.endswith("/reminders/policy") else {"get", "post"}
+        )
+        assert methods <= attendu, (chemin, methods)
     # Une relance visée hors du dossier est un 404, jamais un 403.
     autres = Reminders(client, _dossier(make_company))
     assert autres.resend(par_facture["items"][0]["id"]).status_code == 404

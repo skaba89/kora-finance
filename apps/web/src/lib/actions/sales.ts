@@ -286,6 +286,42 @@ export async function resendReminderAction(
   return { status: "success", message: t.sales.reminderResent };
 }
 
+/** Enregistre la politique de relance automatique du dossier (Phase B, lot 2) :
+ * upsert audité — activation et échéancier d'escalade (jours de retard, ex.
+ * « 1, 7, 15 »). L'exécution est périodique côté worker : une relance par
+ * facture et par jour, aucune écriture comptable. */
+export async function updateReminderPolicyAction(
+  companyId: string,
+  _: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const t = await actionDictionary();
+  const offsetsBruts = field(formData, "offsets_days");
+  if (!offsetsBruts) {
+    return { status: "error", message: t.sales.autoOffsetsRequired };
+  }
+  const offsets = offsetsBruts
+    .split(",")
+    .map((valeur) => Number.parseInt(valeur.trim(), 10))
+    .filter((valeur) => Number.isInteger(valeur));
+  if (offsets.length === 0) {
+    return { status: "error", message: t.sales.autoOffsetsRequired };
+  }
+  const { error, response } = await (await api()).PUT(
+    "/api/v1/companies/{company_id}/reminders/policy",
+    {
+      params: { path: { company_id: companyId } },
+      body: {
+        enabled: field(formData, "enabled") === "on",
+        offsets_days: offsets,
+      },
+    },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  return { status: "success", message: t.sales.autoSaved };
+}
+
 /** Comptabilise une facture ou un avoir émis (Phase 4E) : acte explicite du
  * comptable — crée et valide l'écriture du journal des ventes, liée au document.
  * Refusé si le document est déjà comptabilisé (409) ; une erreur se corrige par

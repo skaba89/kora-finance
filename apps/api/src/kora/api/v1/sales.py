@@ -27,8 +27,9 @@ from kora.models.sales import (
     SalesPayment,
     SalesPaymentAllocation,
     SalesReminder,
+    SalesReminderPolicy,
 )
-from kora.sales import accounting, document_emails, payments, reminders, service
+from kora.sales import accounting, auto_reminders, document_emails, payments, reminders, service
 from kora.sales.service import DocumentData, LineData
 from kora.tenancy.deps import EntriesPost, SalesManage, SalesRead, TenantContext
 from kora.worker.enqueue import enqueue_best_effort
@@ -821,6 +822,66 @@ def resend_reminder(
     reminders.resend_reminder(db, _actor(tenant, ctx), reminder_id)
     queued = enqueue_best_effort(send_sales_reminder, str(tenant.company_id), str(reminder_id))
     return ResendOut(email_queued=queued)
+
+
+# --- Relances automatiques configurables (Phase B, lot 2) ----------------------
+
+
+class ReminderPolicyOut(BaseModel):
+    """Politique effective de relance automatique du dossier : valeurs par
+    défaut d'affichage si jamais paramétrée (jamais appliquées sans
+    enregistrement explicite — `enabled` False tant que la politique n'existe
+    pas)."""
+
+    enabled: bool
+    offsets_days: list[int]
+    updated_at: str | None
+
+
+class ReminderPolicyIn(BaseModel):
+    """Réglage demandé : activation et échéancier d'escalade — 1 à 6 seuils,
+    entiers de 1 à 365 jours de retard, strictement croissants (chaque seuil
+    déclenche le niveau de relance suivant)."""
+
+    enabled: bool
+    offsets_days: Annotated[list[int], Field(max_length=6)]
+
+
+def _policy_out(policy: SalesReminderPolicy | None) -> ReminderPolicyOut:
+    if policy is None:
+        return ReminderPolicyOut(
+            enabled=False,
+            offsets_days=list(auto_reminders.DEFAULT_OFFSETS_DAYS),
+            updated_at=None,
+        )
+    return ReminderPolicyOut(
+        enabled=policy.enabled,
+        offsets_days=[int(v) for v in policy.offsets_days],
+        updated_at=policy.updated_at.isoformat(),
+    )
+
+
+@router.get("/reminders/policy", responses={404: {"model": ErrorResponse}})
+def get_reminder_policy(tenant: SalesRead, db: DbSession) -> ReminderPolicyOut:
+    """Politique de relance automatique du dossier (défauts d'affichage si
+    jamais paramétrée : relances automatiques désactivées)."""
+    return _policy_out(auto_reminders.get_policy(db, tenant.company_id))
+
+
+@router.put("/reminders/policy", responses=WRITE_ERRORS)
+def put_reminder_policy(
+    body: ReminderPolicyIn, tenant: SalesManage, db: DbSession, ctx: Ctx
+) -> ReminderPolicyOut:
+    """Crée ou met à jour la politique de relance automatique du dossier
+    (upsert, audité). L'exécution est périodique (planificateur → worker) :
+    une relance par facture et par jour, même unicité que la relance manuelle
+    (4D) — aucun doublon, aucune écriture comptable."""
+    policy = auto_reminders.upsert_policy(
+        db,
+        _actor(tenant, ctx),
+        auto_reminders.PolicyData(enabled=body.enabled, offsets_days=body.offsets_days),
+    )
+    return _policy_out(policy)
 
 
 # --- Envoi d'un document de vente par email avec son PDF (4D-bis) ------------

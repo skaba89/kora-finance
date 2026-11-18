@@ -1566,6 +1566,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/reminders/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Reminder Policy
+         * @description Politique de relance automatique du dossier (défauts d'affichage si
+         *     jamais paramétrée : relances automatiques désactivées).
+         */
+        get: operations["get_reminder_policy_api_v1_companies__company_id__reminders_policy_get"];
+        /**
+         * Put Reminder Policy
+         * @description Crée ou met à jour la politique de relance automatique du dossier
+         *     (upsert, audité). L'exécution est périodique (planificateur → worker) :
+         *     une relance par facture et par jour, même unicité que la relance manuelle
+         *     (4D) — aucun doublon, aucune écriture comptable.
+         */
+        put: operations["put_reminder_policy_api_v1_companies__company_id__reminders_policy_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/reminders/{reminder_id}/resend": {
         parameters: {
             query?: never;
@@ -5233,6 +5261,33 @@ export interface components {
             partner_id: string;
             /** Reminded On */
             reminded_on: string;
+        };
+        /**
+         * ReminderPolicyIn
+         * @description Réglage demandé : activation et échéancier d'escalade — 1 à 6 seuils,
+         *     entiers de 1 à 365 jours de retard, strictement croissants (chaque seuil
+         *     déclenche le niveau de relance suivant).
+         */
+        ReminderPolicyIn: {
+            /** Enabled */
+            enabled: boolean;
+            /** Offsets Days */
+            offsets_days: number[];
+        };
+        /**
+         * ReminderPolicyOut
+         * @description Politique effective de relance automatique du dossier : valeurs par
+         *     défaut d'affichage si jamais paramétrée (jamais appliquées sans
+         *     enregistrement explicite — `enabled` False tant que la politique n'existe
+         *     pas).
+         */
+        ReminderPolicyOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Offsets Days */
+            offsets_days: number[];
+            /** Updated At */
+            updated_at: string | null;
         };
         /** RemindersOut */
         RemindersOut: {
@@ -12303,6 +12358,119 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReminderCreatedOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_reminder_policy_api_v1_companies__company_id__reminders_policy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReminderPolicyOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_reminder_policy_api_v1_companies__company_id__reminders_policy_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReminderPolicyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReminderPolicyOut"];
                 };
             };
             /** @description Unauthorized */

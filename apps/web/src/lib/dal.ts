@@ -461,3 +461,13 @@ export async function getSalesReminders(
     }),
   );
 }
+
+/** Politique effective de relance automatique du dossier (Phase B, lot 2) :
+ * défauts d'affichage si jamais paramétrée (relances automatiques désactivées). */
+export async function getSalesReminderPolicy(companyId: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/reminders/policy", {
+      params: { path: { company_id: companyId } },
+    }),
+  );
+}

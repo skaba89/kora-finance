@@ -7576,6 +7576,63 @@
         "title": "ReminderOut",
         "type": "object"
       },
+      "ReminderPolicyIn": {
+        "description": "Réglage demandé : activation et échéancier d'escalade — 1 à 6 seuils,\nentiers de 1 à 365 jours de retard, strictement croissants (chaque seuil\ndéclenche le niveau de relance suivant).",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "offsets_days": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 6,
+            "title": "Offsets Days",
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "offsets_days"
+        ],
+        "title": "ReminderPolicyIn",
+        "type": "object"
+      },
+      "ReminderPolicyOut": {
+        "description": "Politique effective de relance automatique du dossier : valeurs par\ndéfaut d'affichage si jamais paramétrée (jamais appliquées sans\nenregistrement explicite — `enabled` False tant que la politique n'existe\npas).",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "offsets_days": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Offsets Days",
+            "type": "array"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "enabled",
+          "offsets_days",
+          "updated_at"
+        ],
+        "title": "ReminderPolicyOut",
+        "type": "object"
+      },
       "RemindersOut": {
         "properties": {
           "items": {
@@ -19250,6 +19307,166 @@
           }
         ],
         "summary": "Create Reminder",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/reminders/policy": {
+      "get": {
+        "description": "Politique de relance automatique du dossier (défauts d'affichage si\njamais paramétrée : relances automatiques désactivées).",
+        "operationId": "get_reminder_policy_api_v1_companies__company_id__reminders_policy_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderPolicyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Reminder Policy",
+        "tags": [
+          "ventes"
+        ]
+      },
+      "put": {
+        "description": "Crée ou met à jour la politique de relance automatique du dossier\n(upsert, audité). L'exécution est périodique (planificateur → worker) :\nune relance par facture et par jour, même unicité que la relance manuelle\n(4D) — aucun doublon, aucune écriture comptable.",
+        "operationId": "put_reminder_policy_api_v1_companies__company_id__reminders_policy_put",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReminderPolicyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderPolicyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Reminder Policy",
         "tags": [
           "ventes"
         ]

@@ -702,6 +702,18 @@ export const fr = {
       "Le PDF joint est rendu depuis les données figées à l'émission (mentions légales, montants). L'email part depuis le worker : une panne de la file n'annule pas l'envoi enregistré. Une facture annulée ne part jamais. Envoyer un document n'écrit rien en comptabilité.",
     emailDocRequired: "Choisissez un document numéroté à envoyer.",
     emailQueued: "Envoi enregistré : l'email avec le PDF en pièce jointe est parti au client.",
+    autoTitle: "Relances automatiques",
+    autoState: "Politique",
+    autoEnabled: "Activer les relances automatiques des factures échues",
+    autoOffsets: "Échéancier d'escalade (jours de retard)",
+    autoOffsetsPlaceholder: "Exemple : 1, 7, 15",
+    autoOffsetsHint:
+      "Une relance est due quand le retard atteint chaque seuil : « 1, 7, 15 » = 1re relance à J+1, 2e à J+7, 3e à J+15. 1 à 6 seuils, strictement croissants. Le balayage est périodique (worker) : une relance par facture et par jour, aucun doublon avec une relance manuelle du même jour, arrêt au dernier seuil. Aucune écriture comptable.",
+    autoUnconfigured: "Non paramétrée — relances automatiques désactivées.",
+    autoUpdated: "Dernier réglage",
+    autoSave: "Enregistrer la politique",
+    autoSaved: "Politique de relance automatique enregistrée (audité).",
+    autoOffsetsRequired: "Renseignez l'échéancier (jours de retard, ex. « 1, 7, 15 »).",
     reminderLevels: {
       1: "1re relance",
       2: "2e relance",
