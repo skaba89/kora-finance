@@ -122,6 +122,25 @@ email/WhatsApp, relances, balance âgée.
   borné à EMAIL par CHECK) ; zéro écriture comptable (4E à venir) ; page Ventes
   fr/en : factures échues candidates, formulaire de relance (message
   personnalisé facultatif), historique avec renvoi).
+- **4D-bis — Envoi du document de vente par email avec son PDF** ✅ (2026-11-18,
+  branche `feature/kora-4d-bis-email-document` : migration 0022
+  `sales_document_emails` (RLS forcée, FK composites, envoi immuable) ; un envoi
+  vise un document numéroté (facture/avoir ÉMIS, devis envoyé/accepté/refusé) —
+  un brouillon n'a ni numéro ni PDF (409), une facture annulée ne part pas (409)
+  et un envoi déjà en file pour une facture annulée entre-temps est abandonné
+  dans le worker sans réessai ; destinataire = adresse explicite de la demande,
+  sinon l'email de la fiche du tier (sans l'un ni l'autre : refus clair) ;
+  contrairement à la relance (4D), pas d'unicité quotidienne — le client peut
+  redemander l'exemplaire, chaque envoi est enregistré et journalisé
+  (`sales_document.emailed`) ; le PDF joint est rendu dans le worker depuis les
+  instantanés figés à l'émission (4B-bis, jamais les fiches vivantes) ;
+  `OutgoingEmail` porte désormais des pièces jointes (base64 dans la file JSON,
+  réhydratation dans le worker) ; routes `POST /sales/{id}/email` et
+  `GET /sales/{id}/emails` (contrat 113→115 chemins, 188→192 schémas, pur
+  ajout), permissions `sales:manage` (envoi) et `sales:read` (historique) ;
+  gabarit d'email fr/en ; aucune écriture comptable (garde-fou retesté) ; page
+  Ventes fr/en : carte « Envoyer un document par email » (document, destinataire
+  facultatif, message facultatif) avec renvoi possible).
 - **4E — Intégration comptable des ventes** ✅ (2026-11-18, branche
   `feature/kora-4e-comptabilisation` : migration 0020 colonnes de liaison
   `sales_documents.entry_id` et `sales_payments.entry_id` (FK composites RESTRICT

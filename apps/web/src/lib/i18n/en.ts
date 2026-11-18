@@ -691,6 +691,17 @@ export const en: typeof fr = {
     reminderOn: "Reminder date",
     reminderLevel: "Level",
     reminderTo: "Recipient (frozen at send time)",
+    emailTitle: "Email a numbered document",
+    emailDoc: "Numbered document",
+    emailDocPlaceholder: "Pick a numbered document (invoice, credit note, sent quote)",
+    emailTo: "Recipient (optional)",
+    emailToPlaceholder: "Otherwise: the partner's email on file",
+    emailNote: "Personal message (optional)",
+    emailSend: "Record the send and email the PDF",
+    emailHint:
+      "The attached PDF is rendered from the data frozen at issuance (legal mentions, amounts). The email is sent from the worker: a queue outage does not cancel the recorded send. A cancelled invoice is never sent. Emailing a document writes nothing to accounting.",
+    emailDocRequired: "Pick a numbered document to send.",
+    emailQueued: "Send recorded: the email with the attached PDF is on its way to the client.",
     reminderLevels: {
       1: "1st reminder",
       2: "2nd reminder",

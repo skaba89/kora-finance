@@ -322,3 +322,34 @@ export async function postPaymentEntryAction(
   refresh();
   return { status: "success", message: t.sales.paymentPosted };
 }
+
+/** Envoie un document numéroté par email avec son PDF en pièce jointe (4D-bis) :
+ * l'adresse explicite prime sur l'email de la fiche du tier ; le PDF est rendu
+ * depuis les instantanés figés à l'émission et l'email part depuis le worker —
+ * une panne de la file n'annule pas l'enregistrement (renvoi possible). */
+export async function sendDocumentEmailAction(
+  companyId: string,
+  _: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const documentId = field(formData, "document_id");
+  if (!documentId) {
+    const t = await actionDictionary();
+    return { status: "error", message: t.sales.emailDocRequired };
+  }
+  const to = field(formData, "to");
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/sales/{document_id}/email",
+    {
+      params: { path: { company_id: companyId, document_id: documentId } },
+      body: {
+        to: to || undefined,
+        note: field(formData, "note") || undefined,
+      },
+    },
+  );
+  if (!response.ok) return failure(error);
+  const t = await actionDictionary();
+  refresh();
+  return { status: "success", message: t.sales.emailQueued };
+}

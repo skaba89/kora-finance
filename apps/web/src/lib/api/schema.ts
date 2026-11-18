@@ -1684,6 +1684,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/sales/{document_id}/email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Document Email
+         * @description Enregistre l'envoi d'un document numéroté par email et programme la
+         *     livraison du PDF en pièce jointe dans le worker. Le PDF est rendu depuis les
+         *     instantanés figés à l'émission ; une facture annulée ne part pas. Une panne
+         *     de la file n'annule pas l'enregistrement (`email_queued` False : l'envoi
+         *     reste renvoyable). Aucune écriture comptable.
+         */
+        post: operations["send_document_email_api_v1_companies__company_id__sales__document_id__email_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/sales/{document_id}/emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Document Emails
+         * @description Historique immuable des envois email d'un document (du plus récent au
+         *     plus ancien).
+         */
+        get: operations["list_document_emails_api_v1_companies__company_id__sales__document_id__emails_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/sales/{document_id}/entry": {
         parameters: {
             query?: never;
@@ -3031,6 +3076,58 @@ export interface components {
             total_ttc: number;
             /** Valid Until */
             valid_until: string | null;
+        };
+        /**
+         * DocumentEmailCreatedOut
+         * @description Résultat d'un envoi enregistré : `email_queued` est False si la file
+         *     d'attente était injoignable — l'envoi reste enregistré et renvoyable.
+         */
+        DocumentEmailCreatedOut: {
+            email: components["schemas"]["DocumentEmailOut"];
+            /** Email Queued */
+            email_queued: boolean;
+        };
+        /**
+         * DocumentEmailIn
+         * @description Envoi demandé : destinataire explicite facultatif (sinon l'email de la
+         *     fiche du tier) et message personnalisé facultatif.
+         */
+        DocumentEmailIn: {
+            /** Note */
+            note?: string | null;
+            /** To */
+            to?: string | null;
+        };
+        /** DocumentEmailOut */
+        DocumentEmailOut: {
+            /** Created At */
+            created_at: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Email To */
+            email_to: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note: string | null;
+            /**
+             * Partner Id
+             * Format: uuid
+             */
+            partner_id: string;
+        };
+        /** DocumentEmailsOut */
+        DocumentEmailsOut: {
+            /** Items */
+            items: components["schemas"]["DocumentEmailOut"][];
+            /** Total */
+            total: number;
         };
         /**
          * DocumentEntryIn
@@ -12835,6 +12932,121 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    send_document_email_api_v1_companies__company_id__sales__document_id__email_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentEmailIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentEmailCreatedOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_document_emails_api_v1_companies__company_id__sales__document_id__emails_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentEmailsOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

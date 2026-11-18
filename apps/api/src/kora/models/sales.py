@@ -466,3 +466,50 @@ class SalesReminder(Base):
         Index("ix_sales_reminders_tenant_partner", "tenant_id", "partner_id"),
         Index("ix_sales_reminders_tenant_date", "tenant_id", "reminded_on"),
     )
+
+
+class SalesDocumentEmail(Base):
+    """Envoi d'un document de vente par email avec son PDF en pièce jointe
+    (Phase 4D-bis) : un envoi est un acte commercial documenté et immuable (un
+    email parti ne se « désend » pas — aucune suppression ni modification).
+    L'adresse destinataire est figée au moment de la demande (traçabilité : le
+    tier peut changer d'email ensuite). Contrairement à la relance (4D), un
+    même document peut être renvoyé plusieurs fois le même jour (le client
+    redemande l'exemplaire) : pas d'unicité quotidienne — le journal d'audit
+    et l'historique de la page portent la trace de chaque envoi. Le PDF joint
+    est rendu dans le worker depuis les instantanés figés à l'émission. Aucune
+    écriture comptable : l'envoi n'est pas un fait financier."""
+
+    __tablename__ = "sales_document_emails"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    document_id: Mapped[uuid.UUID]
+    partner_id: Mapped[uuid.UUID]
+    email_to: Mapped[str] = mapped_column(String(254))
+    note: Mapped[str | None] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = created_at_column()
+    updated_at: Mapped[datetime] = updated_at_column()
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        CheckConstraint("length(trim(email_to)) > 0", name="email_to_not_blank"),
+        CheckConstraint("note IS NULL OR length(trim(note)) > 0", name="note_not_blank"),
+        ForeignKeyConstraint(
+            ["tenant_id", "document_id"],
+            ["sales_documents.tenant_id", "sales_documents.id"],
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "partner_id"],
+            ["partners.tenant_id", "partners.id"],
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(["tenant_id"], ["companies.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["created_by_user_id"], ["users.id"]),
+        Index("ix_sales_document_emails_tenant_document", "tenant_id", "document_id"),
+        Index("ix_sales_document_emails_tenant_partner", "tenant_id", "partner_id"),
+    )

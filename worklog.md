@@ -1799,3 +1799,81 @@ par une preuve :
 (PDF en pièce jointe, worker, audit, page fr/en) ; puis relances automatiques
 configurables ; puis acomptes/avances (migration 0022) ; puis phase 5 import.
 - Suivi : `AUDIT_SUIVI_20261109.md` §39.
+
+## 2026-11-18 — Phase 4D-bis : envoi du document de vente par email avec son PDF
+
+Dernier manque majeur du cycle commercial (mission Phase B lot 1) : le client ne
+recevait son document que par téléchargement manuel. Désormais, un document
+numéroté peut être envoyé par email avec son PDF conformé en pièce jointe, dans
+la même discipline que les relances (4D) : l'envoi est un acte commercial
+documenté et immuable, l'email part du worker, aucune écriture comptable.
+
+- Migration **0022** `sales_document_emails` (RLS `tenant_isolation` forcée, FK
+  composites, envoi immuable — aucune suppression ni modification) : adresse
+  destinataire **figée à la demande** (traçabilité), message personnalisé
+  facultatif, auteur. Contrairement à la relance, **pas d'unicité quotidienne** :
+  le client peut redemander l'exemplaire, chaque envoi est enregistré et
+  journalisé (`sales_document.emailed`).
+- Règles : un envoi vise un document **numéroté** (facture/avoir ÉMIS, devis
+  envoyé/accepté/refusé) ; brouillon refusé 409 (ni numéro ni PDF), facture
+  annulée refusée 409, et un envoi déjà en file pour une facture annulée
+  entre-temps est **abandonné dans le worker sans réessai** (renvoyer une
+  facture annulée serait trompeur) ; destinataire = adresse explicite de la
+  demande, sinon l'email de la fiche du tier — sans l'un ni l'autre, refus avec
+  un message clair.
+- Le **PDF joint est rendu dans le worker** depuis les instantanés figés à
+  l'émission (4B-bis), jamais depuis les fiches vivantes : le test change
+  l'email du tier après la mise en file et l'envoi reste figé à l'adresse
+  d'origine. `OutgoingEmail` porte désormais des **pièces jointes**
+  (`OutgoingAttachment`, base64 dans la file JSON, réhydratation dans le
+  worker, composition MIME testée) — extension rétrocompatible (les anciens
+  messages sans pièces jointes restent valides).
+- Routes `POST /sales/{id}/email` (201, `email_queued` False si la file est
+  injoignable — l'envoi reste enregistré et renvoyable) et
+  `GET /sales/{id}/emails` (historique immuable). Contrat : **115 chemins / 146
+  opérations, 192 schémas** (113/144/188 → +2/+2/+4, pur ajout) ; permissions
+  réutilisées (`sales:manage` envoi, `sales:read` historique), gabarit d'email
+  fr/en.
+- Front fr/en : carte « Envoyer un document par email » sur la page Ventes
+  (document numéroté, destinataire facultatif avec placeholder « email de la
+  fiche du tier », message facultatif) ; Server Action
+  `sendDocumentEmailAction` ; type `email` sur le champ destinataire.
+- Pile locale reconstruite après recyclage du bac à sable (bootstrap idempotent
+  réécrit) : PG 16.2 + btree_gist **recompilé contre la distribution pgserver**
+  (contrib absent du binaire téléchargé, installé dans `lib/postgresql/`),
+  fakeredis via `TcpFakeServer` (la console `fakeredis-server` n'est plus
+  fournie par les versions récentes), Moto S3, Mailpit v1.33.1 avec les mêmes
+  réglages AUTH que le compose (`--smtp-auth-accept-any`). **Correction
+  importante du harnais** : `kora_app` est désormais créé
+  NOSUPERUSER/NOBYPASSRLS avec les privilèges DML du protocole
+  `infra/postgres/init-roles.sh` — l'ancien bootstrap le créait SUPERUSER, ce
+  qui faisait **échouer les tests de refus RLS** de l'audit journal (détectés
+  puis corrigés : les 5 tests d'audit et 2 SMTP réels repassent).
+
+**Validation** : pytest **11 nouveaux** (`test_sales_emails.py` : chemin heureux
+avec PDF joint vérifié au contenu `%PDF-`, destinataire explicite prioritaire,
+plusieurs envois le même jour (pas d'unicité 4D), brouillon et annulée refusés,
+tier sans email refusé, isolation RLS (404 + historique vide), lecteur lit mais
+ne sert pas, facture annulée après mise en file = abandon sans réessai (worker
+différé), état persisté figé après changement de fiche, journal d'audit,
+garde-fou comptable, composition MIME de la pièce jointe) ; régression par
+tranches sur la pile réelle hors Docker : ventes 89/89 (11 inclus),
+emails/worker/audit/notify/migrations 44/44, auth/MFA/permissions/garde-fous/
+dossiers/tiers 100/100, **isolation des tenants 365/365** (359 + 6 nouvelles
+instances des routes email), achats 29/29, comptabilité/grand livre/saisie
+guidée/lettrage/clôture 94/94, tableau de bord/trésorerie/cashflow 39/39,
+pièces/exports/états/rapports/sauvegardes/santé 115/115 — **675 tests verts** ;
+ruff 0 (format appliqué) ; mypy strict 0 (198 fichiers) ; ESLint 0 ;
+tsc 0 ; Vitest 69/69 ; build Next.js OK (115 pages, route `/ventes` fr/en) ;
+migrations aller-retour 0022 → 0021 → 0022 + `alembic check` propre
+(« No new upgrade operations detected ») ; contrat OpenAPI réexporté =
+committé (vérifié par diff).
+
+**Reste** : relances automatiques configurables (lot 2) ; acomptes clients,
+avances fournisseurs, trop-perçus et remboursements (lot 3, migration 0023) ;
+échéanciers clients et export PDF/Excel de la balance âgée ; imputation multi-
+comptes ; WhatsApp (compte Business officiel requis — aucune intégration
+simulée ne sera présentée comme opérationnelle) ; phase 5 import/migration ;
+CI GitHub Actions toujours bloquée par la facturation du compte (aucune
+exécution GitHub n'a validé cette phase).
+- Suivi : `AUDIT_SUIVI_20261109.md` §40.

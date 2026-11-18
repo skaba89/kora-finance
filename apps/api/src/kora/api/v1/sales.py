@@ -13,7 +13,7 @@ from typing import Annotated, Any, Literal
 from urllib.parse import quote
 
 from fastapi import APIRouter, Query, Response, status
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from kora.accounting.entries import Actor
 from kora.api.v1.common import TENANT_ERRORS, WRITE_ERRORS, Limit, Offset, RequestBody
@@ -22,16 +22,17 @@ from kora.core.errors import ErrorResponse
 from kora.models.common import utcnow
 from kora.models.sales import (
     SalesDocument,
+    SalesDocumentEmail,
     SalesDocumentLine,
     SalesPayment,
     SalesPaymentAllocation,
     SalesReminder,
 )
-from kora.sales import accounting, payments, reminders, service
+from kora.sales import accounting, document_emails, payments, reminders, service
 from kora.sales.service import DocumentData, LineData
 from kora.tenancy.deps import EntriesPost, SalesManage, SalesRead, TenantContext
 from kora.worker.enqueue import enqueue_best_effort
-from kora.worker.tasks import send_sales_reminder
+from kora.worker.tasks import send_sales_document_email, send_sales_reminder
 
 router = APIRouter(prefix="/companies/{company_id}", tags=["ventes"])
 
@@ -820,3 +821,79 @@ def resend_reminder(
     reminders.resend_reminder(db, _actor(tenant, ctx), reminder_id)
     queued = enqueue_best_effort(send_sales_reminder, str(tenant.company_id), str(reminder_id))
     return ResendOut(email_queued=queued)
+
+
+# --- Envoi d'un document de vente par email avec son PDF (4D-bis) ------------
+
+
+class DocumentEmailIn(BaseModel):
+    """Envoi demandé : destinataire explicite facultatif (sinon l'email de la
+    fiche du tier) et message personnalisé facultatif."""
+
+    to: EmailStr | None = None
+    note: Annotated[str | None, Field(max_length=2000)] = None
+
+
+class DocumentEmailOut(BaseModel):
+    id: uuid.UUID
+    document_id: uuid.UUID
+    partner_id: uuid.UUID
+    email_to: str
+    note: str | None
+    created_at: str
+
+
+class DocumentEmailCreatedOut(BaseModel):
+    """Résultat d'un envoi enregistré : `email_queued` est False si la file
+    d'attente était injoignable — l'envoi reste enregistré et renvoyable."""
+
+    email: DocumentEmailOut
+    email_queued: bool
+
+
+class DocumentEmailsOut(BaseModel):
+    items: list[DocumentEmailOut]
+    total: int
+
+
+def _document_email_out(envoi: SalesDocumentEmail) -> DocumentEmailOut:
+    return DocumentEmailOut(
+        id=envoi.id,
+        document_id=envoi.document_id,
+        partner_id=envoi.partner_id,
+        email_to=envoi.email_to,
+        note=envoi.note,
+        created_at=envoi.created_at.isoformat(),
+    )
+
+
+@router.get("/sales/{document_id}/emails", responses={404: {"model": ErrorResponse}})
+def list_document_emails(
+    document_id: uuid.UUID, tenant: SalesRead, db: DbSession
+) -> DocumentEmailsOut:
+    """Historique immuable des envois email d'un document (du plus récent au
+    plus ancien)."""
+    items, total = document_emails.list_emails(db, tenant.company_id, document_id)
+    return DocumentEmailsOut(items=[_document_email_out(e) for e in items], total=total)
+
+
+@router.post(
+    "/sales/{document_id}/email",
+    status_code=status.HTTP_201_CREATED,
+    responses=WRITE_ERRORS,
+)
+def send_document_email(
+    document_id: uuid.UUID, body: DocumentEmailIn, tenant: SalesManage, db: DbSession, ctx: Ctx
+) -> DocumentEmailCreatedOut:
+    """Enregistre l'envoi d'un document numéroté par email et programme la
+    livraison du PDF en pièce jointe dans le worker. Le PDF est rendu depuis les
+    instantanés figés à l'émission ; une facture annulée ne part pas. Une panne
+    de la file n'annule pas l'enregistrement (`email_queued` False : l'envoi
+    reste renvoyable). Aucune écriture comptable."""
+    envoi = document_emails.create_email_send(
+        db,
+        _actor(tenant, ctx),
+        document_emails.DocumentEmailData(document_id=document_id, to=body.to, note=body.note),
+    )
+    queued = enqueue_best_effort(send_sales_document_email, str(tenant.company_id), str(envoi.id))
+    return DocumentEmailCreatedOut(email=_document_email_out(envoi), email_queued=queued)

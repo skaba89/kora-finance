@@ -2018,6 +2018,124 @@
         "title": "DocumentDetailOut",
         "type": "object"
       },
+      "DocumentEmailCreatedOut": {
+        "description": "Résultat d'un envoi enregistré : `email_queued` est False si la file\nd'attente était injoignable — l'envoi reste enregistré et renvoyable.",
+        "properties": {
+          "email": {
+            "$ref": "#/components/schemas/DocumentEmailOut"
+          },
+          "email_queued": {
+            "title": "Email Queued",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "email",
+          "email_queued"
+        ],
+        "title": "DocumentEmailCreatedOut",
+        "type": "object"
+      },
+      "DocumentEmailIn": {
+        "description": "Envoi demandé : destinataire explicite facultatif (sinon l'email de la\nfiche du tier) et message personnalisé facultatif.",
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "format": "email",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To"
+          }
+        },
+        "title": "DocumentEmailIn",
+        "type": "object"
+      },
+      "DocumentEmailOut": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "email_to": {
+            "title": "Email To",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "partner_id": {
+            "format": "uuid",
+            "title": "Partner Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "document_id",
+          "partner_id",
+          "email_to",
+          "note",
+          "created_at"
+        ],
+        "title": "DocumentEmailOut",
+        "type": "object"
+      },
+      "DocumentEmailsOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentEmailOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "DocumentEmailsOut",
+        "type": "object"
+      },
       "DocumentEntryIn": {
         "additionalProperties": false,
         "description": "Comptabilisation d'un document émis : le compte de produits est choisi par\nle comptable (défaut : numéro 701 du plan du dossier) ; la TVA suit les\ncomptes collectés des taux figés à l'émission.",
@@ -20079,6 +20197,188 @@
           }
         ],
         "summary": "Decide Quote",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/sales/{document_id}/email": {
+      "post": {
+        "description": "Enregistre l'envoi d'un document numéroté par email et programme la\nlivraison du PDF en pièce jointe dans le worker. Le PDF est rendu depuis les\ninstantanés figés à l'émission ; une facture annulée ne part pas. Une panne\nde la file n'annule pas l'enregistrement (`email_queued` False : l'envoi\nreste renvoyable). Aucune écriture comptable.",
+        "operationId": "send_document_email_api_v1_companies__company_id__sales__document_id__email_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentEmailIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentEmailCreatedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send Document Email",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/sales/{document_id}/emails": {
+      "get": {
+        "description": "Historique immuable des envois email d'un document (du plus récent au\nplus ancien).",
+        "operationId": "list_document_emails_api_v1_companies__company_id__sales__document_id__emails_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentEmailsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Document Emails",
         "tags": [
           "ventes"
         ]
