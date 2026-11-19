@@ -6,6 +6,10 @@ import { FlashBanner } from "@/components/flash/flash-banner";
 import { ActionForm } from "@/components/forms/action-form";
 import type { ActionState } from "@/lib/actions/state";
 
+// usePathname est lu par FlashProvider ; le test pilote la valeur courante.
+const path = vi.hoisted(() => ({ current: "/" }));
+vi.mock("next/navigation", () => ({ usePathname: () => path.current }));
+
 /** Pont entre le test et le contexte : expose showFlash au monde du test. */
 function Probe({ onReady }: { onReady: (show: (message: string) => void) => void }) {
   const ctx = useFlash();
@@ -26,6 +30,7 @@ function Pusher(onReady: (show: (message: string) => void) => void) {
 describe("bandeau de confirmation (flash)", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    path.current = "/";
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -58,6 +63,18 @@ describe("bandeau de confirmation (flash)", () => {
     expect(screen.getByRole("status")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Fermer" }));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("efface le bandeau au changement de page (contextuel)", () => {
+    let show: ((message: string) => void) | undefined;
+    const { rerender } = render(Pusher((fn) => (show = fn)));
+
+    act(() => show?.("Modifications enregistrées."));
+    expect(screen.getByRole("status")).toBeInTheDocument();
+
+    path.current = "/dossiers/1/journal-audit";
+    rerender(Pusher((fn) => (show = fn)));
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 

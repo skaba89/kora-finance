@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -30,6 +31,9 @@ const FlashContext = createContext<FlashContextValue | null>(null);
 /** Durée d'affichage du bandeau avant effacement automatique. */
 export const FLASH_DURATION_MS = 6000;
 
+/** Flash stocké : message + page où il a été poussé (contextuel). */
+type StoredFlash = { path: string; message: string };
+
 /**
  * Fournit le bandeau de confirmation à toute la page : les formulaires
  * poussent le message de succès renvoyé par leurs Server Actions et le
@@ -37,14 +41,26 @@ export const FLASH_DURATION_MS = 6000;
  * sans librairie de toasts).
  */
 export function FlashProvider({ children, closeLabel }: { children: ReactNode; closeLabel: string }) {
-  const [flash, setFlash] = useState<Flash | null>(null);
+  const [stored, setStored] = useState<StoredFlash | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pathname = usePathname();
 
-  const hideFlash = useCallback(() => setFlash(null), []);
+  // Le bandeau est contextuel : visible uniquement sur la page où le succès
+  // a eu lieu — un « enregistré » des paramètres ne traîne pas sur la page
+  // suivante. Dérivation au rendu, sans effet ni cascade de re-rendus.
+  const flash = useMemo<Flash | null>(
+    () => (stored && stored.path === pathname ? { message: stored.message, tone: "success" } : null),
+    [stored, pathname],
+  );
 
-  const showFlash = useCallback((message: string) => {
-    setFlash({ message, tone: "success" });
-  }, []);
+  const hideFlash = useCallback(() => setStored(null), []);
+
+  const showFlash = useCallback(
+    (message: string) => {
+      setStored({ path: pathname, message });
+    },
+    [pathname],
+  );
 
   // Chaque nouveau flash relance le minuteur ; l'ancien est nettoyé au passage.
   useEffect(() => {
