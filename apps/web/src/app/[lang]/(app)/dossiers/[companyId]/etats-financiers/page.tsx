@@ -2,12 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ExportLinks } from "@/components/ledger/export-links";
+import { PeriodFilter } from "@/components/ledger/period-filter";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getCompany, getCashFlowStatement, getFinancialStatements, getFiscalYears } from "@/lib/dal";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -106,35 +104,19 @@ export default async function StatementsPage({ params, searchParams }: PageProps
           <AlertDescription>{interpolate(s.expertWarning, { reference: tft.reference })}</AlertDescription>
         </Alert>
 
-        <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
+        <PeriodFilter
+          years={years}
+          yearId={year.id}
+          dateTo={dateTo}
+          locale={locale}
+          labels={{ fiscalYear: t.reports.fiscalYear, from: t.reports.from, to: t.reports.to, show: t.reports.show }}
+        >
           <input type="hidden" name="etat" value={view} />
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="etats-exercice">{t.reports.fiscalYear}</Label>
-            <select
-              id="etats-exercice"
-              name="exercice"
-              defaultValue={year.id}
-              className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-            >
-              {years.map((y) => (
-                <option key={y.id} value={y.id}>
-                  {formatDate(y.start_date, locale)} – {formatDate(y.end_date, locale)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="etats-au">{t.reports.to}</Label>
-            <Input id="etats-au" name="au" type="date" defaultValue={dateTo} className="w-auto" />
-          </div>
           <label className="flex h-9 items-center gap-2 text-sm">
             <input type="checkbox" name="tous" value="1" defaultChecked={showEmpty} />
             {s.showEmpty}
           </label>
-          <Button type="submit" variant="secondary">
-            {t.reports.show}
-          </Button>
-        </form>
+        </PeriodFilter>
 
         <nav className="mb-4 flex gap-1" aria-label={s.title}>
           {tab("bilan", s.balanceSheet)}
@@ -273,35 +255,19 @@ export default async function StatementsPage({ params, searchParams }: PageProps
         <AlertDescription>{interpolate(s.expertWarning, { reference: data.reference })}</AlertDescription>
       </Alert>
 
-      <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
+      <PeriodFilter
+        years={years}
+        yearId={year.id}
+        dateTo={dateTo}
+        locale={locale}
+        labels={{ fiscalYear: t.reports.fiscalYear, from: t.reports.from, to: t.reports.to, show: t.reports.show }}
+      >
         <input type="hidden" name="etat" value={view} />
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="etats-exercice">{t.reports.fiscalYear}</Label>
-          <select
-            id="etats-exercice"
-            name="exercice"
-            defaultValue={year.id}
-            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-          >
-            {years.map((y) => (
-              <option key={y.id} value={y.id}>
-                {formatDate(y.start_date, locale)} – {formatDate(y.end_date, locale)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="etats-au">{t.reports.to}</Label>
-          <Input id="etats-au" name="au" type="date" defaultValue={dateTo} className="w-auto" />
-        </div>
         <label className="flex h-9 items-center gap-2 text-sm">
           <input type="checkbox" name="tous" value="1" defaultChecked={showEmpty} />
           {s.showEmpty}
         </label>
-        <Button type="submit" variant="secondary">
-          {t.reports.show}
-        </Button>
-      </form>
+      </PeriodFilter>
 
       <nav className="mb-4 flex gap-1" aria-label={s.title}>
         {tab("bilan", s.balanceSheet)}
