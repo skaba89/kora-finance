@@ -212,6 +212,27 @@ email/WhatsApp, relances, balance âgée.
   le modèle des ventes ; page Achats fr/en (documents, décaissements, échéancier,
   bouton Comptabiliser avec `entries:post`) ; garde-fou retesté : aucun chemin
   d'émission ni de décaissement n'écrit en comptabilité).
+- **B3 — Acomptes clients, avances fournisseurs, trop-perçus, remboursements et
+  affectation ultérieure** ✅ (2026-11-19, branche `feature/kora-b3-acomptes-avances` :
+  migration 0024 `sales_refunds`/`purchase_refunds` (RLS forcée, `entry_id` RESTRICT)
+  + colonne `entry_id` sur les affectations (couverture comptable) ; un règlement
+  porte désormais un **reste non affecté** : acompte reçu sans facture (tier client
+  exigé) ou trop-perçu sur facture — comptabilisé au 4191 (sinon parent 419 du
+  référentiel préchargé), jamais au 411 ; miroir achats 4091/409 ; **affectation
+  ultérieure** à cibles absolues idempotentes (répéter = no-op, hausse seule,
+  disponible = montant − remboursements, soldes sous verrou FOR UPDATE, course
+  concurrente testée) ; **remboursements** immuables bornés au disponible, interlocks
+  contre-passation ; écritures explicites du comptable : règlement mixte (411x +
+  419/4191), **transfert d'acompte** (débit 4191/crédit 411x, journal OD) et
+  écriture de remboursement (débit 4191, crédit trésorerie) ; routes
+  `/payments/{id}/allocations`, `/payments/{id}/refund`, `/payment-refunds/{id}`
+  (+ `/entry`), `/payments/{id}/allocation-entry` et miroirs achats
+  (contrat 116→126 chemins, 148→158 opérations, 194→200 schémas, pur ajout) ;
+  pages Ventes et Achats fr/en (formulaire acompte/avance, badge « Non affecté »,
+  affectation/remboursement inline, transfert OD) ; PaymentIn évolue
+  rétrocompatiblement (allocations facultatif, amount et partner_id facultatifs) ;
+  22 tests nouveaux + deux tests datés en dur corrigés à la racine (échéances
+  dynamiques).)
 
 ## Phase 5 — Import et migration
 FEC, Excel, balance d'ouverture en tâche de fond, rapport de contrôle.

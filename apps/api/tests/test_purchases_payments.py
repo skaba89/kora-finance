@@ -14,10 +14,12 @@ décaissement n'écrit au grand livre (4F ne comptabilise que sur acte explicite
 
 import threading
 from collections.abc import Callable
+from datetime import timedelta
 
 from fastapi.testclient import TestClient
 from httpx2 import Response
 
+from kora.models.common import utcnow
 from tests.conftest import CompanyFixture
 from tests.test_purchases import Purchases, _facture_achat_brouillon
 from tests.test_sales import _creer_tva, _dossier
@@ -234,24 +236,28 @@ def test_decaissement_devise_et_tier_controles(
 
 def test_payables_aging_buckets(client: TestClient, make_company: MakeCompany) -> None:
     """Échéancier fournisseurs : une facture à échéance lointaine entre dans
-    not_due ; une facture échue de 45 jours entre dans d31_60."""
+    not_due ; une facture échue de 45 jours entre dans d31_60. Échéances
+    **dynamiques** : aucune date calendaire en dur (un jour en dur restait vert
+    jusqu'à sa date, puis cassait chaque jour suivant)."""
     company = _dossier(make_company)
     purchases = Purchases(client, company)
     tva_id = _creer_tva(client, company)
-    non_echue = _facture_achat_brouillon(purchases, tva_id, due_on="2026-12-31")
+    future = utcnow().date() + timedelta(days=45)
+    passee = utcnow().date() - timedelta(days=45)
+    non_echue = _facture_achat_brouillon(purchases, tva_id, due_on=future.isoformat())
     assert purchases.issue(non_echue).status_code == 200
     # Facture échue : brouillon créé avec échéance future (la création refuse
     # une échéance passée), échéance corrigée sur le brouillon, émission
     # rétrodatée à la date du fournisseur (rattrapage de saisie).
-    echue = _facture_achat_brouillon(purchases, tva_id, due_on="2026-12-31")
-    patched = purchases.patch(echue, {"due_on": "2026-05-04"})
+    echue = _facture_achat_brouillon(purchases, tva_id, due_on=future.isoformat())
+    patched = purchases.patch(echue, {"due_on": passee.isoformat()})
     assert patched.status_code == 200, patched.text
-    response = purchases.issue(echue, issued_on="2026-05-04")
+    response = purchases.issue(echue, issued_on=passee.isoformat())
     assert response.status_code == 200, response.text
     aging = client.get(
         f"/api/v1/companies/{company.id}/payables/aging",
         headers=company.headers,
-        params={"as_of": "2026-06-18"},
+        params={"as_of": utcnow().date().isoformat()},  # 45 jours après l'échéance
     ).json()
     assert aging["buckets"]["not_due"]["count"] == 1
     assert aging["buckets"]["d31_60"]["count"] == 1, aging["buckets"]

@@ -27,6 +27,7 @@ exercice clôturé est refusé (même règle que toute saisie).
 """
 
 import uuid
+from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -38,10 +39,12 @@ from kora.accounting.entries import (
     apply_generated,
     check_entry_date,
     post_pending,
+    reversal_id_of,
 )
 from kora.audit.service import record_event
 from kora.core.errors import BusinessRuleError, ConflictError, NotFoundError
 from kora.models.accounting import Account, TaxRate
+from kora.models.common import utcnow
 from kora.models.ledger import Journal, JournalEntry
 from kora.models.organization import FiscalYear
 from kora.models.partners import Partner
@@ -51,20 +54,30 @@ from kora.models.purchases import (
     PurchaseDocument,
     PurchaseDocumentLine,
     PurchasePayment,
+    PurchasePaymentAllocation,
+    PurchaseRefund,
 )
 from kora.models.sales import PaymentMethod
 from kora.purchases.service import _lock_document, format_document_number
 
 # Numéros SYSCOHADA des comptes par défaut, résolus dans le plan du dossier.
 SUPPLIER_ACCOUNT_NUMBER = "401"
+# Avances et acomptes versés (lot B-3) : le reste non affecté d'un décaissement
+# (avance versée sans facture ou trop-versé) se porte au 4091 — jamais au 401,
+# où il masquerait une dette réelle dans le bilan.
+ADVANCES_PAID_ACCOUNT_NUMBER = "4091"
+# Parent du référentiel préchargé : utilisé quand le dossier n'a pas créé le 4091.
+ADVANCES_PARENT_ACCOUNT_NUMBER = "409"
 PURCHASE_ACCOUNT_NUMBER = "601"
 CASH_ACCOUNT_NUMBER = "571"
 BANK_ACCOUNT_NUMBER = "521"
-# Journaux par défaut créés à l'initialisation du dossier : achats et trésorerie.
+# Journaux par défaut créés à l'initialisation du dossier : achats, trésorerie
+# et opérations diverses (transfert d'avance — aucun mouvement de trésorerie).
 ACHATS_JOURNAL_CODE = "AC"
 CASH_JOURNAL_CODE = "CA"
 MOBILE_MONEY_JOURNAL_CODE = "MM"
 BANK_JOURNAL_CODE = "BQ"
+OD_JOURNAL_CODE = "OD"
 
 
 def _resolve_account(session: Session, company_id: uuid.UUID, number: str, role: str) -> Account:
@@ -106,6 +119,30 @@ def _supplier_account(
         )
     return _resolve_account(
         session, company_id, SUPPLIER_ACCOUNT_NUMBER, "compte de tiers fournisseur"
+    )
+
+
+def _advances_account(session: Session, company_id: uuid.UUID) -> Account:
+    """Compte d'avances et acomptes versés : le 4091 précis du plan quand le
+    dossier l'a créé, sinon le parent 409 « Fournisseurs débiteurs » du
+    référentiel préchargé — l'avance reste portée hors du 401 (dettes réelles)
+    dans tous les cas, sans exiger une personnalisation du plan."""
+    precise = session.execute(
+        select(Account).where(
+            Account.tenant_id == company_id, Account.number == ADVANCES_PAID_ACCOUNT_NUMBER
+        )
+    ).scalar_one_or_none()
+    if precise is not None:
+        if not precise.is_active:
+            raise BusinessRuleError(
+                f"Le compte {ADVANCES_PAID_ACCOUNT_NUMBER} (avances versées) est désactivé."
+            )
+        return precise
+    return _resolve_account(
+        session,
+        company_id,
+        ADVANCES_PARENT_ACCOUNT_NUMBER,
+        "compte d'avances et acomptes versés (409)",
     )
 
 
@@ -308,7 +345,15 @@ def post_payment(
 ) -> JournalEntry:
     """Comptabilise un décaissement : écriture validée du journal de trésorerie
     (caisse, banque ou Mobile Money selon le mode de paiement), liée au
-    règlement. La course concurrente se sérialise sur le verrou du règlement."""
+    règlement. La course concurrente se sérialise sur le verrou du règlement.
+
+    La partie **affectée** au débit du compte de tiers fournisseur (le lettrage
+    commercial correspond à la comptabilité) ; le **reste non affecté** (avance
+    ou trop-versé, lot B-3) au débit du 4091 « Fournisseurs, avances et
+    acomptes versés » — jamais au 401, où il masquerait une dette dans le
+    bilan. Les affectations présentes à la comptabilisation sont couvertes par
+    cette écriture (`entry_id` posé) ; une affectation ultérieure restera non
+    couverte jusqu'au transfert d'avance explicite."""
     payment = session.execute(
         select(PurchasePayment)
         .where(PurchasePayment.tenant_id == actor.company_id, PurchasePayment.id == payment_id)
@@ -320,6 +365,14 @@ def post_payment(
         raise ConflictError(
             "Ce règlement est déjà comptabilisé : l'écriture est liée au règlement."
         )
+    allocations = sorted(
+        session.execute(
+            select(PurchasePaymentAllocation).where(
+                PurchasePaymentAllocation.payment_id == payment.id
+            )
+        ).scalars(),
+        key=lambda row: row.document_id,
+    )
     check_entry_date(session, actor.company_id, payment.paid_on)
     partner = session.execute(
         select(Partner).where(
@@ -348,6 +401,22 @@ def post_payment(
         )
     )
     journal = _journal_by_code(session, actor.company_id, journal_code)
+    lettres = sum(allocation.amount for allocation in allocations)
+    reste = payment.amount - lettres
+    lines = [
+        LineData(account_id=treasury.id, credit=payment.amount, label=partner.name[:200]),
+    ]
+    if lettres > 0:
+        lines.append(LineData(account_id=supplier.id, debit=lettres, label=partner.name[:200]))
+    if reste > 0:
+        advances = _advances_account(session, actor.company_id)
+        lines.append(
+            LineData(
+                account_id=advances.id,
+                debit=reste,
+                label=f"Avance {partner.name}"[:200],
+            )
+        )
     label = f"Décaissement fournisseur {partner.name}"[:200]
     entry = JournalEntry(
         id=uuid.uuid4(),
@@ -364,14 +433,13 @@ def post_payment(
             entry_date=payment.paid_on,
             label=label,
             reference=payment.reference,
-            lines=[
-                LineData(account_id=supplier.id, debit=payment.amount, label=partner.name[:200]),
-                LineData(account_id=treasury.id, credit=payment.amount, label=partner.name[:200]),
-            ],
+            lines=lines,
         ),
     )
     post_pending(session, actor, entry)
     payment.entry_id = entry.id
+    for allocation in allocations:
+        allocation.entry_id = entry.id
     record_event(
         session,
         action="purchase_payment.posted",
@@ -380,6 +448,237 @@ def post_payment(
         payload={
             "montant": payment.amount,
             "mode": payment.method,
+            "journal": journal.code,
+            "ecriture": entry.number,
+            "affecte": lettres,
+            "non_affecte": reste,
+        },
+        actor_user_id=actor.user_id,
+        ip_address=actor.ctx.ip_address,
+    )
+    session.commit()
+    return entry
+
+
+def post_allocation_entry(
+    session: Session,
+    actor: Actor,
+    payment_id: uuid.UUID,
+    *,
+    entry_date: date | None = None,
+) -> JournalEntry:
+    """Transfert d'avance (lot B-3) : couvre en comptabilité les affectations
+    ajoutées **après** la comptabilisation du règlement — débit du compte de
+    tiers fournisseur, crédit du 4091 « Fournisseurs, avances et acomptes
+    versés », au journal des opérations diverses (aucun mouvement de
+    trésorerie : le 4091 se reporte sur le 401x, l'avance devient un règlement
+    de factures). La date d'écriture est le jour du transfert (défaut :
+    aujourd'hui) — le reclassement s'inscrit dans l'exercice courant, ouvert.
+    Idempotence refusée : une affectation déjà couverte ne se transfère pas
+    deux fois (409) — la course concurrente se sérialise sur le verrou du
+    règlement."""
+    payment = session.execute(
+        select(PurchasePayment)
+        .where(PurchasePayment.tenant_id == actor.company_id, PurchasePayment.id == payment_id)
+        .with_for_update()
+    ).scalar_one_or_none()
+    if payment is None:
+        raise NotFoundError("Règlement introuvable dans ce dossier.")
+    if payment.entry_id is None:
+        raise ConflictError(
+            "Ce règlement n'est pas comptabilisé : ses affectations seront "
+            "couvertes par l'écriture du règlement — rien à transférer."
+        )
+    if reversal_id_of(session, actor.company_id, payment.entry_id) is not None:
+        raise ConflictError(
+            "L'écriture du règlement est contre-passée : rétablissez le "
+            "règlement avant de transférer ses avances."
+        )
+    non_couvertes = sorted(
+        session.execute(
+            select(PurchasePaymentAllocation).where(
+                PurchasePaymentAllocation.payment_id == payment.id,
+                PurchasePaymentAllocation.entry_id.is_(None),
+            )
+        ).scalars(),
+        key=lambda row: row.document_id,
+    )
+    if not non_couvertes:
+        raise ConflictError(
+            "Aucune affectation à transférer : les affectations de ce règlement "
+            "sont déjà couvertes en comptabilité."
+        )
+    jour = entry_date if entry_date is not None else utcnow().date()
+    check_entry_date(session, actor.company_id, jour)
+    partner = session.execute(
+        select(Partner).where(
+            Partner.tenant_id == actor.company_id, Partner.id == payment.partner_id
+        )
+    ).scalar_one()
+    supplier = _supplier_account(session, actor.company_id, partner.default_supplier_account_id)
+    advances = _advances_account(session, actor.company_id)
+    transfert = sum(allocation.amount for allocation in non_couvertes)
+    lines = [
+        LineData(account_id=supplier.id, debit=transfert, label=partner.name[:200]),
+    ]
+    for allocation in non_couvertes:
+        lines.append(
+            LineData(
+                account_id=advances.id,
+                credit=allocation.amount,
+                label=f"Transfert avance {partner.name}"[:200],
+            )
+        )
+    label = f"Transfert d'avance fournisseur {partner.name}"[:200]
+    entry = JournalEntry(
+        id=uuid.uuid4(),
+        tenant_id=actor.company_id,
+        label=label,
+        created_by_user_id=actor.user_id,
+    )
+    apply_generated(
+        session,
+        actor,
+        entry,
+        EntryData(
+            journal_id=_journal_by_code(session, actor.company_id, OD_JOURNAL_CODE).id,
+            entry_date=jour,
+            label=label,
+            reference=payment.reference,
+            lines=lines,
+        ),
+    )
+    post_pending(session, actor, entry)
+    for allocation in non_couvertes:
+        allocation.entry_id = entry.id
+    record_event(
+        session,
+        action="purchase_payment.allocation_entry_posted",
+        entity_type="purchase_payment",
+        entity_id=payment.id,
+        payload={
+            "transfert": transfert,
+            "affectations": len(non_couvertes),
+            "journal": OD_JOURNAL_CODE,
+            "ecriture": entry.number,
+        },
+        actor_user_id=actor.user_id,
+        ip_address=actor.ctx.ip_address,
+    )
+    session.commit()
+    return entry
+
+
+def post_refund_entry(
+    session: Session,
+    actor: Actor,
+    refund_id: uuid.UUID,
+    *,
+    cash_account_id: uuid.UUID | None = None,
+) -> JournalEntry:
+    """Comptabilise un remboursement reçu d'un fournisseur (lot B-3) : écriture
+    validée du journal de trésorerie selon le mode — débit du compte de
+    trésorerie (l'argent revient), crédit du 4091 « Fournisseurs, avances et
+    acomptes versés » (l'avance remboursée sort du bilan). Le règlement porteur
+    doit être comptabilisé et son écriture vivante : le remboursement ne fait
+    que sortir une part du débit d'avance déjà inscrit — sinon le 4091
+    partirait en crédit sans origine."""
+    refund = session.execute(
+        select(PurchaseRefund)
+        .where(PurchaseRefund.tenant_id == actor.company_id, PurchaseRefund.id == refund_id)
+        .with_for_update()
+    ).scalar_one_or_none()
+    if refund is None:
+        raise NotFoundError("Remboursement introuvable dans ce dossier.")
+    if refund.entry_id is not None:
+        raise ConflictError(
+            "Ce remboursement est déjà comptabilisé : l'écriture est liée au remboursement."
+        )
+    payment = session.execute(
+        select(PurchasePayment)
+        .where(
+            PurchasePayment.tenant_id == actor.company_id, PurchasePayment.id == refund.payment_id
+        )
+        .with_for_update()
+    ).scalar_one()
+    if payment.entry_id is None:
+        raise ConflictError(
+            "Le règlement porteur n'est pas comptabilisé : comptabilisez-le "
+            "d'abord (le 4091 doit exister avant d'être remboursé)."
+        )
+    if reversal_id_of(session, actor.company_id, payment.entry_id) is not None:
+        raise ConflictError(
+            "L'écriture du règlement porteur est contre-passée : son avance "
+            "n'existe plus au 4091 — le remboursement ne se comptabilise pas."
+        )
+    check_entry_date(session, actor.company_id, refund.refunded_on)
+    partner = session.execute(
+        select(Partner).where(
+            Partner.tenant_id == actor.company_id, Partner.id == payment.partner_id
+        )
+    ).scalar_one()
+    advances = _advances_account(session, actor.company_id)
+    if cash_account_id is not None:
+        treasury = _resolve_given_account(
+            session, actor.company_id, cash_account_id, "compte de trésorerie"
+        )
+    else:
+        number = (
+            CASH_ACCOUNT_NUMBER
+            if refund.method == PaymentMethod.CASH.value
+            else BANK_ACCOUNT_NUMBER
+        )
+        treasury = _resolve_account(session, actor.company_id, number, "compte de trésorerie")
+    journal_code = (
+        CASH_JOURNAL_CODE
+        if refund.method == PaymentMethod.CASH.value
+        else (
+            MOBILE_MONEY_JOURNAL_CODE
+            if refund.method == PaymentMethod.MOBILE_MONEY.value
+            else BANK_JOURNAL_CODE
+        )
+    )
+    journal = _journal_by_code(session, actor.company_id, journal_code)
+    label = f"Remboursement fournisseur {partner.name}"[:200]
+    entry = JournalEntry(
+        id=uuid.uuid4(),
+        tenant_id=actor.company_id,
+        label=label,
+        created_by_user_id=actor.user_id,
+    )
+    apply_generated(
+        session,
+        actor,
+        entry,
+        EntryData(
+            journal_id=journal.id,
+            entry_date=refund.refunded_on,
+            label=label,
+            reference=refund.reference,
+            lines=[
+                LineData(
+                    account_id=treasury.id,
+                    debit=refund.amount,
+                    label=partner.name[:200],
+                ),
+                LineData(
+                    account_id=advances.id,
+                    credit=refund.amount,
+                    label=f"Avance remboursée {partner.name}"[:200],
+                ),
+            ],
+        ),
+    )
+    post_pending(session, actor, entry)
+    refund.entry_id = entry.id
+    record_event(
+        session,
+        action="purchase_refund.posted",
+        entity_type="purchase_refund",
+        entity_id=refund.id,
+        payload={
+            "montant": refund.amount,
+            "mode": refund.method,
             "journal": journal.code,
             "ecriture": entry.number,
         },

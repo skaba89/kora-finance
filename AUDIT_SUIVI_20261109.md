@@ -1955,3 +1955,44 @@ compte (aucune exécution GitHub n'a validé cette phase) ; WhatsApp hors
 périmètre tant que le compte Business officiel n'est pas obtenu. Décision :
 **GO** pour le lot suivant (acomptes/avances, migration 0024).
 
+
+## 42. Phase B lot 3 — acomptes clients, avances fournisseurs, trop-perçus,
+remboursements et affectation ultérieure (2026-11-19)
+
+Branche `feature/kora-b3-acomptes-avances` (base `3d9a233` = PR #100). Chantier :
+lever l'interdiction de l'acompte flottant posée en 4C sous discipline comptable
+(4191/4091), avec affectation ultérieure idempotente et remboursements bornés.
+
+| # | Vérification | Méthode | Résultat |
+|---|---|---|---|
+| 1 | Migration 0024 aller-retour | pytest `test_migrations` + downgrade 0024→base→0024 | 3/3 + OK |
+| 2 | Synchro modèles/migrations | `alembic check` | « No new upgrade operations detected » |
+| 3 | Acompte/avance : montant saisi obligatoire, tier client/fournisseur exigé, refus d'un tier du mauvais côté | 22 tests dédiés (`test_sales_deposits.py`, `test_purchases_deposits.py`) | 22/22 |
+| 4 | Trop-perçu : facture soldée, excédent non affecté ; montant < affectations refusé | même suite | OK |
+| 5 | Affectation ultérieure : cibles absolues idempotentes (répétition = no-op), hausse seule, disponible = montant − remboursements, delta ≤ solde sous verrou ; dix courses concurrentes = invariant respecté | même suite (PostgreSQL réel) | OK |
+| 6 | Remboursements : bornés au reste non affecté, immuables, supprimables tant que non comptabilisés ; interlocks avec contre-passation | même suite | OK |
+| 7 | Garde-fou comptable | GET /entries après acompte/affectation/remboursement | 0 écriture |
+| 8 | Routage SYSCOHADA : acompte au 419 (parent du référentiel préchargé, 4191 choisi s'il existe — jamais au 411) ; mixte 411x + 419 ; transfert OD débit 4191/crédit 411x ; remboursement débit 4191/crédit trésorerie ; miroir achats 409/4091/401 | écritures vérifiées ligne à ligne (numéro de compte, débit, crédit, journal) | OK |
+| 9 | Isolation des tenants (RLS) sur les deux nouvelles tables et les nouveaux chemins | suite isolation complète | 419/419 |
+| 10 | Permissions : lecteur lit mais n'affecte ni ne rembourse ni ne transfère ; écritures réservées à `entries:post` | suite dédiée + tranches permissions | OK |
+| 11 | Contrat | openapi réexporté = committé ; 116→126 chemins / 148→158 opérations / 194→200 schémas (pur ajout) ; immuabilité des DELETE interdits maintenue | OK |
+| 12 | Static + front | ruff ; format ; mypy strict (src+tests) ; ESLint ; tsc (typegen) ; Vitest ; build pages fr/en | tous verts |
+
+Anomalies corrigées à cette occasion :
+
+1. **Tests datés en dur** (`test_balance_agee_buckets` : échéance « 2026-11-18 » ;
+   `test_payables_aging_buckets` : « 2026-12-31 ») — la création refuse une
+   échéance passée, donc chaque jour suivant la date écrite le test cassait ;
+   échéances et `as_of` désormais calculés dynamiquement (cause racine, pas un
+   recalage de date).
+2. **Comptes d'avances** : le référentiel préchargé ne porte que les parents
+   419/409 — résolution à deux niveaux (4191/4091 exacts si le dossier les a
+   créés, sinon le parent) : l'acompte reste présenté hors du 411/401 dans tous
+   les cas sans exiger une personnalisation du plan ni une migration du
+   référentiel (à valider par l'expert-comptable avec la personnalisation KF).
+
+Limites inchangées : CI GitHub Actions toujours bloquée par la facturation du
+compte (aucune exécution GitHub n'a validé cette phase) ; toutes les validations
+restent locales (PostgreSQL 16.2 réel, fakeredis, Moto, Mailpit). Décision :
+**GO** pour les échéanciers clients / balance âgée exportable et le lot hygiène
+(gitleaks whitelist), puis phase 5 import.
