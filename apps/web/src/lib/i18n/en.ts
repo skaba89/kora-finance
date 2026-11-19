@@ -27,6 +27,7 @@ export const en: typeof fr = {
     notFoundBody: "This page does not exist or you do not have access to it.",
     backHome: "Back to my companies",
     expertNotice: "To be validated by a Guinean chartered accountant.",
+    close: "Dismiss",
   },
   nav: {
     guided: "Guided entry",
