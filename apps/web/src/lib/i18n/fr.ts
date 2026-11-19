@@ -25,6 +25,7 @@ export const fr = {
     notFoundBody: "Cette page n'existe pas ou vous n'y avez pas accès.",
     backHome: "Retour à mes dossiers",
     expertNotice: "À valider par un expert-comptable guinéen.",
+    close: "Fermer",
   },
   errors: {
     title: "Une erreur est survenue",

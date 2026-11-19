@@ -4,6 +4,7 @@ import { type ReactNode, useActionState, useEffect, useRef } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { useFlash } from "@/components/flash/flash-context";
 import type { ActionState } from "@/lib/actions/state";
 import { cn } from "@/lib/utils";
 
@@ -42,9 +43,23 @@ export function ActionForm({
   const [state, formAction, pending] = useActionState(action, IDLE);
   const formRef = useRef<HTMLFormElement>(null);
 
+  // Hors du FlashProvider (pages publiques) : `hasFlash` est false et la
+  // confirmation reste affichée en place, comme avant.
+  const flashContext = useFlash();
+  const hasFlash = flashContext !== null;
+  const showFlash = flashContext?.showFlash;
+
   useEffect(() => {
     if (resetOnSuccess && state.status === "success") formRef.current?.reset();
   }, [state, resetOnSuccess]);
+
+  // Succès porté par le bandeau sous le PageHeader — visible même sur une
+  // page dense, là où la confirmation en place passait inaperçue (P2.3).
+  useEffect(() => {
+    if (hasFlash && state.status === "success" && state.message && showFlash) {
+      showFlash(state.message);
+    }
+  }, [hasFlash, showFlash, state]);
 
   return (
     <form
@@ -70,7 +85,7 @@ export function ActionForm({
           </AlertDescription>
         </Alert>
       ) : null}
-      {state.status === "success" && state.message ? (
+      {!hasFlash && state.status === "success" && state.message ? (
         <p role="status" className="text-sm text-emerald-700 dark:text-emerald-400">
           {state.message}
         </p>

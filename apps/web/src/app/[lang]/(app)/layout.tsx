@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { FlashProvider } from "@/components/flash/flash-context";
 import { InlineAction } from "@/components/forms/inline-action";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { LogoutButton } from "@/components/offline/logout-button";
@@ -80,7 +81,9 @@ export default async function AppLayout({ children }: LayoutProps<"/[lang]">) {
       <Suspense>
         <OfflineSyncSlot />
       </Suspense>
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-6">{children}</div>
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-6">
+        <FlashProvider closeLabel={t.common.close}>{children}</FlashProvider>
+      </div>
     </div>
   );
 }
