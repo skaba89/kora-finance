@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description: "Gestion financière et comptable pour les PME guinéennes",
   applicationName: "Kora Finance",
   appleWebApp: { capable: true, title: "Kora Finance", statusBarStyle: "default" },
-  icons: { apple: "/icons/apple-touch-icon.png" },
+  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {

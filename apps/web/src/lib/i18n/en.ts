@@ -28,6 +28,14 @@ export const en: typeof fr = {
     backHome: "Back to my companies",
     expertNotice: "To be validated by a Guinean chartered accountant.",
   },
+  errors: {
+    title: "Something went wrong",
+    description:
+      "This screen could not be displayed. You can try again — data already saved is intact.",
+    retry: "Try again",
+    backToCompany: "Back to the company dashboard",
+    detailsSummary: "Technical details (for support)",
+  },
   nav: {
     guided: "Guided entry",
     offline: "Offline",

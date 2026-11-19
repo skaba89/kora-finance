@@ -26,6 +26,14 @@ export const fr = {
     backHome: "Retour à mes dossiers",
     expertNotice: "À valider par un expert-comptable guinéen.",
   },
+  errors: {
+    title: "Une erreur est survenue",
+    description:
+      "Cet écran n'a pas pu être affiché. Vous pouvez réessayer : vos données déjà enregistrées sont intactes.",
+    retry: "Réessayer",
+    backToCompany: "Retour au tableau de bord du dossier",
+    detailsSummary: "Détails techniques (pour le support)",
+  },
   nav: {
     guided: "Saisie guidée",
     offline: "Hors connexion",
