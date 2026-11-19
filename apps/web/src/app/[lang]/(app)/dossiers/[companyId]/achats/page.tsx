@@ -1,36 +1,19 @@
 import type { Metadata } from "next";
 
-import { ActionForm } from "@/components/forms/action-form";
-import { Field, SelectField } from "@/components/forms/field";
-import { InlineAction } from "@/components/forms/inline-action";
 import { PageHeader } from "@/components/page-header";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import {
+  PurchasesAgingCard,
+  PurchasesCreateDocumentCard,
+} from "@/components/purchases/purchases-cards";
+import { PurchasesDocumentsTable } from "@/components/purchases/purchases-documents-table";
+import { PurchasesFilters } from "@/components/purchases/purchases-filters";
+import {
+  PurchasesAdvanceFormCard,
+  PurchasesPaymentFormCard,
+} from "@/components/purchases/purchases-payment-forms";
+import { PurchasesPaymentsTable } from "@/components/purchases/purchases-payments-table";
+import { activeRateOptions, PURCHASE_STATUSES } from "@/components/purchases/labels";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  allocatePurchasePaymentAction,
-  cancelPurchaseInvoiceAction,
-  createAdvanceAction,
-  createPurchaseDocumentAction,
-  createPurchasePaymentAction,
-  deletePurchaseDocumentAction,
-  deletePurchasePaymentAction,
-  deletePurchaseRefundAction,
-  issuePurchaseDocumentAction,
-  postPurchaseAllocationEntryAction,
-  postPurchaseDocumentEntryAction,
-  postPurchasePaymentEntryAction,
-  postPurchaseRefundEntryAction,
-  refundPurchasePaymentAction,
-} from "@/lib/actions/purchases";
 import {
   can,
   getCompany,
@@ -40,7 +23,6 @@ import {
   getPurchasePayments,
   getTaxRates,
 } from "@/lib/dal";
-import { formatMoney } from "@/lib/format";
 import { getDictionary } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -48,13 +30,14 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.purchases.title };
 }
 
-const STATUSES = ["DRAFT", "ISSUED", "CANCELLED"] as const;
-
 /** Page achats (4F) : factures et avoirs fournisseurs à numérotation interne
  * sans trou (FACH/AVF), décaissements lettrés et échéancier fournisseurs.
  * Enregistrer un document n'écrit rien en comptabilité ; la comptabilisation
  * est un acte explicite du comptable : elle crée l'écriture validée du journal
- * des achats et la lie au document ou au décaissement. */
+ * des achats et la lie au document ou au décaissement.
+ *
+ * La composition est déléguée aux composants de `@/components/purchases/` :
+ * cette page charge les données, résout les permissions et assemble. */
 export default async function PurchasesPage({
   params,
   searchParams,
@@ -65,7 +48,7 @@ export default async function PurchasesPage({
   const [{ companyId }, { kind, statut }] = await Promise.all([params, searchParams]);
   const kindParam =
     kind === "supplier_invoice" || kind === "supplier_credit_note" ? kind : undefined;
-  const statusParam = STATUSES.find((value) => value === statut);
+  const statusParam = PURCHASE_STATUSES.find((value) => value === statut);
   const [{ t }, company, documents, partners, taxRates, payments, aging] = await Promise.all([
     getDictionary(),
     getCompany(companyId),
@@ -82,65 +65,16 @@ export default async function PurchasesPage({
   ]);
 
   const manage = can(company, "purchases:manage");
+  // La comptabilisation est un acte comptable : permission entries:post.
   const canPost = can(company, "entries:post");
-  const today = new Date().toISOString().slice(0, 10);
-  const rateOptions = taxRates
-    .filter((rate) => {
-      const validTo = rate.valid_to ?? null;
-      return rate.valid_from <= today && (validTo == null || validTo >= today);
-    })
-    .map((rate) => ({ value: rate.id, label: `${rate.label} (${rate.rate_basis_points / 100} %)` }));
-
-  const kindLabel = (value: string) =>
-    value === "supplier_credit_note"
-      ? t.purchases.kinds.supplierCreditNote
-      : t.purchases.kinds.supplierInvoice;
-  const statusLabel = (value: string) =>
-    (t.purchases.statuses as Record<string, string>)[value] ?? value;
-  const statusTone = (value: string) =>
-    value === "CANCELLED" ? "destructive" : value === "DRAFT" ? "secondary" : "default";
-  const displayNumber = (kind: string, number: number | null) =>
-    number == null ? "—" : `${kind === "supplier_credit_note" ? "AVF" : "FACH"}-${number}`;
+  const rateOptions = activeRateOptions(taxRates);
 
   return (
     <>
       <PageHeader title={t.purchases.title} subtitle={t.purchases.subtitle} />
       <p className="text-muted-foreground -mt-4 mb-4 text-xs">{t.purchases.noPostingNotice}</p>
 
-      <form method="get" className="mb-4 flex flex-wrap items-end gap-3 text-sm">
-        <label className="flex flex-col gap-1">
-          <span className="text-muted-foreground text-xs">{t.common.filter}</span>
-          <select
-            name="kind"
-            defaultValue={kindParam ?? ""}
-            aria-label={t.common.filter}
-            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-          >
-            <option value="">{t.purchases.filterAll}</option>
-            <option value="supplier_invoice">{t.purchases.kinds.supplierInvoice}</option>
-            <option value="supplier_credit_note">{t.purchases.kinds.supplierCreditNote}</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-muted-foreground text-xs">{t.common.filter}</span>
-          <select
-            name="statut"
-            defaultValue={statusParam ?? ""}
-            aria-label={t.common.filter}
-            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-          >
-            <option value="">{t.purchases.filterAll}</option>
-            {STATUSES.map((status: string) => (
-              <option key={status} value={status}>
-                {statusLabel(status)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Button type="submit" variant="outline" size="sm">
-          {t.purchases.apply}
-        </Button>
-      </form>
+      <PurchasesFilters t={t} kindParam={kindParam} statusParam={statusParam} />
 
       <Card>
         <CardHeader>
@@ -150,224 +84,21 @@ export default async function PurchasesPage({
           {documents.items.length === 0 ? (
             <p className="text-muted-foreground text-sm">{t.purchases.empty}</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t.purchases.numberLabel}</TableHead>
-                  <TableHead>{t.purchases.kindLabel}</TableHead>
-                  <TableHead>{t.purchases.statusLabel}</TableHead>
-                  <TableHead>{t.purchases.totalLabel}</TableHead>
-                  <TableHead>{t.purchases.outstandingLabel}</TableHead>
-                  <TableHead>{t.purchases.issuedLabel}</TableHead>
-                  <TableHead>{t.purchases.referenceLabel}</TableHead>
-                  <TableHead className="text-right">{t.common.actions}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {documents.items.map((document) => (
-                  <TableRow key={document.id}>
-                    <TableCell className="font-mono text-xs">
-                      {displayNumber(document.doc_kind, document.number)}
-                      {document.entry_id != null && (
-                        <span className="ml-2">
-                          <Badge variant="outline">{t.purchases.postedBadge}</Badge>
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>{kindLabel(document.doc_kind)}</TableCell>
-                    <TableCell>
-                      <Badge variant={statusTone(document.status)}>
-                        {statusLabel(document.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{formatMoney(document.total_ttc, document.currency)}</TableCell>
-                    <TableCell>
-                      {document.payment_status != null ? (
-                        <Badge
-                          variant={
-                            document.payment_status === "paid"
-                              ? "outline"
-                              : document.payment_status === "partial"
-                                ? "secondary"
-                                : "default"
-                          }
-                        >
-                          {(t.purchases.paymentStatus as Record<string, string>)[
-                            document.payment_status
-                          ]}{" "}
-                          {formatMoney(document.outstanding_ttc ?? 0, document.currency)}
-                        </Badge>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell>{document.issued_on ?? "—"}</TableCell>
-                    <TableCell className="font-mono text-xs">{document.reference ?? "—"}</TableCell>
-                    <TableCell className="space-x-2 text-right">
-                      {manage && document.status === "DRAFT" && (
-                        <InlineAction
-                          action={issuePurchaseDocumentAction.bind(null, companyId, document.id)}
-                          confirm={t.purchases.confirmNumbering}
-                          label={t.purchases.issue}
-                          pendingLabel={t.common.pending}
-                        />
-                      )}
-                      {manage && document.status === "DRAFT" && (
-                        <InlineAction
-                          action={deletePurchaseDocumentAction.bind(null, companyId, document.id)}
-                          confirm={t.purchases.confirmGeneric}
-                          label={t.common.remove}
-                          pendingLabel={t.common.pending}
-                        />
-                      )}
-                      {manage &&
-                        document.status === "ISSUED" &&
-                        document.doc_kind === "supplier_invoice" && (
-                          <InlineAction
-                            action={cancelPurchaseInvoiceAction.bind(null, companyId, document.id)}
-                            confirm={t.purchases.confirmCancel}
-                            label={t.purchases.cancel}
-                            pendingLabel={t.common.pending}
-                          />
-                        )}
-                      {canPost && document.status === "ISSUED" && document.entry_id == null && (
-                        <InlineAction
-                          action={postPurchaseDocumentEntryAction.bind(null, companyId, document.id)}
-                          confirm={t.purchases.confirmPost}
-                          label={t.purchases.postButton}
-                          pendingLabel={t.common.pending}
-                        />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <PurchasesDocumentsTable
+              companyId={companyId}
+              documents={documents}
+              t={t}
+              manage={manage}
+              canPost={canPost}
+            />
           )}
         </CardContent>
       </Card>
 
       {manage && (
         <>
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>{t.purchases.paymentFormTitle}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ActionForm
-              action={createPurchasePaymentAction.bind(null, companyId)}
-              className="space-y-4"
-              submitLabel={t.purchases.paymentRecord}
-              pendingLabel={t.common.pending}
-            >
-              <div className="grid gap-4 sm:grid-cols-3">
-                <SelectField
-                  label={t.purchases.paymentDoc}
-                  name="document_id"
-                  required
-                  options={[
-                    { value: "", label: t.purchases.paymentDocPlaceholder },
-                    ...documents.items
-                      .filter(
-                        (document) =>
-                          document.doc_kind === "supplier_invoice" &&
-                          document.status === "ISSUED" &&
-                          (document.outstanding_ttc ?? 0) > 0,
-                      )
-                      .map((document) => ({
-                        value: document.id,
-                        label: `FACH-${document.number} — ${t.purchases.outstandingLabel} ${formatMoney(document.outstanding_ttc ?? 0, document.currency)}`,
-                      })),
-                  ]}
-                />
-                <Field
-                  label={t.purchases.paymentAmount}
-                  name="amount"
-                  type="number"
-                  min="1"
-                  step="1"
-                  required
-                />
-                <Field label={t.purchases.paymentDate} name="paid_on" type="date" required />
-                <SelectField
-                  label={t.purchases.paymentMethod}
-                  name="method"
-                  options={(
-                    [
-                      "BANK_TRANSFER",
-                      "MOBILE_MONEY",
-                      "CASH",
-                      "CHECK",
-                      "CARD",
-                      "OTHER",
-                    ] as const
-                  ).map((method) => ({
-                    value: method,
-                    label: (t.purchases.methods as Record<string, string>)[method] ?? method,
-                  }))}
-                />
-                <Field label={t.purchases.paymentReference} name="reference" />
-              </div>
-              <p className="text-muted-foreground text-xs">{t.purchases.paymentHint}</p>
-            </ActionForm>
-          </CardContent>
-        </Card>
-
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>{t.purchases.advanceTitle}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ActionForm
-              action={createAdvanceAction.bind(null, companyId)}
-              className="space-y-4"
-              submitLabel={t.purchases.advanceRecord}
-              pendingLabel={t.common.pending}
-            >
-              <div className="grid gap-4 sm:grid-cols-3">
-                <SelectField
-                  label={t.purchases.advancePartner}
-                  name="partner_id"
-                  required
-                  options={[
-                    { value: "", label: t.purchases.advancePartner },
-                    ...partners.items
-                      .filter((partner) => partner.is_supplier)
-                      .map((partner) => ({ value: partner.id, label: partner.name })),
-                  ]}
-                />
-                <Field
-                  label={t.purchases.advanceAmount}
-                  name="amount"
-                  type="number"
-                  min="1"
-                  step="1"
-                  required
-                />
-                <Field label={t.purchases.paymentDate} name="paid_on" type="date" required />
-                <SelectField
-                  label={t.purchases.paymentMethod}
-                  name="method"
-                  options={(
-                    [
-                      "BANK_TRANSFER",
-                      "MOBILE_MONEY",
-                      "CASH",
-                      "CHECK",
-                      "CARD",
-                      "OTHER",
-                    ] as const
-                  ).map((method) => ({
-                    value: method,
-                    label: (t.purchases.methods as Record<string, string>)[method] ?? method,
-                  }))}
-                />
-                <Field label={t.purchases.paymentReference} name="reference" />
-              </div>
-              <p className="text-muted-foreground text-xs">{t.purchases.advanceHint}</p>
-            </ActionForm>
-          </CardContent>
-        </Card>
+          <PurchasesPaymentFormCard companyId={companyId} documents={documents} t={t} />
+          <PurchasesAdvanceFormCard companyId={companyId} partners={partners} t={t} />
         </>
       )}
 
@@ -379,314 +110,27 @@ export default async function PurchasesPage({
           {payments.items.length === 0 ? (
             <p className="text-muted-foreground text-sm">{t.purchases.paymentsEmpty}</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t.purchases.paymentDate}</TableHead>
-                  <TableHead>{t.purchases.paymentMethod}</TableHead>
-                  <TableHead>{t.purchases.totalLabel}</TableHead>
-                  <TableHead>{t.purchases.unallocatedBadge}</TableHead>
-                  <TableHead>{t.purchases.paymentsAllocations}</TableHead>
-                  <TableHead>{t.purchases.paymentReference}</TableHead>
-                  <TableHead className="text-right">{t.common.actions}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payments.items.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell>{payment.paid_on}</TableCell>
-                    <TableCell>
-                      {(t.purchases.methods as Record<string, string>)[payment.method] ??
-                        payment.method}
-                    </TableCell>
-                    <TableCell>{formatMoney(payment.amount, payment.currency)}</TableCell>
-                    <TableCell>
-                      {payment.unallocated > 0 ? (
-                        <Badge variant="secondary">
-                          {t.purchases.unallocatedBadge}{" "}
-                          {formatMoney(payment.unallocated, payment.currency)}
-                        </Badge>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {payment.allocations
-                        .map((allocation) => {
-                          const target = documents.items.find(
-                            (document) => document.id === allocation.document_id,
-                          );
-                          return target?.number != null ? `FACH-${target.number}` : "…";
-                        })
-                        .join(", ")}
-                    </TableCell>
-                    <TableCell>{payment.reference ?? "—"}</TableCell>
-                    <TableCell className="space-x-2 text-right">
-                      {canPost && payment.entry_id == null && (
-                        <InlineAction
-                          action={postPurchasePaymentEntryAction.bind(null, companyId, payment.id)}
-                          confirm={t.purchases.confirmPost}
-                          label={t.purchases.postButton}
-                          pendingLabel={t.common.pending}
-                        />
-                      )}
-                      {canPost &&
-                        payment.entry_id != null &&
-                        payment.allocations.some((allocation) => allocation.entry_id == null) && (
-                          <InlineAction
-                            action={postPurchaseAllocationEntryAction.bind(null, companyId, payment.id)}
-                            label={t.purchases.allocationTransfer}
-                            pendingLabel={t.common.pending}
-                          />
-                        )}
-                      {manage && payment.unallocated > 0 && (
-                        <details className="mt-1">
-                          <summary className="cursor-pointer text-xs underline">
-                            {t.purchases.allocateAction}
-                          </summary>
-                          <ActionForm
-                            action={allocatePurchasePaymentAction.bind(null, companyId, payment.id)}
-                            className="mt-2 space-y-2"
-                            submitLabel={t.purchases.allocateAction}
-                            pendingLabel={t.common.pending}
-                          >
-                            <SelectField
-                              label={t.purchases.paymentDoc}
-                              name="document_id"
-                              required
-                              options={documents.items
-                                .filter(
-                                  (document) =>
-                                    document.doc_kind === "supplier_invoice" &&
-                                    document.status === "ISSUED" &&
-                                    document.partner_id === payment.partner_id,
-                                )
-                                .map((document) => ({
-                                  value: document.id,
-                                  label: `FACH-${document.number} — ${t.purchases.outstandingLabel} ${formatMoney(document.outstanding_ttc ?? 0, document.currency)}`,
-                                }))}
-                            />
-                            <Field
-                              label={t.purchases.allocateTarget}
-                              name="target"
-                              type="number"
-                              min="1"
-                              step="1"
-                              required
-                            />
-                            <p className="text-muted-foreground text-xs">{t.purchases.allocateHint}</p>
-                          </ActionForm>
-                        </details>
-                      )}
-                      {manage && payment.unallocated > 0 && (
-                        <details className="mt-1">
-                          <summary className="cursor-pointer text-xs underline">
-                            {t.purchases.refundAction}
-                          </summary>
-                          <ActionForm
-                            action={refundPurchasePaymentAction.bind(null, companyId, payment.id)}
-                            className="mt-2 space-y-2"
-                            submitLabel={t.purchases.refundAction}
-                            pendingLabel={t.common.pending}
-                          >
-                            <Field
-                              label={t.purchases.refundAmount}
-                              name="amount"
-                              type="number"
-                              min="1"
-                              step="1"
-                              required
-                            />
-                            <Field
-                              label={t.purchases.paymentDate}
-                              name="refunded_on"
-                              type="date"
-                              required
-                            />
-                            <p className="text-muted-foreground text-xs">{t.purchases.refundTitle}</p>
-                          </ActionForm>
-                        </details>
-                      )}
-                      {manage &&
-                        payment.refunds.map((refund) => (
-                          <div key={refund.id} className="mt-1 text-xs">
-                            <span className="text-muted-foreground">{t.purchases.refundsTitle} :</span>{" "}
-                            {formatMoney(refund.amount, refund.currency)} — {refund.refunded_on}
-                            {canPost && refund.entry_id == null && (
-                              <InlineAction
-                                action={postPurchaseRefundEntryAction.bind(null, companyId, refund.id)}
-                                label={t.purchases.refundPost}
-                                pendingLabel={t.common.pending}
-                              />
-                            )}
-                            {manage && refund.entry_id == null && (
-                              <InlineAction
-                                action={deletePurchaseRefundAction.bind(null, companyId, refund.id)}
-                                label={t.common.remove}
-                                pendingLabel={t.common.pending}
-                              />
-                            )}
-                          </div>
-                        ))}
-                      {manage && (
-                        <InlineAction
-                          action={deletePurchasePaymentAction.bind(null, companyId, payment.id)}
-                          confirm={t.purchases.confirmPaymentDelete}
-                          label={t.common.remove}
-                          pendingLabel={t.common.pending}
-                        />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <PurchasesPaymentsTable
+              companyId={companyId}
+              payments={payments}
+              documents={documents}
+              t={t}
+              manage={manage}
+              canPost={canPost}
+            />
           )}
         </CardContent>
       </Card>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>{t.purchases.agingTitle}</CardTitle>
-          <p className="text-muted-foreground text-sm">
-            {t.purchases.agingAsOf} {aging.as_of} —{" "}
-            {formatMoney(aging.grand_total_ttc, company.company.currency)}
-          </p>
-        </CardHeader>
-        <CardContent>
-          {aging.grand_total_ttc === 0 ? (
-            <p className="text-muted-foreground text-sm">{t.purchases.agingEmpty}</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t.purchases.agingTitle}</TableHead>
-                  <TableHead>{t.purchases.agingCount}</TableHead>
-                  <TableHead className="text-right">{t.purchases.agingTotal}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(["not_due", "d1_30", "d31_60", "d61_90", "d90_plus"] as const).map((bucket) => {
-                  const line = aging.buckets[bucket];
-                  if (!line || line.count === 0) return null;
-                  return (
-                    <TableRow key={bucket}>
-                      <TableCell>
-                        {(t.purchases.agingBucket as Record<string, string>)[bucket]}
-                      </TableCell>
-                      <TableCell>{line.count}</TableCell>
-                      <TableCell className="text-right">
-                        {formatMoney(line.total_ttc, company.company.currency)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <PurchasesAgingCard aging={aging} currency={company.company.currency} t={t} />
 
       {manage && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>{t.purchases.createTitle}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ActionForm
-              action={createPurchaseDocumentAction.bind(null, companyId)}
-              className="space-y-4"
-              submitLabel={t.purchases.create}
-              pendingLabel={t.common.pending}
-            >
-              <div className="grid gap-4 sm:grid-cols-3">
-                <SelectField
-                  label={t.purchases.kindLabel}
-                  name="doc_kind"
-                  required
-                  options={[
-                    { value: "supplier_invoice", label: t.purchases.kinds.supplierInvoice },
-                    {
-                      value: "supplier_credit_note",
-                      label: t.purchases.kinds.supplierCreditNote,
-                    },
-                  ]}
-                />
-                <SelectField
-                  label={t.purchases.partnerLabel}
-                  name="partner_id"
-                  required
-                  options={[
-                    { value: "", label: t.purchases.partnerPlaceholder },
-                    ...partners.items.map((partner) => ({
-                      value: partner.id,
-                      label: partner.name,
-                    })),
-                  ]}
-                />
-                <Field label={t.purchases.reference} name="reference" />
-              </div>
-              {[1, 2, 3].map((slot) => (
-                <fieldset key={slot} className="grid gap-3 rounded-md border p-3 sm:grid-cols-6">
-                  <legend className="text-muted-foreground px-1 text-xs">
-                    {t.purchases.lineTitle} {slot}
-                  </legend>
-                  <div className="sm:col-span-2">
-                    <Field label={t.purchases.lineLabel} name={`label_${slot}`} />
-                  </div>
-                  <Field
-                    label={t.purchases.lineQty}
-                    name={`qty_${slot}`}
-                    type="number"
-                    step="0.001"
-                    min="0.001"
-                  />
-                  <Field
-                    label={t.purchases.linePrice}
-                    name={`price_${slot}`}
-                    type="number"
-                    min="0"
-                  />
-                  <Field
-                    label={t.purchases.lineDiscount}
-                    name={`discount_${slot}`}
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                  />
-                  <SelectField
-                    label={t.purchases.lineTax}
-                    name={`tax_mode_${slot}`}
-                    options={[
-                      { value: "rate", label: t.purchases.lineTaxRate },
-                      { value: "exempt", label: t.purchases.lineTaxExempt },
-                    ]}
-                  />
-                  <div className="sm:col-span-2">
-                    <SelectField
-                      label={t.purchases.lineTaxRateChoice}
-                      name={`tax_rate_${slot}`}
-                      options={[
-                        { value: "", label: t.purchases.lineTaxNone },
-                        ...rateOptions,
-                      ]}
-                    />
-                  </div>
-                  <div className="sm:col-span-3">
-                    <Field label={t.purchases.lineTaxReason} name={`tax_reason_${slot}`} />
-                  </div>
-                </fieldset>
-              ))}
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Field label={t.purchases.dueOn} name="due_on" type="date" />
-                <Field label={t.purchases.notes} name="notes" />
-              </div>
-              <p className="text-muted-foreground text-xs">{t.purchases.createHint}</p>
-              <p className="text-muted-foreground text-xs">{t.purchases.mentionsNotice}</p>
-            </ActionForm>
-          </CardContent>
-        </Card>
+        <PurchasesCreateDocumentCard
+          companyId={companyId}
+          partners={partners}
+          rateOptions={rateOptions}
+          t={t}
+        />
       )}
     </>
   );
