@@ -6,16 +6,12 @@ import { FlashBanner } from "@/components/flash/flash-banner";
 import { ActionForm } from "@/components/forms/action-form";
 import type { ActionState } from "@/lib/actions/state";
 
-// usePathname est lu par FlashProvider ; le test pilote la valeur courante.
-const path = vi.hoisted(() => ({ current: "/" }));
-vi.mock("next/navigation", () => ({ usePathname: () => path.current }));
-
 /** Pont entre le test et le contexte : expose showFlash au monde du test. */
 function Probe({ onReady }: { onReady: (show: (message: string) => void) => void }) {
   const ctx = useFlash();
   if (!ctx) throw new Error("Probe doit être rendu dans FlashProvider");
   onReady(ctx.showFlash);
-  return <span data-testid="state">{ctx.flash ? "shown" : "empty"}</span>;
+  return <span data-testid="state">{ctx.stored ? "shown" : "empty"}</span>;
 }
 
 function Pusher(onReady: (show: (message: string) => void) => void) {
@@ -30,7 +26,8 @@ function Pusher(onReady: (show: (message: string) => void) => void) {
 describe("bandeau de confirmation (flash)", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    path.current = "/";
+    // Page courante propre : le pushState du test précédent ne traîne pas.
+    window.history.pushState({}, "", "/");
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -73,7 +70,9 @@ describe("bandeau de confirmation (flash)", () => {
     act(() => show?.("Modifications enregistrées."));
     expect(screen.getByRole("status")).toBeInTheDocument();
 
-    path.current = "/dossiers/1/journal-audit";
+    // Navigation client : la page suivante re-rend le banner, qui détecte
+    // le nouveau pathname via window.location et masque le flash d'ailleurs.
+    window.history.pushState({}, "", "/dossiers/1/journal-audit");
     rerender(Pusher((fn) => (show = fn)));
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
