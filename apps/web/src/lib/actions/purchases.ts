@@ -228,3 +228,159 @@ export async function postPurchasePaymentEntryAction(
   refresh();
   return { status: "success", message: t.purchases.paymentPosted };
 }
+
+/** Crée une avance fournisseur (lot B-3) : argent versé sans facture visée. Le
+ * montant reste non affecté jusqu'à l'affectation ultérieure ou au
+ * remboursement — jamais comptabilisé comme un décaissement lettré. */
+export async function createAdvanceAction(
+  companyId: string,
+  _: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const t = await actionDictionary();
+  const partnerId = field(formData, "partner_id");
+  const amount = Number(field(formData, "amount") || "0");
+  if (!partnerId || !Number.isFinite(amount) || amount <= 0) {
+    return { status: "error", message: t.purchases.advanceAmountRequired };
+  }
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/purchase-payments",
+    {
+      params: { path: { company_id: companyId } },
+      body: {
+        paid_on: field(formData, "paid_on") || new Date().toISOString().slice(0, 10),
+        method: (field(formData, "method") || "BANK_TRANSFER") as
+          | "CASH"
+          | "BANK_TRANSFER"
+          | "MOBILE_MONEY"
+          | "CHECK"
+          | "CARD"
+          | "OTHER",
+        allocations: [],
+        amount: Math.round(amount),
+        partner_id: partnerId,
+        reference: field(formData, "reference") || undefined,
+        notes: field(formData, "notes") || undefined,
+      },
+    },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  return { status: "success", message: t.purchases.advanceRecorded };
+}
+
+/** Affecte ultérieurement le reste non affecté d'un décaissement (avance ou
+ * trop-versé) à une facture fournisseur émise du même tier (lot B-3) : cible
+ * **absolue**, idempotente, hausse seule, jamais au-delà du disponible. */
+export async function allocatePurchasePaymentAction(
+  companyId: string,
+  paymentId: string,
+  _: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const t = await actionDictionary();
+  const documentId = field(formData, "document_id");
+  const target = Number(field(formData, "target") || "0");
+  if (!documentId || !Number.isFinite(target) || target <= 0) {
+    return { status: "error", message: t.purchases.allocationTargetRequired };
+  }
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/purchase-payments/{payment_id}/allocations",
+    {
+      params: { path: { company_id: companyId, payment_id: paymentId } },
+      body: { allocations: [{ document_id: documentId, amount: Math.round(target) }] },
+    },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  return { status: "success", message: t.purchases.allocationsAdded };
+}
+
+/** Constate le retour par le fournisseur d'une part du reste non affecté d'un
+ * décaissement (lot B-3) : jamais au-delà du disponible sous verrou. */
+export async function refundPurchasePaymentAction(
+  companyId: string,
+  paymentId: string,
+  _: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const t = await actionDictionary();
+  const amount = Number(field(formData, "amount") || "0");
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { status: "error", message: t.purchases.refundAmountRequired };
+  }
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/purchase-payments/{payment_id}/refund",
+    {
+      params: { path: { company_id: companyId, payment_id: paymentId } },
+      body: {
+        refunded_on: field(formData, "refunded_on") || new Date().toISOString().slice(0, 10),
+        method: (field(formData, "method") || "BANK_TRANSFER") as
+          | "CASH"
+          | "BANK_TRANSFER"
+          | "MOBILE_MONEY"
+          | "CHECK"
+          | "CARD"
+          | "OTHER",
+        amount: Math.round(amount),
+        reference: field(formData, "reference") || undefined,
+        notes: field(formData, "notes") || undefined,
+      },
+    },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  return { status: "success", message: t.purchases.refundRecorded };
+}
+
+/** Supprime un remboursement fournisseur (correction de saisie) : le
+ * disponible du règlement porteur est restitué, l'action est journalisée. */
+export async function deletePurchaseRefundAction(
+  companyId: string,
+  refundId: string,
+  _: ActionState,
+): Promise<ActionState> {
+  const { error, response } = await (await api()).DELETE(
+    "/api/v1/companies/{company_id}/purchase-payment-refunds/{refund_id}",
+    { params: { path: { company_id: companyId, refund_id: refundId } } },
+  );
+  if (!response.ok) return failure(error);
+  const t = await actionDictionary();
+  refresh();
+  return { status: "success", message: t.purchases.refundDeleted };
+}
+
+/** Transfert d'avance (lot B-3) : couvre en comptabilité les affectations
+ * ajoutées après la comptabilisation du décaissement — débit du compte de
+ * tiers fournisseur, crédit du 4091, au journal des opérations diverses. */
+export async function postPurchaseAllocationEntryAction(
+  companyId: string,
+  paymentId: string,
+  _: ActionState,
+): Promise<ActionState> {
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/purchase-payments/{payment_id}/allocation-entry",
+    { params: { path: { company_id: companyId, payment_id: paymentId } } },
+  );
+  if (!response.ok) return failure(error);
+  const t = await actionDictionary();
+  refresh();
+  return { status: "success", message: t.purchases.allocationEntryPosted };
+}
+
+/** Comptabilise un remboursement reçu du fournisseur (lot B-3) : débit de la
+ * trésorerie, crédit du 4091 « Fournisseurs, avances et acomptes versés ». */
+export async function postPurchaseRefundEntryAction(
+  companyId: string,
+  refundId: string,
+  _: ActionState,
+): Promise<ActionState> {
+  const { error, response } = await (await api()).POST(
+    "/api/v1/companies/{company_id}/purchase-payment-refunds/{refund_id}/entry",
+    { params: { path: { company_id: companyId, refund_id: refundId } }, body: {} },
+  );
+  if (!response.ok) return failure(error);
+  const t = await actionDictionary();
+  refresh();
+  return { status: "success", message: t.purchases.refundEntryPosted };
+}

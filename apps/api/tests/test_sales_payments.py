@@ -15,10 +15,12 @@ règlements (Phase 4E le fera avec validation humaine).
 import threading
 import uuid
 from collections.abc import Callable
+from datetime import timedelta
 
 from fastapi.testclient import TestClient
 from httpx2 import Response
 
+from kora.models.common import utcnow
 from tests.conftest import CompanyFixture
 from tests.test_sales import (
     Sales,
@@ -359,17 +361,22 @@ def test_balance_agee_buckets(client: TestClient, make_company: MakeCompany) -> 
     company = _dossier(make_company)
     sales = Sales(client, company)
     reglements = Payments(client, company)
-    echue_1_30 = _facture_emise(sales, client, company, due_on="2026-11-18")
-    echue_31_60 = _facture_emise(sales, client, company, due_on="2026-11-18")
-    echue_61_90 = _facture_emise(sales, client, company, due_on="2026-11-18")
-    echue_90_plus = _facture_emise(sales, client, company, due_on="2026-11-18")
-    payee = _facture_emise(sales, client, company, due_on="2026-11-18")
+    # Échéances **dynamiques** (demain) : la création refuse une échéance passée,
+    # la balance âgée se lit à des `as_of` arbitraires pour placer les buckets —
+    # aucun jour calendaire en dur dans ce test (il restait vert jusqu'à la date
+    # écrite en dur, puis cassait chaque jour suivant).
+    echeance = utcnow().date() + timedelta(days=1)
+    echue_1_30 = _facture_emise(sales, client, company, due_on=echeance.isoformat())
+    echue_31_60 = _facture_emise(sales, client, company, due_on=echeance.isoformat())
+    echue_61_90 = _facture_emise(sales, client, company, due_on=echeance.isoformat())
+    echue_90_plus = _facture_emise(sales, client, company, due_on=echeance.isoformat())
+    payee = _facture_emise(sales, client, company, due_on=echeance.isoformat())
     _sans_echeance = _facture_emise(sales, client, company)  # due_on NULL : à-échoir
     _reglement(reglements, payee, 3_540_000)
     ttc = 3_540_000
     # as_of arbitraire : chaque facture tombe dans son bucket (la balance âgée
     # se calcule à la date demandée, jamais à la date du jour seulement).
-    response = reglements.aging(as_of="2027-02-19")
+    response = reglements.aging(as_of=(echeance + timedelta(days=93)).isoformat())
     assert response.status_code == 200, response.text
     body = response.json()
     buckets = body["buckets"]
@@ -384,7 +391,8 @@ def test_balance_agee_buckets(client: TestClient, make_company: MakeCompany) -> 
     _reglement(reglements, echue_31_60, 540_000)
     _reglement(reglements, echue_61_90, 540_000)
     _reglement(reglements, echue_90_plus, 540_000)
-    body = reglements.aging(as_of="2026-12-19").json()  # 31 jours après le 18/11
+    # 31 jours après l'échéance : les quatre soldes partiels tombent en d31_60.
+    body = reglements.aging(as_of=(echeance + timedelta(days=31)).isoformat()).json()
     buckets = body["buckets"]
     assert buckets["not_due"] == {"count": 1, "total_ttc": ttc}
     assert buckets["d1_30"] == {"count": 0, "total_ttc": 0}

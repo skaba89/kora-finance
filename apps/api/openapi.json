@@ -279,6 +279,18 @@
             "format": "uuid",
             "title": "Document Id",
             "type": "string"
+          },
+          "entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Id"
           }
         },
         "required": [
@@ -286,6 +298,26 @@
           "amount"
         ],
         "title": "AllocationOut",
+        "type": "object"
+      },
+      "AllocationTargetsIn": {
+        "additionalProperties": false,
+        "description": "Affectation ultérieure (lot B-3) : montants cibles **absolus** par\nfacture — répéter la même demande ne change rien (idempotence), seule la\nhausse est permise et la somme cible ne dépasse jamais le disponible.",
+        "properties": {
+          "allocations": {
+            "items": {
+              "$ref": "#/components/schemas/AllocationIn"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Allocations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "allocations"
+        ],
+        "title": "AllocationTargetsIn",
         "type": "object"
       },
       "AssetLineOut": {
@@ -5981,16 +6013,28 @@
       },
       "PaymentIn": {
         "additionalProperties": false,
-        "description": "Règlement saisi : le montant n'est jamais transmis — c'est la somme des\naffectations que le service recalcule et contrôle sous verrou.",
+        "description": "Règlement saisi : les affectations sont facultatives (lot B-3) — sans\nfacture visée, `amount` est obligatoire (acompte reçu du tier client\n`partner_id`) ; avec affectations, `amount` (facultatif) doit être au moins\négal à leur somme — l'excédent est un trop-perçu non lettré. Le service\ncontrôle chaque affectation sous verrou de la facture.",
         "properties": {
           "allocations": {
+            "default": [],
             "items": {
               "$ref": "#/components/schemas/AllocationIn"
             },
             "maxItems": 50,
-            "minItems": 1,
             "title": "Allocations",
             "type": "array"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
           },
           "method": {
             "enum": [
@@ -6021,6 +6065,18 @@
             "title": "Paid On",
             "type": "string"
           },
+          "partner_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partner Id"
+          },
           "reference": {
             "anyOf": [
               {
@@ -6036,8 +6092,7 @@
         },
         "required": [
           "paid_on",
-          "method",
-          "allocations"
+          "method"
         ],
         "title": "PaymentIn",
         "type": "object"
@@ -6127,6 +6182,17 @@
               }
             ],
             "title": "Reference"
+          },
+          "refunds": {
+            "items": {
+              "$ref": "#/components/schemas/RefundOut"
+            },
+            "title": "Refunds",
+            "type": "array"
+          },
+          "unallocated": {
+            "title": "Unallocated",
+            "type": "integer"
           }
         },
         "required": [
@@ -6140,7 +6206,9 @@
           "partner_id",
           "fiscal_year_id",
           "created_at",
-          "allocations"
+          "allocations",
+          "unallocated",
+          "refunds"
         ],
         "title": "PaymentOut",
         "type": "object"
@@ -6286,6 +6354,18 @@
             "format": "uuid",
             "title": "Document Id",
             "type": "string"
+          },
+          "entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Id"
           }
         },
         "required": [
@@ -6293,6 +6373,26 @@
           "amount"
         ],
         "title": "PurchaseAllocationOut",
+        "type": "object"
+      },
+      "PurchaseAllocationTargetsIn": {
+        "additionalProperties": false,
+        "description": "Affectation ultérieure (lot B-3) : montants cibles **absolus** par\nfacture — répéter la même demande ne change rien (idempotence), seule la\nhausse est permise et la somme cible ne dépasse jamais le disponible.",
+        "properties": {
+          "allocations": {
+            "items": {
+              "$ref": "#/components/schemas/PurchaseAllocationIn"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Allocations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "allocations"
+        ],
+        "title": "PurchaseAllocationTargetsIn",
         "type": "object"
       },
       "PurchaseDocumentCreate": {
@@ -7106,16 +7206,28 @@
       },
       "PurchasePaymentIn": {
         "additionalProperties": false,
-        "description": "Décaissement saisi : le montant n'est jamais transmis — c'est la somme\ndes affectations que le service recalcule et contrôle sous verrou.",
+        "description": "Décaissement saisi : les affectations sont facultatives (lot B-3) —\nsans facture visée, `amount` est obligatoire (avance versée au tier\nfournisseur `partner_id`) ; avec affectations, `amount` (facultatif) doit\nêtre au moins égal à leur somme — l'excédent est un trop-versé non lettré.\nLe service contrôle chaque affectation sous verrou de la facture.",
         "properties": {
           "allocations": {
+            "default": [],
             "items": {
               "$ref": "#/components/schemas/PurchaseAllocationIn"
             },
             "maxItems": 50,
-            "minItems": 1,
             "title": "Allocations",
             "type": "array"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
           },
           "method": {
             "enum": [
@@ -7146,6 +7258,18 @@
             "title": "Paid On",
             "type": "string"
           },
+          "partner_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partner Id"
+          },
           "reference": {
             "anyOf": [
               {
@@ -7161,8 +7285,7 @@
         },
         "required": [
           "paid_on",
-          "method",
-          "allocations"
+          "method"
         ],
         "title": "PurchasePaymentIn",
         "type": "object"
@@ -7252,6 +7375,17 @@
               }
             ],
             "title": "Reference"
+          },
+          "refunds": {
+            "items": {
+              "$ref": "#/components/schemas/PurchaseRefundOut"
+            },
+            "title": "Refunds",
+            "type": "array"
+          },
+          "unallocated": {
+            "title": "Unallocated",
+            "type": "integer"
           }
         },
         "required": [
@@ -7265,7 +7399,9 @@
           "partner_id",
           "fiscal_year_id",
           "created_at",
-          "allocations"
+          "allocations",
+          "unallocated",
+          "refunds"
         ],
         "title": "PurchasePaymentOut",
         "type": "object"
@@ -7289,6 +7425,155 @@
           "total"
         ],
         "title": "PurchasePaymentsOut",
+        "type": "object"
+      },
+      "PurchaseRefundIn": {
+        "additionalProperties": false,
+        "description": "Remboursement saisi (lot B-3) : une part du reste non affecté d'un\ndécaissement rendue par le fournisseur — jamais au-delà du disponible\ncontrôlé sous verrou (montant - affectations - remboursements saisis).",
+        "properties": {
+          "amount": {
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "type": "integer"
+          },
+          "method": {
+            "enum": [
+              "CASH",
+              "BANK_TRANSFER",
+              "MOBILE_MONEY",
+              "CHECK",
+              "CARD",
+              "OTHER"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "refunded_on": {
+            "format": "date",
+            "title": "Refunded On",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refunded_on",
+          "method",
+          "amount"
+        ],
+        "title": "PurchaseRefundIn",
+        "type": "object"
+      },
+      "PurchaseRefundOut": {
+        "description": "Remboursement reçu d'un fournisseur (lot B-3).",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "integer"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "method": {
+            "enum": [
+              "CASH",
+              "BANK_TRANSFER",
+              "MOBILE_MONEY",
+              "CHECK",
+              "CARD",
+              "OTHER"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "payment_id": {
+            "format": "uuid",
+            "title": "Payment Id",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "refunded_on": {
+            "title": "Refunded On",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "payment_id",
+          "refunded_on",
+          "method",
+          "reference",
+          "notes",
+          "amount",
+          "currency",
+          "created_at"
+        ],
+        "title": "PurchaseRefundOut",
         "type": "object"
       },
       "ReadyResponse": {
@@ -7420,6 +7705,155 @@
           "refresh_token"
         ],
         "title": "RefreshRequest",
+        "type": "object"
+      },
+      "RefundIn": {
+        "additionalProperties": false,
+        "description": "Remboursement saisi (lot B-3) : une part du reste non affecté d'un\nrèglement rendue au client — jamais au-delà du disponible contrôlé sous\nverrou (montant - affectations - remboursements déjà saisis).",
+        "properties": {
+          "amount": {
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "type": "integer"
+          },
+          "method": {
+            "enum": [
+              "CASH",
+              "BANK_TRANSFER",
+              "MOBILE_MONEY",
+              "CHECK",
+              "CARD",
+              "OTHER"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "refunded_on": {
+            "format": "date",
+            "title": "Refunded On",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refunded_on",
+          "method",
+          "amount"
+        ],
+        "title": "RefundIn",
+        "type": "object"
+      },
+      "RefundOut": {
+        "description": "Remboursement d'une part du reste non affecté (lot B-3).",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "integer"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "method": {
+            "enum": [
+              "CASH",
+              "BANK_TRANSFER",
+              "MOBILE_MONEY",
+              "CHECK",
+              "CARD",
+              "OTHER"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "payment_id": {
+            "format": "uuid",
+            "title": "Payment Id",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "refunded_on": {
+            "title": "Refunded On",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "payment_id",
+          "refunded_on",
+          "method",
+          "reference",
+          "notes",
+          "amount",
+          "currency",
+          "created_at"
+        ],
+        "title": "RefundOut",
         "type": "object"
       },
       "RegisterRequest": {
@@ -16985,6 +17419,211 @@
         ]
       }
     },
+    "/api/v1/companies/{company_id}/payment-refunds/{refund_id}": {
+      "delete": {
+        "description": "Supprime un remboursement (correction de saisie) : le disponible du\nrèglement porteur est restitué, l'action est journalisée. Refusé tant que\nle remboursement est comptabilisé : l'écriture se contre-passe d'abord.",
+        "operationId": "delete_payment_refund_api_v1_companies__company_id__payment_refunds__refund_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "refund_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Refund Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Payment Refund",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/payment-refunds/{refund_id}/entry": {
+      "post": {
+        "description": "Comptabilise un remboursement (lot B-3) : écriture validée du journal de\ntrésorerie — débit du 4191 « Clients, avances et acomptes reçus », crédit du\ncompte de trésorerie. Exige un règlement porteur comptabilisé (écriture\nvivante) ; idempotence refusée (409).",
+        "operationId": "post_refund_entry_api_v1_companies__company_id__payment_refunds__refund_id__entry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "refund_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Refund Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentEntryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Refund Entry",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
     "/api/v1/companies/{company_id}/payments": {
       "get": {
         "description": "Règlements du dossier (encaissements lettrés), filtrables et paginés.",
@@ -17402,9 +18041,221 @@
         ]
       }
     },
+    "/api/v1/companies/{company_id}/payments/{payment_id}/allocation-entry": {
+      "post": {
+        "description": "Transfert d'acompte (lot B-3) : couvre en comptabilité les affectations\najoutées après la comptabilisation du règlement — débit du 4191 « Clients,\navances et acomptes reçus », crédit du compte de tiers, au journal des\nopérations diverses. Idempotence refusée : rien à transférer répond 409.",
+        "operationId": "post_allocation_entry_api_v1_companies__company_id__payments__payment_id__allocation_entry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Payment Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Allocation Entry",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/payments/{payment_id}/allocations": {
+      "post": {
+        "description": "**Affectation ultérieure** (lot B-3) : affecte le reste non affecté d'un\nrèglement (acompte ou trop-perçu) à des factures émises du même tier.\nCibles absolues et idempotentes : répéter la même demande ne change rien ;\nhausse seule permise ; la somme cible ne dépasse jamais le disponible\n(montant - remboursements) ni les soldes des factures (contrôles sous\nverrou).",
+        "operationId": "allocate_payment_api_v1_companies__company_id__payments__payment_id__allocations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Payment Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocationTargetsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Allocate Payment",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
     "/api/v1/companies/{company_id}/payments/{payment_id}/entry": {
       "post": {
-        "description": "Comptabilise un règlement : écriture validée du journal de trésorerie\n(débit du compte de trésorerie, crédit du compte de tiers), liée au\nrèglement. Idempotence refusée : un règlement déjà comptabilisé répond 409.",
+        "description": "Comptabilise un règlement : écriture validée du journal de trésorerie\n(débit du compte de trésorerie, crédit du compte de tiers pour la part\naffectée et du 4191 pour le reste non affecté — acompte ou trop-perçu),\nliée au règlement. Idempotence refusée : un règlement déjà comptabilisé\nrépond 409.",
         "operationId": "post_payment_entry_api_v1_companies__company_id__payments__payment_id__entry_post",
         "parameters": [
           {
@@ -17510,6 +18361,322 @@
         "summary": "Post Payment Entry",
         "tags": [
           "ventes"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/payments/{payment_id}/refund": {
+      "post": {
+        "description": "**Remboursement** (lot B-3) : rend au client une part du reste non affecté\ndu règlement — jamais au-delà du disponible contrôlé sous verrou. Aucune\nécriture n'est générée : la comptabilisation (débit 4191, crédit\ntrésorerie) reste explicite (`entries:post`).",
+        "operationId": "create_payment_refund_api_v1_companies__company_id__payments__payment_id__refund_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Payment Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Payment Refund",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/purchase-payment-refunds/{refund_id}": {
+      "delete": {
+        "description": "Supprime un remboursement (correction de saisie) : le disponible du\nrèglement porteur est restitué, l'action est journalisée. Refusé tant que\nle remboursement est comptabilisé : l'écriture se contre-passe d'abord.",
+        "operationId": "delete_payment_refund_api_v1_companies__company_id__purchase_payment_refunds__refund_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "refund_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Refund Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Payment Refund",
+        "tags": [
+          "achats"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/purchase-payment-refunds/{refund_id}/entry": {
+      "post": {
+        "description": "Comptabilise un remboursement reçu du fournisseur (lot B-3) : écriture\nvalidée du journal de trésorerie — débit du compte de trésorerie, crédit du\n4091 « Fournisseurs, avances et acomptes versés ». Exige un règlement\nporteur comptabilisé (écriture vivante) ; idempotence refusée (409).",
+        "operationId": "post_refund_entry_api_v1_companies__company_id__purchase_payment_refunds__refund_id__entry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "refund_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Refund Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurchasePaymentEntryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseRefundOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Refund Entry",
+        "tags": [
+          "achats"
         ]
       }
     },
@@ -17930,9 +19097,221 @@
         ]
       }
     },
+    "/api/v1/companies/{company_id}/purchase-payments/{payment_id}/allocation-entry": {
+      "post": {
+        "description": "Transfert d'avance (lot B-3) : couvre en comptabilité les affectations\najoutées après la comptabilisation du règlement — débit du compte de tiers\nfournisseur, crédit du 4091 « Fournisseurs, avances et acomptes versés »,\nau journal des opérations diverses. Idempotence refusée : rien à\ntransférer répond 409.",
+        "operationId": "post_allocation_entry_api_v1_companies__company_id__purchase_payments__payment_id__allocation_entry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Payment Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchasePaymentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Allocation Entry",
+        "tags": [
+          "achats"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/purchase-payments/{payment_id}/allocations": {
+      "post": {
+        "description": "**Affectation ultérieure** (lot B-3) : affecte le reste non affecté d'un\ndécaissement (avance ou trop-versé) à des factures fournisseurs émises du\nmême tier. Cibles absolues et idempotentes : répéter la même demande ne\nchange rien ; hausse seule permise ; la somme cible ne dépasse jamais le\ndisponible (montant - remboursements) ni les soldes des factures\n(contrôles sous verrou).",
+        "operationId": "allocate_payment_api_v1_companies__company_id__purchase_payments__payment_id__allocations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Payment Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurchaseAllocationTargetsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchasePaymentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Allocate Payment",
+        "tags": [
+          "achats"
+        ]
+      }
+    },
     "/api/v1/companies/{company_id}/purchase-payments/{payment_id}/entry": {
       "post": {
-        "description": "Comptabilise un décaissement : écriture validée du journal de trésorerie\n(débit du compte de tiers, crédit du compte de trésorerie), liée au\nrèglement. Idempotence refusée : un règlement déjà comptabilisé répond 409.",
+        "description": "Comptabilise un décaissement : écriture validée du journal de trésorerie\n(débit du compte de tiers pour la part affectée et du 4091 pour le reste\nnon affecté — avance ou trop-versé, crédit du compte de trésorerie), liée\nau règlement. Idempotence refusée : un règlement déjà comptabilisé répond\n409.",
         "operationId": "post_payment_entry_api_v1_companies__company_id__purchase_payments__payment_id__entry_post",
         "parameters": [
           {
@@ -18036,6 +19415,117 @@
           }
         ],
         "summary": "Post Payment Entry",
+        "tags": [
+          "achats"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/purchase-payments/{payment_id}/refund": {
+      "post": {
+        "description": "**Remboursement** (lot B-3) : constate le retour par le fournisseur d'une\npart du reste non affecté du décaissement — jamais au-delà du disponible\ncontrôlé sous verrou. Aucune écriture n'est générée : la comptabilisation\n(débit trésorerie, crédit 4091) reste explicite (`entries:post`).",
+        "operationId": "create_payment_refund_api_v1_companies__company_id__purchase_payments__payment_id__refund_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Payment Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurchaseRefundIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseRefundOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Payment Refund",
         "tags": [
           "achats"
         ]

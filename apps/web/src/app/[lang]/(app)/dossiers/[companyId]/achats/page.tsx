@@ -16,14 +16,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  allocatePurchasePaymentAction,
   cancelPurchaseInvoiceAction,
+  createAdvanceAction,
   createPurchaseDocumentAction,
   createPurchasePaymentAction,
   deletePurchaseDocumentAction,
   deletePurchasePaymentAction,
+  deletePurchaseRefundAction,
   issuePurchaseDocumentAction,
+  postPurchaseAllocationEntryAction,
   postPurchaseDocumentEntryAction,
   postPurchasePaymentEntryAction,
+  postPurchaseRefundEntryAction,
+  refundPurchasePaymentAction,
 } from "@/lib/actions/purchases";
 import {
   can,
@@ -242,6 +248,7 @@ export default async function PurchasesPage({
       </Card>
 
       {manage && (
+        <>
         <Card className="mt-6">
           <CardHeader>
             <CardTitle>{t.purchases.paymentFormTitle}</CardTitle>
@@ -305,6 +312,63 @@ export default async function PurchasesPage({
             </ActionForm>
           </CardContent>
         </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>{t.purchases.advanceTitle}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ActionForm
+              action={createAdvanceAction.bind(null, companyId)}
+              className="space-y-4"
+              submitLabel={t.purchases.advanceRecord}
+              pendingLabel={t.common.pending}
+            >
+              <div className="grid gap-4 sm:grid-cols-3">
+                <SelectField
+                  label={t.purchases.advancePartner}
+                  name="partner_id"
+                  required
+                  options={[
+                    { value: "", label: t.purchases.advancePartner },
+                    ...partners.items
+                      .filter((partner) => partner.is_supplier)
+                      .map((partner) => ({ value: partner.id, label: partner.name })),
+                  ]}
+                />
+                <Field
+                  label={t.purchases.advanceAmount}
+                  name="amount"
+                  type="number"
+                  min="1"
+                  step="1"
+                  required
+                />
+                <Field label={t.purchases.paymentDate} name="paid_on" type="date" required />
+                <SelectField
+                  label={t.purchases.paymentMethod}
+                  name="method"
+                  options={(
+                    [
+                      "BANK_TRANSFER",
+                      "MOBILE_MONEY",
+                      "CASH",
+                      "CHECK",
+                      "CARD",
+                      "OTHER",
+                    ] as const
+                  ).map((method) => ({
+                    value: method,
+                    label: (t.purchases.methods as Record<string, string>)[method] ?? method,
+                  }))}
+                />
+                <Field label={t.purchases.paymentReference} name="reference" />
+              </div>
+              <p className="text-muted-foreground text-xs">{t.purchases.advanceHint}</p>
+            </ActionForm>
+          </CardContent>
+        </Card>
+        </>
       )}
 
       <Card className="mt-6">
@@ -321,6 +385,7 @@ export default async function PurchasesPage({
                   <TableHead>{t.purchases.paymentDate}</TableHead>
                   <TableHead>{t.purchases.paymentMethod}</TableHead>
                   <TableHead>{t.purchases.totalLabel}</TableHead>
+                  <TableHead>{t.purchases.unallocatedBadge}</TableHead>
                   <TableHead>{t.purchases.paymentsAllocations}</TableHead>
                   <TableHead>{t.purchases.paymentReference}</TableHead>
                   <TableHead className="text-right">{t.common.actions}</TableHead>
@@ -335,6 +400,16 @@ export default async function PurchasesPage({
                         payment.method}
                     </TableCell>
                     <TableCell>{formatMoney(payment.amount, payment.currency)}</TableCell>
+                    <TableCell>
+                      {payment.unallocated > 0 ? (
+                        <Badge variant="secondary">
+                          {t.purchases.unallocatedBadge}{" "}
+                          {formatMoney(payment.unallocated, payment.currency)}
+                        </Badge>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
                     <TableCell>
                       {payment.allocations
                         .map((allocation) => {
@@ -355,6 +430,104 @@ export default async function PurchasesPage({
                           pendingLabel={t.common.pending}
                         />
                       )}
+                      {canPost &&
+                        payment.entry_id != null &&
+                        payment.allocations.some((allocation) => allocation.entry_id == null) && (
+                          <InlineAction
+                            action={postPurchaseAllocationEntryAction.bind(null, companyId, payment.id)}
+                            label={t.purchases.allocationTransfer}
+                            pendingLabel={t.common.pending}
+                          />
+                        )}
+                      {manage && payment.unallocated > 0 && (
+                        <details className="mt-1">
+                          <summary className="cursor-pointer text-xs underline">
+                            {t.purchases.allocateAction}
+                          </summary>
+                          <ActionForm
+                            action={allocatePurchasePaymentAction.bind(null, companyId, payment.id)}
+                            className="mt-2 space-y-2"
+                            submitLabel={t.purchases.allocateAction}
+                            pendingLabel={t.common.pending}
+                          >
+                            <SelectField
+                              label={t.purchases.paymentDoc}
+                              name="document_id"
+                              required
+                              options={documents.items
+                                .filter(
+                                  (document) =>
+                                    document.doc_kind === "supplier_invoice" &&
+                                    document.status === "ISSUED" &&
+                                    document.partner_id === payment.partner_id,
+                                )
+                                .map((document) => ({
+                                  value: document.id,
+                                  label: `FACH-${document.number} — ${t.purchases.outstandingLabel} ${formatMoney(document.outstanding_ttc ?? 0, document.currency)}`,
+                                }))}
+                            />
+                            <Field
+                              label={t.purchases.allocateTarget}
+                              name="target"
+                              type="number"
+                              min="1"
+                              step="1"
+                              required
+                            />
+                            <p className="text-muted-foreground text-xs">{t.purchases.allocateHint}</p>
+                          </ActionForm>
+                        </details>
+                      )}
+                      {manage && payment.unallocated > 0 && (
+                        <details className="mt-1">
+                          <summary className="cursor-pointer text-xs underline">
+                            {t.purchases.refundAction}
+                          </summary>
+                          <ActionForm
+                            action={refundPurchasePaymentAction.bind(null, companyId, payment.id)}
+                            className="mt-2 space-y-2"
+                            submitLabel={t.purchases.refundAction}
+                            pendingLabel={t.common.pending}
+                          >
+                            <Field
+                              label={t.purchases.refundAmount}
+                              name="amount"
+                              type="number"
+                              min="1"
+                              step="1"
+                              required
+                            />
+                            <Field
+                              label={t.purchases.paymentDate}
+                              name="refunded_on"
+                              type="date"
+                              required
+                            />
+                            <p className="text-muted-foreground text-xs">{t.purchases.refundTitle}</p>
+                          </ActionForm>
+                        </details>
+                      )}
+                      {manage &&
+                        payment.refunds.map((refund) => (
+                          <div key={refund.id} className="mt-1 text-xs">
+                            <span className="text-muted-foreground">{t.purchases.refundsTitle} :</span>{" "}
+                            {formatMoney(refund.amount, refund.currency)} — {refund.refunded_on}
+                            {canPost && refund.entry_id == null && (
+                              <InlineAction
+                                action={postPurchaseRefundEntryAction.bind(null, companyId, refund.id)}
+                                label={t.purchases.refundPost}
+                                pendingLabel={t.common.pending}
+                              />
+                            )}
+                            {manage && refund.entry_id == null && (
+                              <InlineAction
+                                action={deletePurchaseRefundAction.bind(null, companyId, refund.id)}
+                                label={t.common.remove}
+                                pendingLabel={t.common.pending}
+                              />
+                            )}
+                          </div>
+                        ))}
                       {manage && (
                         <InlineAction
                           action={deletePurchasePaymentAction.bind(null, companyId, payment.id)}

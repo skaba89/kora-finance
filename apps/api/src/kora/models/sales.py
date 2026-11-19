@@ -300,17 +300,21 @@ class PaymentMethod(StrEnum):
 
 
 class SalesPayment(Base):
-    """Règlement reçu d'un client (Phase 4C) : un encaissement d'un montant
-    strictement positif, affecté à une ou plusieurs factures émises du même tier
-    (affectations `SalesPaymentAllocation` — le lettrage commercial). Le montant
-    du règlement est la somme de ses affectations : le service le recalcule et
-    refuse tout excédent sur le solde restant des factures — jamais d'acompte
-    flottant non lettré à cette phase (le trop-perçu est une évolution future).
+    """Règlement reçu d'un client (Phase 4C, acomptes au lot B-3) : un
+    encaissement d'un montant strictement positif, affecté à une ou plusieurs
+    factures émises du même tier (affectations `SalesPaymentAllocation` — le
+    lettrage commercial). Le montant du règlement est au moins la somme de ses
+    affectations : le service contrôle chaque affectation sous verrou FOR UPDATE
+    de la facture (jamais au-delà du solde restant dû) ; la différence entre le
+    montant et les affectations est le **reste non affecté** — acompte reçu sans
+    facture ou trop-perçu sur une facture — remboursable (affectation ultérieure
+    et remboursement, lot B-3), jamais comptabilisé comme un encaissement lettré.
 
     Le règlement est immuable après création : une erreur se corrige en
     supprimant le règlement (journalisé) puis en le re-saisissant — une fois
     comptabilisé, la suppression exige d'abord la contre-passation de son
-    écriture (Phase 4E, permission `entries:post`)."""
+    écriture (Phase 4E, permission `entries:post`) et le départ des remboursements
+    comptabilisés."""
 
     __tablename__ = "sales_payments"
 
@@ -375,7 +379,11 @@ class SalesPaymentAllocation(Base):
     qui porte le solde restant dû. Un règlement ne s'affecte qu'une fois à une
     même facture (unicité), et jamais au-delà de son solde (contrôle du service,
     sous verrou FOR UPDATE de la facture — deux règlements concurrents ne peuvent
-    pas excéder le TTC ensemble)."""
+    pas excéder le TTC ensemble). La colonne `entry_id` porte la couverture
+    comptable de l'affectation : remplie à la comptabilisation du règlement (le
+    crédit du compte de tiers couvre ces affectations) ou à l'écriture de
+    transfert de l'acompte (débit 4191, crédit 411x) quand l'affectation
+    ultérieure arrive après comptabilisation — NULL tant que non couverte."""
 
     __tablename__ = "sales_payment_allocations"
 
@@ -386,10 +394,19 @@ class SalesPaymentAllocation(Base):
     payment_id: Mapped[uuid.UUID]
     document_id: Mapped[uuid.UUID]
     amount: Mapped[int] = mapped_column(BigInteger)
+    # Écriture qui couvre cette affectation en comptabilité : celle du règlement
+    # (postée avec lui) ou le transfert d'acompte (affectation ultérieure) —
+    # NULL tant que non couverte.
+    entry_id: Mapped[uuid.UUID | None]
 
     __table_args__ = (
         UniqueConstraint("payment_id", "document_id"),
         CheckConstraint("amount > 0", name="amount_positive"),
+        ForeignKeyConstraint(
+            ["tenant_id", "entry_id"],
+            ["journal_entries.tenant_id", "journal_entries.id"],
+            ondelete="RESTRICT",
+        ),
         ForeignKeyConstraint(
             ["tenant_id", "payment_id"],
             ["sales_payments.tenant_id", "sales_payments.id"],
@@ -403,6 +420,75 @@ class SalesPaymentAllocation(Base):
         ForeignKeyConstraint(["tenant_id"], ["companies.id"], ondelete="CASCADE"),
         Index("ix_sales_payment_allocations_tenant_document", "tenant_id", "document_id"),
         Index("ix_sales_payment_allocations_tenant_payment", "tenant_id", "payment_id"),
+    )
+
+
+class SalesRefund(Base):
+    """Remboursement versé à un client (lot B-3) : le retour d'un acompte ou
+    d'un trop-perçu qui n'est pas lettré (le disponible au remboursement =
+    montant du règlement - affectations - remboursements déjà saisis). La date
+    est le fait générateur : l'exercice couvrant `refunded_on` doit être ouvert
+    (même règle que les règlements). Immuable après création — une erreur se
+    corrige en supprimant le remboursement (journalisé) puis en le re-saisissant
+    ; une fois comptabilisé (débit 4191, crédit trésorerie — acte explicite,
+    `entries:post`), la suppression exige d'abord la contre-passation de son
+    écriture. La suppression du règlement porteur est refusée tant qu'un de ses
+    remboursements reste comptabilisé."""
+
+    __tablename__ = "sales_refunds"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    payment_id: Mapped[uuid.UUID]
+    # Exercice de la date de remboursement : fixé par le service à partir de
+    # refunded_on (l'exercice doit être ouvert — même règle que les règlements).
+    fiscal_year_id: Mapped[uuid.UUID]
+    refunded_on: Mapped[date] = mapped_column(Date)
+    method: Mapped[str] = mapped_column(String(16))
+    reference: Mapped[str | None] = mapped_column(String(100))
+    notes: Mapped[str | None] = mapped_column(Text)
+    amount: Mapped[int] = mapped_column(BigInteger)
+    currency: Mapped[str] = mapped_column(String(3), server_default="GNF")
+    # Écriture validée qui porte le remboursement en comptabilité : NULL tant
+    # que non comptabilisé — jamais automatique (acte explicite du comptable).
+    entry_id: Mapped[uuid.UUID | None]
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = created_at_column()
+    updated_at: Mapped[datetime] = updated_at_column()
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
+        CheckConstraint(
+            "method IN ('CASH', 'BANK_TRANSFER', 'MOBILE_MONEY', 'CHECK', 'CARD', 'OTHER')",
+            name="method_valid",
+        ),
+        CheckConstraint("amount > 0", name="amount_positive"),
+        CheckConstraint("length(trim(currency)) = 3", name="currency_iso4217"),
+        CheckConstraint(
+            "reference IS NULL OR length(trim(reference)) > 0", name="reference_not_blank"
+        ),
+        CheckConstraint("notes IS NULL OR length(trim(notes)) > 0", name="notes_not_blank"),
+        ForeignKeyConstraint(
+            ["tenant_id", "payment_id"],
+            ["sales_payments.tenant_id", "sales_payments.id"],
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "fiscal_year_id"],
+            ["fiscal_years.tenant_id", "fiscal_years.id"],
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(["tenant_id"], ["companies.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["created_by_user_id"], ["users.id"]),
+        ForeignKeyConstraint(
+            ["tenant_id", "entry_id"],
+            ["journal_entries.tenant_id", "journal_entries.id"],
+            ondelete="RESTRICT",
+        ),
+        Index("ix_sales_refunds_tenant_payment", "tenant_id", "payment_id"),
+        Index("ix_sales_refunds_tenant_date", "tenant_id", "refunded_on"),
     )
 
 

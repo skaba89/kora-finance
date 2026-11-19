@@ -1248,6 +1248,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/payment-refunds/{refund_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Payment Refund
+         * @description Supprime un remboursement (correction de saisie) : le disponible du
+         *     règlement porteur est restitué, l'action est journalisée. Refusé tant que
+         *     le remboursement est comptabilisé : l'écriture se contre-passe d'abord.
+         */
+        delete: operations["delete_payment_refund_api_v1_companies__company_id__payment_refunds__refund_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/payment-refunds/{refund_id}/entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Refund Entry
+         * @description Comptabilise un remboursement (lot B-3) : écriture validée du journal de
+         *     trésorerie — débit du 4191 « Clients, avances et acomptes reçus », crédit du
+         *     compte de trésorerie. Exige un règlement porteur comptabilisé (écriture
+         *     vivante) ; idempotence refusée (409).
+         */
+        post: operations["post_refund_entry_api_v1_companies__company_id__payment_refunds__refund_id__entry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/payments": {
         parameters: {
             query?: never;
@@ -1296,6 +1341,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/payments/{payment_id}/allocation-entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Allocation Entry
+         * @description Transfert d'acompte (lot B-3) : couvre en comptabilité les affectations
+         *     ajoutées après la comptabilisation du règlement — débit du 4191 « Clients,
+         *     avances et acomptes reçus », crédit du compte de tiers, au journal des
+         *     opérations diverses. Idempotence refusée : rien à transférer répond 409.
+         */
+        post: operations["post_allocation_entry_api_v1_companies__company_id__payments__payment_id__allocation_entry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/payments/{payment_id}/allocations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Allocate Payment
+         * @description **Affectation ultérieure** (lot B-3) : affecte le reste non affecté d'un
+         *     règlement (acompte ou trop-perçu) à des factures émises du même tier.
+         *     Cibles absolues et idempotentes : répéter la même demande ne change rien ;
+         *     hausse seule permise ; la somme cible ne dépasse jamais le disponible
+         *     (montant - remboursements) ni les soldes des factures (contrôles sous
+         *     verrou).
+         */
+        post: operations["allocate_payment_api_v1_companies__company_id__payments__payment_id__allocations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/payments/{payment_id}/entry": {
         parameters: {
             query?: never;
@@ -1308,10 +1401,80 @@ export interface paths {
         /**
          * Post Payment Entry
          * @description Comptabilise un règlement : écriture validée du journal de trésorerie
-         *     (débit du compte de trésorerie, crédit du compte de tiers), liée au
-         *     règlement. Idempotence refusée : un règlement déjà comptabilisé répond 409.
+         *     (débit du compte de trésorerie, crédit du compte de tiers pour la part
+         *     affectée et du 4191 pour le reste non affecté — acompte ou trop-perçu),
+         *     liée au règlement. Idempotence refusée : un règlement déjà comptabilisé
+         *     répond 409.
          */
         post: operations["post_payment_entry_api_v1_companies__company_id__payments__payment_id__entry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/payments/{payment_id}/refund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Payment Refund
+         * @description **Remboursement** (lot B-3) : rend au client une part du reste non affecté
+         *     du règlement — jamais au-delà du disponible contrôlé sous verrou. Aucune
+         *     écriture n'est générée : la comptabilisation (débit 4191, crédit
+         *     trésorerie) reste explicite (`entries:post`).
+         */
+        post: operations["create_payment_refund_api_v1_companies__company_id__payments__payment_id__refund_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/purchase-payment-refunds/{refund_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Payment Refund
+         * @description Supprime un remboursement (correction de saisie) : le disponible du
+         *     règlement porteur est restitué, l'action est journalisée. Refusé tant que
+         *     le remboursement est comptabilisé : l'écriture se contre-passe d'abord.
+         */
+        delete: operations["delete_payment_refund_api_v1_companies__company_id__purchase_payment_refunds__refund_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/purchase-payment-refunds/{refund_id}/entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Refund Entry
+         * @description Comptabilise un remboursement reçu du fournisseur (lot B-3) : écriture
+         *     validée du journal de trésorerie — débit du compte de trésorerie, crédit du
+         *     4091 « Fournisseurs, avances et acomptes versés ». Exige un règlement
+         *     porteur comptabilisé (écriture vivante) ; idempotence refusée (409).
+         */
+        post: operations["post_refund_entry_api_v1_companies__company_id__purchase_payment_refunds__refund_id__entry_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1368,6 +1531,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/purchase-payments/{payment_id}/allocation-entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Allocation Entry
+         * @description Transfert d'avance (lot B-3) : couvre en comptabilité les affectations
+         *     ajoutées après la comptabilisation du règlement — débit du compte de tiers
+         *     fournisseur, crédit du 4091 « Fournisseurs, avances et acomptes versés »,
+         *     au journal des opérations diverses. Idempotence refusée : rien à
+         *     transférer répond 409.
+         */
+        post: operations["post_allocation_entry_api_v1_companies__company_id__purchase_payments__payment_id__allocation_entry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/purchase-payments/{payment_id}/allocations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Allocate Payment
+         * @description **Affectation ultérieure** (lot B-3) : affecte le reste non affecté d'un
+         *     décaissement (avance ou trop-versé) à des factures fournisseurs émises du
+         *     même tier. Cibles absolues et idempotentes : répéter la même demande ne
+         *     change rien ; hausse seule permise ; la somme cible ne dépasse jamais le
+         *     disponible (montant - remboursements) ni les soldes des factures
+         *     (contrôles sous verrou).
+         */
+        post: operations["allocate_payment_api_v1_companies__company_id__purchase_payments__payment_id__allocations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/purchase-payments/{payment_id}/entry": {
         parameters: {
             query?: never;
@@ -1380,10 +1592,35 @@ export interface paths {
         /**
          * Post Payment Entry
          * @description Comptabilise un décaissement : écriture validée du journal de trésorerie
-         *     (débit du compte de tiers, crédit du compte de trésorerie), liée au
-         *     règlement. Idempotence refusée : un règlement déjà comptabilisé répond 409.
+         *     (débit du compte de tiers pour la part affectée et du 4091 pour le reste
+         *     non affecté — avance ou trop-versé, crédit du compte de trésorerie), liée
+         *     au règlement. Idempotence refusée : un règlement déjà comptabilisé répond
+         *     409.
          */
         post: operations["post_payment_entry_api_v1_companies__company_id__purchase_payments__payment_id__entry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/purchase-payments/{payment_id}/refund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Payment Refund
+         * @description **Remboursement** (lot B-3) : constate le retour par le fournisseur d'une
+         *     part du reste non affecté du décaissement — jamais au-delà du disponible
+         *     contrôlé sous verrou. Aucune écriture n'est générée : la comptabilisation
+         *     (débit trésorerie, crédit 4091) reste explicite (`entries:post`).
+         */
+        post: operations["create_payment_refund_api_v1_companies__company_id__purchase_payments__payment_id__refund_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2422,6 +2659,18 @@ export interface components {
              * Format: uuid
              */
             document_id: string;
+            /** Entry Id */
+            entry_id?: string | null;
+        };
+        /**
+         * AllocationTargetsIn
+         * @description Affectation ultérieure (lot B-3) : montants cibles **absolus** par
+         *     facture — répéter la même demande ne change rien (idempotence), seule la
+         *     hausse est permise et la somme cible ne dépasse jamais le disponible.
+         */
+        AllocationTargetsIn: {
+            /** Allocations */
+            allocations: components["schemas"]["AllocationIn"][];
         };
         /** AssetLineOut */
         AssetLineOut: {
@@ -4667,12 +4916,20 @@ export interface components {
         };
         /**
          * PaymentIn
-         * @description Règlement saisi : le montant n'est jamais transmis — c'est la somme des
-         *     affectations que le service recalcule et contrôle sous verrou.
+         * @description Règlement saisi : les affectations sont facultatives (lot B-3) — sans
+         *     facture visée, `amount` est obligatoire (acompte reçu du tier client
+         *     `partner_id`) ; avec affectations, `amount` (facultatif) doit être au moins
+         *     égal à leur somme — l'excédent est un trop-perçu non lettré. Le service
+         *     contrôle chaque affectation sous verrou de la facture.
          */
         PaymentIn: {
-            /** Allocations */
+            /**
+             * Allocations
+             * @default []
+             */
             allocations: components["schemas"]["AllocationIn"][];
+            /** Amount */
+            amount?: number | null;
             /**
              * Method
              * @enum {string}
@@ -4685,6 +4942,8 @@ export interface components {
              * Format: date
              */
             paid_on: string;
+            /** Partner Id */
+            partner_id?: string | null;
             /** Reference */
             reference?: string | null;
         };
@@ -4726,6 +4985,10 @@ export interface components {
             partner_id: string;
             /** Reference */
             reference: string | null;
+            /** Refunds */
+            refunds: components["schemas"]["RefundOut"][];
+            /** Unallocated */
+            unallocated: number;
         };
         /** PaymentsOut */
         PaymentsOut: {
@@ -4811,6 +5074,18 @@ export interface components {
              * Format: uuid
              */
             document_id: string;
+            /** Entry Id */
+            entry_id?: string | null;
+        };
+        /**
+         * PurchaseAllocationTargetsIn
+         * @description Affectation ultérieure (lot B-3) : montants cibles **absolus** par
+         *     facture — répéter la même demande ne change rien (idempotence), seule la
+         *     hausse est permise et la somme cible ne dépasse jamais le disponible.
+         */
+        PurchaseAllocationTargetsIn: {
+            /** Allocations */
+            allocations: components["schemas"]["PurchaseAllocationIn"][];
         };
         /** PurchaseDocumentCreate */
         PurchaseDocumentCreate: {
@@ -5058,12 +5333,20 @@ export interface components {
         };
         /**
          * PurchasePaymentIn
-         * @description Décaissement saisi : le montant n'est jamais transmis — c'est la somme
-         *     des affectations que le service recalcule et contrôle sous verrou.
+         * @description Décaissement saisi : les affectations sont facultatives (lot B-3) —
+         *     sans facture visée, `amount` est obligatoire (avance versée au tier
+         *     fournisseur `partner_id`) ; avec affectations, `amount` (facultatif) doit
+         *     être au moins égal à leur somme — l'excédent est un trop-versé non lettré.
+         *     Le service contrôle chaque affectation sous verrou de la facture.
          */
         PurchasePaymentIn: {
-            /** Allocations */
+            /**
+             * Allocations
+             * @default []
+             */
             allocations: components["schemas"]["PurchaseAllocationIn"][];
+            /** Amount */
+            amount?: number | null;
             /**
              * Method
              * @enum {string}
@@ -5076,6 +5359,8 @@ export interface components {
              * Format: date
              */
             paid_on: string;
+            /** Partner Id */
+            partner_id?: string | null;
             /** Reference */
             reference?: string | null;
         };
@@ -5117,6 +5402,10 @@ export interface components {
             partner_id: string;
             /** Reference */
             reference: string | null;
+            /** Refunds */
+            refunds: components["schemas"]["PurchaseRefundOut"][];
+            /** Unallocated */
+            unallocated: number;
         };
         /** PurchasePaymentsOut */
         PurchasePaymentsOut: {
@@ -5124,6 +5413,65 @@ export interface components {
             items: components["schemas"]["PurchasePaymentOut"][];
             /** Total */
             total: number;
+        };
+        /**
+         * PurchaseRefundIn
+         * @description Remboursement saisi (lot B-3) : une part du reste non affecté d'un
+         *     décaissement rendue par le fournisseur — jamais au-delà du disponible
+         *     contrôlé sous verrou (montant - affectations - remboursements saisis).
+         */
+        PurchaseRefundIn: {
+            /** Amount */
+            amount: number;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "CASH" | "BANK_TRANSFER" | "MOBILE_MONEY" | "CHECK" | "CARD" | "OTHER";
+            /** Notes */
+            notes?: string | null;
+            /** Reference */
+            reference?: string | null;
+            /**
+             * Refunded On
+             * Format: date
+             */
+            refunded_on: string;
+        };
+        /**
+         * PurchaseRefundOut
+         * @description Remboursement reçu d'un fournisseur (lot B-3).
+         */
+        PurchaseRefundOut: {
+            /** Amount */
+            amount: number;
+            /** Created At */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /** Entry Id */
+            entry_id?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "CASH" | "BANK_TRANSFER" | "MOBILE_MONEY" | "CHECK" | "CARD" | "OTHER";
+            /** Notes */
+            notes: string | null;
+            /**
+             * Payment Id
+             * Format: uuid
+             */
+            payment_id: string;
+            /** Reference */
+            reference: string | null;
+            /** Refunded On */
+            refunded_on: string;
         };
         /** ReadyResponse */
         ReadyResponse: {
@@ -5180,6 +5528,65 @@ export interface components {
         RefreshRequest: {
             /** Refresh Token */
             refresh_token: string;
+        };
+        /**
+         * RefundIn
+         * @description Remboursement saisi (lot B-3) : une part du reste non affecté d'un
+         *     règlement rendue au client — jamais au-delà du disponible contrôlé sous
+         *     verrou (montant - affectations - remboursements déjà saisis).
+         */
+        RefundIn: {
+            /** Amount */
+            amount: number;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "CASH" | "BANK_TRANSFER" | "MOBILE_MONEY" | "CHECK" | "CARD" | "OTHER";
+            /** Notes */
+            notes?: string | null;
+            /** Reference */
+            reference?: string | null;
+            /**
+             * Refunded On
+             * Format: date
+             */
+            refunded_on: string;
+        };
+        /**
+         * RefundOut
+         * @description Remboursement d'une part du reste non affecté (lot B-3).
+         */
+        RefundOut: {
+            /** Amount */
+            amount: number;
+            /** Created At */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /** Entry Id */
+            entry_id?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "CASH" | "BANK_TRANSFER" | "MOBILE_MONEY" | "CHECK" | "CARD" | "OTHER";
+            /** Notes */
+            notes: string | null;
+            /**
+             * Payment Id
+             * Format: uuid
+             */
+            payment_id: string;
+            /** Reference */
+            reference: string | null;
+            /** Refunded On */
+            refunded_on: string;
         };
         /** RegisterRequest */
         RegisterRequest: {
@@ -11072,6 +11479,146 @@ export interface operations {
             };
         };
     };
+    delete_payment_refund_api_v1_companies__company_id__payment_refunds__refund_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                refund_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_refund_entry_api_v1_companies__company_id__payment_refunds__refund_id__entry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                refund_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentEntryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_payments_api_v1_companies__company_id__payments_get: {
         parameters: {
             query?: {
@@ -11303,6 +11850,148 @@ export interface operations {
             };
         };
     };
+    post_allocation_entry_api_v1_companies__company_id__payments__payment_id__allocation_entry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    allocate_payment_api_v1_companies__company_id__payments__payment_id__allocations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AllocationTargetsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_payment_entry_api_v1_companies__company_id__payments__payment_id__entry_post: {
         parameters: {
             query?: never;
@@ -11327,6 +12016,219 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_payment_refund_api_v1_companies__company_id__payments__payment_id__refund_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefundIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_payment_refund_api_v1_companies__company_id__purchase_payment_refunds__refund_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                refund_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_refund_entry_api_v1_companies__company_id__purchase_payment_refunds__refund_id__entry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                refund_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchasePaymentEntryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseRefundOut"];
                 };
             };
             /** @description Unauthorized */
@@ -11607,6 +12509,148 @@ export interface operations {
             };
         };
     };
+    post_allocation_entry_api_v1_companies__company_id__purchase_payments__payment_id__allocation_entry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchasePaymentOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    allocate_payment_api_v1_companies__company_id__purchase_payments__payment_id__allocations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseAllocationTargetsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchasePaymentOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_payment_entry_api_v1_companies__company_id__purchase_payments__payment_id__entry_post: {
         parameters: {
             query?: never;
@@ -11631,6 +12675,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PurchasePaymentOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_payment_refund_api_v1_companies__company_id__purchase_payments__payment_id__refund_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payment_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseRefundIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseRefundOut"];
                 };
             };
             /** @description Unauthorized */

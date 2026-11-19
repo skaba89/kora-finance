@@ -25,6 +25,7 @@ from kora.models.purchases import (
     PurchaseDocumentLine,
     PurchasePayment,
     PurchasePaymentAllocation,
+    PurchaseRefund,
 )
 from kora.purchases import accounting, payments, service
 from kora.purchases.payments import PaymentStatus
@@ -372,19 +373,62 @@ class PurchaseAllocationIn(BaseModel):
 
 
 class PurchasePaymentIn(RequestBody):
-    """Décaissement saisi : le montant n'est jamais transmis — c'est la somme
-    des affectations que le service recalcule et contrôle sous verrou."""
+    """Décaissement saisi : les affectations sont facultatives (lot B-3) —
+    sans facture visée, `amount` est obligatoire (avance versée au tier
+    fournisseur `partner_id`) ; avec affectations, `amount` (facultatif) doit
+    être au moins égal à leur somme — l'excédent est un trop-versé non lettré.
+    Le service contrôle chaque affectation sous verrou de la facture."""
 
     paid_on: date
     method: PaymentMethodParam
-    allocations: Annotated[list[PurchaseAllocationIn], Field(min_length=1, max_length=50)]
+    allocations: Annotated[list[PurchaseAllocationIn], Field(default=[], max_length=50)]
     reference: Annotated[str | None, Field(max_length=100)] = None
     notes: Annotated[str | None, Field(max_length=2000)] = None
+    amount: Annotated[int | None, Field(gt=0)] = None
+    partner_id: uuid.UUID | None = None
+
+
+class PurchaseRefundIn(RequestBody):
+    """Remboursement saisi (lot B-3) : une part du reste non affecté d'un
+    décaissement rendue par le fournisseur — jamais au-delà du disponible
+    contrôlé sous verrou (montant - affectations - remboursements saisis)."""
+
+    refunded_on: date
+    method: PaymentMethodParam
+    amount: Annotated[int, Field(gt=0)]
+    reference: Annotated[str | None, Field(max_length=100)] = None
+    notes: Annotated[str | None, Field(max_length=2000)] = None
+
+
+class PurchaseAllocationTargetsIn(RequestBody):
+    """Affectation ultérieure (lot B-3) : montants cibles **absolus** par
+    facture — répéter la même demande ne change rien (idempotence), seule la
+    hausse est permise et la somme cible ne dépasse jamais le disponible."""
+
+    allocations: Annotated[list[PurchaseAllocationIn], Field(min_length=1, max_length=50)]
 
 
 class PurchaseAllocationOut(BaseModel):
     document_id: uuid.UUID
     amount: int
+    # Écriture qui couvre cette affectation (règlement posté ou transfert
+    # d'avance) : NULL tant que non couverte (lot B-3).
+    entry_id: uuid.UUID | None = None
+
+
+class PurchaseRefundOut(BaseModel):
+    """Remboursement reçu d'un fournisseur (lot B-3)."""
+
+    id: uuid.UUID
+    payment_id: uuid.UUID
+    refunded_on: str
+    method: PaymentMethodParam
+    reference: str | None
+    notes: str | None
+    amount: int
+    currency: str
+    entry_id: uuid.UUID | None = None
+    created_at: str
 
 
 class PurchasePaymentOut(BaseModel):
@@ -399,6 +443,10 @@ class PurchasePaymentOut(BaseModel):
     fiscal_year_id: uuid.UUID
     created_at: str
     allocations: list[PurchaseAllocationOut]
+    # Reste non affecté (avance ou trop-versé) : montant - affectations -
+    # remboursements, calculé en lecture (lot B-3).
+    unallocated: int
+    refunds: list[PurchaseRefundOut]
     # Écriture validée qui porte le décaissement en comptabilité.
     entry_id: uuid.UUID | None = None
 
@@ -432,12 +480,32 @@ def _payment_data(body: PurchasePaymentIn) -> payments.PaymentData:
         ),
         reference=body.reference,
         notes=body.notes,
+        amount=body.amount,
+        partner_id=body.partner_id,
+    )
+
+
+def _refund_out(refund: PurchaseRefund) -> PurchaseRefundOut:
+    return PurchaseRefundOut(
+        id=refund.id,
+        payment_id=refund.payment_id,
+        refunded_on=refund.refunded_on.isoformat(),
+        method=refund.method,
+        reference=refund.reference,
+        notes=refund.notes,
+        amount=refund.amount,
+        currency=refund.currency,
+        entry_id=refund.entry_id,
+        created_at=refund.created_at.isoformat(),
     )
 
 
 def _payment_out(
-    payment: PurchasePayment, allocations: list[PurchasePaymentAllocation]
+    payment: PurchasePayment,
+    allocations: list[PurchasePaymentAllocation],
+    refunds: list[PurchaseRefund] | None = None,
 ) -> PurchasePaymentOut:
+    rembourses = refunds if refunds is not None else []
     return PurchasePaymentOut(
         id=payment.id,
         paid_on=payment.paid_on.isoformat(),
@@ -450,8 +518,11 @@ def _payment_out(
         fiscal_year_id=payment.fiscal_year_id,
         created_at=payment.created_at.isoformat(),
         allocations=[
-            PurchaseAllocationOut(document_id=a.document_id, amount=a.amount) for a in allocations
+            PurchaseAllocationOut(document_id=a.document_id, amount=a.amount, entry_id=a.entry_id)
+            for a in allocations
         ],
+        unallocated=payments.unallocated_of(payment, allocations, rembourses),
+        refunds=[_refund_out(r) for r in rembourses],
         entry_id=payment.entry_id,
     )
 
@@ -480,8 +551,11 @@ def list_payments(
         offset=offset,
     )
     par_reglement = payments.allocations_of_payments(db, tenant.company_id, [p.id for p in items])
+    par_rembourse = payments.refunds_of_payments(db, tenant.company_id, [p.id for p in items])
     return PurchasePaymentsOut(
-        items=[_payment_out(p, par_reglement.get(p.id, [])) for p in items],
+        items=[
+            _payment_out(p, par_reglement.get(p.id, []), par_rembourse.get(p.id, [])) for p in items
+        ],
         total=total,
     )
 
@@ -501,7 +575,10 @@ def create_payment(
 @router.get("/purchase-payments/{payment_id}", responses={404: {"model": ErrorResponse}})
 def get_payment(payment_id: uuid.UUID, tenant: PurchasesRead, db: DbSession) -> PurchasePaymentOut:
     payment, allocations = payments.get_payment(db, tenant.company_id, payment_id)
-    return _payment_out(payment, allocations)
+    rembourses = payments.refunds_of_payments(db, tenant.company_id, [payment_id]).get(
+        payment_id, []
+    )
+    return _payment_out(payment, allocations, rembourses)
 
 
 @router.delete("/purchase-payments/{payment_id}", status_code=204, responses=WRITE_ERRORS)
@@ -544,8 +621,10 @@ def post_payment_entry(
     ctx: Ctx,
 ) -> PurchasePaymentOut:
     """Comptabilise un décaissement : écriture validée du journal de trésorerie
-    (débit du compte de tiers, crédit du compte de trésorerie), liée au
-    règlement. Idempotence refusée : un règlement déjà comptabilisé répond 409."""
+    (débit du compte de tiers pour la part affectée et du 4091 pour le reste
+    non affecté — avance ou trop-versé, crédit du compte de trésorerie), liée
+    au règlement. Idempotence refusée : un règlement déjà comptabilisé répond
+    409."""
     accounting.post_payment(
         db,
         _actor(tenant, ctx),
@@ -553,7 +632,115 @@ def post_payment_entry(
         cash_account_id=body.cash_account_id,
     )
     payment, allocations = payments.get_payment(db, tenant.company_id, payment_id)
-    return _payment_out(payment, allocations)
+    rembourses = payments.refunds_of_payments(db, tenant.company_id, [payment_id]).get(
+        payment_id, []
+    )
+    return _payment_out(payment, allocations, rembourses)
+
+
+@router.post("/purchase-payments/{payment_id}/allocations", responses=WRITE_ERRORS)
+def allocate_payment(
+    payment_id: uuid.UUID,
+    body: PurchaseAllocationTargetsIn,
+    tenant: PurchasesManage,
+    db: DbSession,
+    ctx: Ctx,
+) -> PurchasePaymentOut:
+    """**Affectation ultérieure** (lot B-3) : affecte le reste non affecté d'un
+    décaissement (avance ou trop-versé) à des factures fournisseurs émises du
+    même tier. Cibles absolues et idempotentes : répéter la même demande ne
+    change rien ; hausse seule permise ; la somme cible ne dépasse jamais le
+    disponible (montant - remboursements) ni les soldes des factures
+    (contrôles sous verrou)."""
+    payments.allocate_payment(
+        db,
+        _actor(tenant, ctx),
+        payment_id,
+        tuple(
+            payments.AllocationData(document_id=a.document_id, amount=a.amount)
+            for a in body.allocations
+        ),
+    )
+    payment, allocations = payments.get_payment(db, tenant.company_id, payment_id)
+    rembourses = payments.refunds_of_payments(db, tenant.company_id, [payment_id]).get(
+        payment_id, []
+    )
+    return _payment_out(payment, allocations, rembourses)
+
+
+@router.post(
+    "/purchase-payments/{payment_id}/refund",
+    status_code=status.HTTP_201_CREATED,
+    responses=WRITE_ERRORS,
+)
+def create_payment_refund(
+    payment_id: uuid.UUID, body: PurchaseRefundIn, tenant: PurchasesManage, db: DbSession, ctx: Ctx
+) -> PurchaseRefundOut:
+    """**Remboursement** (lot B-3) : constate le retour par le fournisseur d'une
+    part du reste non affecté du décaissement — jamais au-delà du disponible
+    contrôlé sous verrou. Aucune écriture n'est générée : la comptabilisation
+    (débit trésorerie, crédit 4091) reste explicite (`entries:post`)."""
+    refund = payments.refund_payment(
+        db,
+        _actor(tenant, ctx),
+        payment_id,
+        payments.RefundData(
+            refunded_on=body.refunded_on,
+            method=body.method,
+            amount=body.amount,
+            reference=body.reference,
+            notes=body.notes,
+        ),
+    )
+    return _refund_out(refund)
+
+
+@router.delete("/purchase-payment-refunds/{refund_id}", status_code=204, responses=WRITE_ERRORS)
+def delete_payment_refund(
+    refund_id: uuid.UUID, tenant: PurchasesManage, db: DbSession, ctx: Ctx
+) -> None:
+    """Supprime un remboursement (correction de saisie) : le disponible du
+    règlement porteur est restitué, l'action est journalisée. Refusé tant que
+    le remboursement est comptabilisé : l'écriture se contre-passe d'abord."""
+    payments.delete_refund(db, _actor(tenant, ctx), refund_id)
+
+
+@router.post("/purchase-payments/{payment_id}/allocation-entry", responses=WRITE_ERRORS)
+def post_allocation_entry(
+    payment_id: uuid.UUID,
+    tenant: EntriesPost,
+    db: DbSession,
+    ctx: Ctx,
+) -> PurchasePaymentOut:
+    """Transfert d'avance (lot B-3) : couvre en comptabilité les affectations
+    ajoutées après la comptabilisation du règlement — débit du compte de tiers
+    fournisseur, crédit du 4091 « Fournisseurs, avances et acomptes versés »,
+    au journal des opérations diverses. Idempotence refusée : rien à
+    transférer répond 409."""
+    accounting.post_allocation_entry(db, _actor(tenant, ctx), payment_id)
+    payment, allocations = payments.get_payment(db, tenant.company_id, payment_id)
+    rembourses = payments.refunds_of_payments(db, tenant.company_id, [payment_id]).get(
+        payment_id, []
+    )
+    return _payment_out(payment, allocations, rembourses)
+
+
+@router.post("/purchase-payment-refunds/{refund_id}/entry", responses=WRITE_ERRORS)
+def post_refund_entry(
+    refund_id: uuid.UUID,
+    body: PurchasePaymentEntryIn,
+    tenant: EntriesPost,
+    db: DbSession,
+    ctx: Ctx,
+) -> PurchaseRefundOut:
+    """Comptabilise un remboursement reçu du fournisseur (lot B-3) : écriture
+    validée du journal de trésorerie — débit du compte de trésorerie, crédit du
+    4091 « Fournisseurs, avances et acomptes versés ». Exige un règlement
+    porteur comptabilisé (écriture vivante) ; idempotence refusée (409)."""
+    accounting.post_refund_entry(
+        db, _actor(tenant, ctx), refund_id, cash_account_id=body.cash_account_id
+    )
+    return _refund_out(payments.get_refund(db, tenant.company_id, refund_id))
 
 
 @router.get("/payables/aging", responses={404: {"model": ErrorResponse}})
