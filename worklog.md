@@ -1966,3 +1966,65 @@ simulée) ; CI GitHub Actions toujours bloquée par la facturation du compte
 (aucune exécution GitHub n'a validé cette phase).
 - Suivi : `AUDIT_SUIVI_20261109.md` §41.
 
+
+- **Lot B-3 — acomptes clients, avances fournisseurs, trop-perçus, remboursements
+  et affectation ultérieure** (2026-11-19, branche `feature/kora-b3-acomptes-avances`,
+  base `3d9a233` = PR #100). Migration **0024** : tables `sales_refunds` et
+  `purchase_refunds` (montant > 0, méthode bornée, FK composites, `entry_id`
+  RESTRICT, RLS `tenant_isolation` forcée) et colonne `entry_id` sur
+  `sales_payment_allocations` / `purchase_payment_allocations` (la couverture
+  comptable de chaque affectation : posée à la comptabilisation du règlement ou au
+  transfert d'acompte, NULL tant que non couverte) ; aller-retour 0023 → base → 0024
+  + `alembic check` propre.
+- Service : un règlement porte désormais un **reste non affecté** — acompte reçu
+  sans facture (le tier client est exigé : `is_client`, miroir `is_supplier` côté
+  achats) ou trop-perçu sur facture (montant saisi ≥ somme des affectations,
+  contrôlé) ; l'invariant `affectations + remboursements ≤ montant` est maintenu
+  sous verrou FOR UPDATE par chaque mutation. **Affectation ultérieure** : cibles
+  absolues par facture (répéter la même demande = no-op idempotent), hausse seule
+  (réduction = suppression du règlement, journalisée), disponible = montant −
+  remboursements, delta ≤ solde restant dû — dix affectations concurrentes sur le
+  même acompte ne dépassent jamais le disponible (course réelle testée).
+  **Remboursements** : immuables, bornés au reste non affecté, supprimables tant
+  que non comptabilisés.
+- Comptabilisation (acte explicite `entries:post`, garde-fou maintenu) : règlement
+  mixte = débit de trésorerie, crédit du compte de tiers pour la part affectée et
+  du **4191** (sinon parent **419** du référentiel préchargé) pour le reste —
+  jamais au 411 ; miroir achats **4091**/**409** ; **transfert d'acompte**
+  (journal OD : débit 4191, crédit 411x) couvre les affectations ajoutées après
+  comptabilisation (idempotence refusée 409) ; écriture de remboursement (débit
+  4191, crédit trésorerie) exigeant un règlement porteur comptabilisé à l'écriture
+  vivante ; interlocks : règlement porteur d'un remboursement comptabilisé
+  insupprimable, remboursement insupprimable tant que son écriture vit.
+- Routes : `/payments/{id}/allocations`, `/payments/{id}/refund`,
+  `/payment-refunds/{id}` (DELETE) et `/payment-refunds/{id}/entry`,
+  `/payments/{id}/allocation-entry` + cinq miroirs achats — contrat
+  **116→126 chemins / 148→158 opérations / 194→200 schémas** (pur ajout) ;
+  `PaymentIn` évolue rétrocompatiblement (`allocations` devient facultatif,
+  `amount` et `partner_id` facultatifs) ; `PaymentOut`/`PurchasePaymentOut`
+  gagnent `unallocated` et `refunds`, `AllocationOut` gagne `entry_id` ;
+  contrat réexporté = committé (diff nul).
+- Front fr/en : page Ventes — carte « Acompte client reçu » (tier client, montant,
+  date, mode), colonne « Non affecté » avec badge, affectation ultérieure inline
+  (factures émises du tier, cible absolue), remboursement inline, transfert OD,
+  comptabilisation/suppression des remboursements ; page Achats — miroir complet
+  « Avance fournisseur versée » ; Server Actions B-3 (7 ventes + 7 achats) ;
+  i18n fr/en (26 clés par langue).
+- **Tests datés corrigés à la racine** : `test_balance_agee_buckets` et
+  `test_payables_aging_buckets` écrivaient l'échéance en dur (18/11 et 31/12) —
+  la création refuse une échéance passée, donc ils cassaient chaque jour suivant ;
+  échéances désormais dynamiques (aujourd'hui ± N jours) et `as_of` relatifs.
+- **Validation** : pytest **1130 verts** (22 nouveaux : acompte/trop-perçu,
+  affectation ultérieure idempotente et concurrente, remboursements, interlocks,
+  isolation RLS, permissions, routage 419/4191, transfert OD, écriture de
+  remboursement ; régression par tranches : ventes 119, achats+tiers 55, isolation
+  RLS + garde-fous + permissions 419, comptabilité 135, trésorerie/cashflow 144,
+  auth/emails/worker 110, transverse 148) ; migrations 3/3 ; ruff 0 (format 0) ;
+  mypy strict 0 (src+tests) ; ESLint 0 ; tsc 0 (typegen) ; Vitest 69/69 ;
+  build Next.js OK (pages `/ventes` et `/achats` fr/en régénérées).
+- **Reste** : échéanciers clients et export PDF/Excel de la balance âgée ;
+  indicateurs de recouvrement et DSO ; imputation multi-comptes ; phase 5 import
+  Excel/CSV/FEC (100 000 lignes) ; WhatsApp (compte Business officiel requis —
+  aucune intégration simulée) ; CI GitHub Actions toujours bloquée par la
+  facturation du compte (aucune exécution GitHub n'a validé cette phase).
+- Suivi : `AUDIT_SUIVI_20261109.md` §42.
