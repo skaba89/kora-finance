@@ -1,6 +1,13 @@
 # CI Kora Finance. Les jobs exécutent exactement les mêmes commandes `make` qu'en local,
 # dans les mêmes conteneurs épinglés : ce qui passe en local passe en CI, et inversement.
 # Protection de branche : exiger le statut « CI / Résultat » sur main.
+#
+# Économie de minutes : le job « Périmètre modifié » compare les fichiers de la PR
+# à sa base. Une PR qui ne touche que la documentation (docs/** et *.md) saute les
+# six jobs métier — le scan des secrets reste systématique (un secret peut fuiter
+# dans un markdown comme ailleurs) et le job « Résultat » est toujours exécuté, donc
+# un futur check requis sur main reste fiable. Tout changement de code (y compris
+# de .github/workflows/) déclenche la CI complète, comme avant.
 name: CI
 
 on:
@@ -16,6 +23,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Périmètre modifié
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.scope.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: scope
+        name: Déterminer le périmètre (code ou documentation)
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "pull_request" ]; then
+            # Documentation pure : docs/** et tout fichier .md. Tout le reste
+            # (apps/, scripts/, Makefile, docker/, .github/workflows/, racine)
+            # est du code et exige la CI complète.
+            non_docs="$(git diff --name-only "$BASE" "$HEAD" | grep -Ev '(^docs/|\.md$)' || true)"
+            if [ -z "$non_docs" ]; then
+              echo "PR documentation uniquement : les jobs métier seront sautés." >&2
+              echo "code=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "PR de code : CI complète." >&2
+              echo "code=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            # Push sur main : périmètre toujours complet (sécurité par défaut).
+            echo "Push sur main : périmètre complet validé." >&2
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          fi
+
   secrets:
     name: Secrets (gitleaks)
     runs-on: ubuntu-24.04
@@ -28,6 +71,8 @@ jobs:
 
   api:
     name: API (ruff, mypy, pytest)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -43,6 +88,8 @@ jobs:
 
   web:
     name: Web (eslint, tsc, vitest, build)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -56,6 +103,8 @@ jobs:
 
   contract:
     name: Contrat d'API à jour
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -66,6 +115,8 @@ jobs:
 
   e2e:
     name: E2E (pile complète + Playwright)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -85,6 +136,8 @@ jobs:
 
   restore:
     name: Restauration synthétique (PostgreSQL + pièces chiffrées)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -99,6 +152,8 @@ jobs:
 
   sca:
     name: SCA (pip-audit, npm audit, SBOM)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -121,12 +176,26 @@ jobs:
   result:
     name: Résultat
     if: always()
-    needs: [secrets, api, web, contract, e2e, restore, sca]
+    needs: [changes, secrets, api, web, contract, e2e, restore, sca]
     runs-on: ubuntu-24.04
     steps:
-      - name: Tous les jobs doivent réussir
+      - name: Tous les jobs requis doivent réussir
         run: |
-          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}" == "true" ]]; then
-            echo "Au moins un job a échoué." >&2
-            exit 1
+          if [ "${{ needs.changes.outputs.code }}" = "true" ]; then
+            # Périmètre code : aucun job ne doit être manquant, échoué ou annulé.
+            if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}" == "true" ]]; then
+              echo "Au moins un job a échoué." >&2
+              exit 1
+            fi
+          else
+            # Périmètre documentation : secrets doit réussir, les jobs métier
+            # sautés sont attendus — un job réellement en échec reste bloquant.
+            if [ "${{ needs.secrets.result }}" != "success" ]; then
+              echo "Le scan des secrets doit réussir, même sur une PR documentation." >&2
+              exit 1
+            fi
+            if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+              echo "Au moins un job a échoué." >&2
+              exit 1
+            fi
           fi
