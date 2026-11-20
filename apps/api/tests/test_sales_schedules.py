@@ -194,7 +194,11 @@ def test_refus_brouillon_devis_avoir_facture_annulee(
     assert echeanciers.put(devis, plan).status_code == 409
 
     origine = _facture_emise(sales, client, company)
-    avoir = _facture_brouillon(sales, tva, doc_kind="credit_note", origin_document_id=origine)
+    # L'avoir porte le tier de sa facture d'origine (règle 4B).
+    partner_id = sales.get(origine).json()["partner_id"]
+    avoir = _facture_brouillon(
+        sales, tva, doc_kind="credit_note", origin_document_id=origine, partner_id=partner_id
+    )
     assert echeanciers.put(avoir, plan).status_code == 409
 
     annulee = _facture_emise(sales, client, company)

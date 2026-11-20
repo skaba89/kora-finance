@@ -174,6 +174,11 @@ def replace_schedule(
         )
     if not lines:
         raise BusinessRuleError("Un échéancier vide se supprime : au moins une tranche attendue.")
+    # La base refuse une note blanche (CHECK) : le service la refuse avant, avec
+    # un message clair — jamais d'IntegrityError pour une saisie incomplète.
+    for line in lines:
+        if line.note is not None and not line.note.strip():
+            raise BusinessRuleError("La note d'une tranche ne peut pas être vide.")
     if len(lines) > MAX_SCHEDULE_LINES:
         raise BusinessRuleError(
             f"Au maximum {MAX_SCHEDULE_LINES} tranches par échéancier (reçu {len(lines)})."

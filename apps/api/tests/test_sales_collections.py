@@ -121,9 +121,7 @@ def test_kpis_dataset_connu(client: TestClient, make_company: MakeCompany) -> No
         due_on=(jour + timedelta(days=30)).isoformat(),
     )  # fmt: skip
     assert (
-        _reglement(
-            client, company, f2, 2 * TTC, (jour - timedelta(days=10)).isoformat()
-        ).status_code
+        _reglement(client, company, f2, TTC, (jour - timedelta(days=10)).isoformat()).status_code
         == 201
     )
 
@@ -256,7 +254,7 @@ def test_export_balance_agee_pdf_et_excel(client: TestClient, make_company: Make
     jour = utcnow().date()
     echue = _facture_emise(
         sales, client, company, issued_on=(jour - timedelta(days=45)).isoformat(),
-        due_on=(jour - timedelta(days=5)).isoformat(),
+        due_on=(jour + timedelta(days=1)).isoformat(),
     )  # fmt: skip
     _facture_emise(
         sales, client, company, issued_on=jour.isoformat(),
