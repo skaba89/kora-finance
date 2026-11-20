@@ -7,6 +7,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { agingExportHref } from "@/lib/exports";
 import { formatMoney } from "@/lib/format";
 import type { Dictionary, SalesAging } from "./types";
 
@@ -14,10 +16,12 @@ const AGING_BUCKETS = ["not_due", "d1_30", "d31_60", "d61_90", "d90_plus"] as co
 
 /** Balance âgée clients par ancienneté de créance, à la date de calcul. */
 export function SalesAgingCard({
+  companyId,
   aging,
   currency,
   t,
 }: {
+  companyId: string;
   aging: SalesAging;
   currency: string;
   t: Dictionary;
@@ -29,6 +33,14 @@ export function SalesAgingCard({
         <p className="text-muted-foreground text-sm">
           {t.sales.agingAsOf} {aging.as_of} — {formatMoney(aging.grand_total_ttc, currency)}
         </p>
+        <div className="flex gap-2 pt-2">
+          <Button asChild size="sm" variant="outline">
+            <a href={agingExportHref(companyId, "pdf")}>{t.sales.agingExportPdf}</a>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <a href={agingExportHref(companyId, "xlsx")}>{t.sales.agingExportXlsx}</a>
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {aging.grand_total_ttc === 0 ? (

@@ -1754,6 +1754,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/receivables/aging/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Receivables Aging
+         * @description Export PDF/Excel de la balance âgée clients au jour demandé (lot B-4) :
+         *     une section par bucket, une ligne par facture non soldée — la même
+         *     répartition que la route JSON, sous quota d'exports (KF-13) et journalisée.
+         */
+        get: operations["export_receivables_aging_api_v1_companies__company_id__receivables_aging_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/receivables/kpis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Receivables Kpis
+         * @description Indicateurs de recouvrement au jour demandé (aujourd'hui par défaut),
+         *     fenêtre de mesure de 7 à 365 jours (90 par défaut).
+         */
+        get: operations["receivables_kpis_api_v1_companies__company_id__receivables_kpis_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/receivables/overdue": {
         parameters: {
             query?: never;
@@ -1768,6 +1811,27 @@ export interface paths {
          *     doit être complétée avant toute relance).
          */
         get: operations["receivables_overdue_api_v1_companies__company_id__receivables_overdue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/receivables/schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Schedules
+         * @description Tous les échéanciers du dossier, statués au jour demandé (aujourd'hui par
+         *     défaut) : le plan de chaque facture émise qui en porte un, avec son contexte.
+         */
+        get: operations["list_schedules_api_v1_companies__company_id__receivables_schedules_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2051,6 +2115,36 @@ export interface paths {
          */
         get: operations["export_document_pdf_api_v1_companies__company_id__sales__document_id__pdf_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/companies/{company_id}/sales/{document_id}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Schedule
+         * @description L'échéancier d'une facture, statué au jour présent : chaque tranche est
+         *     réglée (cumul encaissé atteint), en retard (date passée) ou à venir. La
+         *     lecture n'écrit rien et n'écrit jamais en comptabilité.
+         */
+        get: operations["get_schedule_api_v1_companies__company_id__sales__document_id__schedule_get"];
+        /**
+         * Replace Schedule
+         * @description Remplace le plan d'une facture émise en bloc (PUT idempotent). Refusé
+         *     pour un brouillon, un devis, un avoir ou une facture annulée ; la somme des
+         *     tranches ne peut pas dépasser le solde restant dû (contrôlé sous verrou du
+         *     document, sérialisé avec les règlements). Journalisé ; aucune écriture
+         *     comptable.
+         */
+        put: operations["replace_schedule_api_v1_companies__company_id__sales__document_id__schedule_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -4294,6 +4388,36 @@ export interface components {
             /** Label */
             label?: string | null;
         };
+        /**
+         * KpisOut
+         * @description Indicateurs de recouvrement au jour demandé : encours, part échue, DSO
+         *     en jours de ventes, taux de recouvrement et top débiteurs. Tout est calculé
+         *     en lecture depuis les mêmes soldes que la balance âgée 4C.
+         */
+        KpisOut: {
+            /** As Of */
+            as_of: string;
+            /** Billed Ttc */
+            billed_ttc: number;
+            /** Collected Ttc */
+            collected_ttc: number;
+            /** Dso Days */
+            dso_days: number;
+            /** Lookback Days */
+            lookback_days: number;
+            /** Outstanding Ttc */
+            outstanding_ttc: number;
+            /** Overdue Share Bp */
+            overdue_share_bp: number;
+            /** Overdue Ttc */
+            overdue_ttc: number;
+            /** Recovery Rate Bp */
+            recovery_rate_bp: number;
+            /** Top Debtors */
+            top_debtors: components["schemas"]["TopDebtorOut"][];
+            /** Weighted Days Late */
+            weighted_days_late: number;
+        };
         /** LedgerAccountOut */
         LedgerAccountOut: {
             /**
@@ -5735,6 +5859,109 @@ export interface components {
          */
         Scenario: "OPTIMISTE" | "NEUTRE" | "PRUDENT";
         /**
+         * ScheduleLineBody
+         * @description Une tranche du plan : date attendue, montant attendu (unités mineures,
+         *     strictement positif), note facultative.
+         */
+        ScheduleLineBody: {
+            /** Expected Amount */
+            expected_amount: number;
+            /**
+             * Expected On
+             * Format: date
+             */
+            expected_on: string;
+            /** Note */
+            note?: string | null;
+        };
+        /** ScheduleLineOut */
+        ScheduleLineOut: {
+            /** Expected Amount */
+            expected_amount: number;
+            /** Expected On */
+            expected_on: string;
+            /** Line No */
+            line_no: number;
+            /** Note */
+            note: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "settled" | "late" | "upcoming";
+        };
+        /** ScheduleOut */
+        ScheduleOut: {
+            /** Currency */
+            currency: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Document Number */
+            document_number: number | null;
+            /** Lines */
+            lines: components["schemas"]["ScheduleLineOut"][];
+            /** Outstanding Ttc */
+            outstanding_ttc: number;
+            /** Paid Ttc */
+            paid_ttc: number;
+            /** Planned Remaining */
+            planned_remaining: number;
+            /** Planned Total */
+            planned_total: number;
+            /** Total Ttc */
+            total_ttc: number;
+        };
+        /**
+         * SchedulePutIn
+         * @description Le plan complet d'une facture : remplacé en bloc (sémantique PUT), les
+         *     tranches renumérotées 1..N. Répéter le même plan = même état (idempotent).
+         */
+        SchedulePutIn: {
+            /** Lines */
+            lines: components["schemas"]["ScheduleLineBody"][];
+        };
+        /** ScheduleSummaryOut */
+        ScheduleSummaryOut: {
+            /** Currency */
+            currency: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Document Number */
+            document_number: number;
+            /** Lines */
+            lines: components["schemas"]["ScheduleLineOut"][];
+            /** Outstanding Ttc */
+            outstanding_ttc: number;
+            /** Paid Ttc */
+            paid_ttc: number;
+            /**
+             * Partner Id
+             * Format: uuid
+             */
+            partner_id: string;
+            /** Partner Name */
+            partner_name: string;
+            /** Planned Remaining */
+            planned_remaining: number;
+            /** Planned Total */
+            planned_total: number;
+            /** Total Ttc */
+            total_ttc: number;
+        };
+        /** SchedulesOut */
+        SchedulesOut: {
+            /** As Of */
+            as_of: string;
+            /** Items */
+            items: components["schemas"]["ScheduleSummaryOut"][];
+        };
+        /**
          * Sense
          * @enum {string}
          */
@@ -5932,6 +6159,20 @@ export interface components {
              * @constant
              */
             token_type: "bearer";
+        };
+        /** TopDebtorOut */
+        TopDebtorOut: {
+            /** Max Days Late */
+            max_days_late: number;
+            /** Outstanding Ttc */
+            outstanding_ttc: number;
+            /**
+             * Partner Id
+             * Format: uuid
+             */
+            partner_id: string;
+            /** Partner Name */
+            partner_name: string;
         };
         /** TransferCreate */
         TransferCreate: {
@@ -13359,6 +13600,123 @@ export interface operations {
             };
         };
     };
+    export_receivables_aging_api_v1_companies__company_id__receivables_aging_export_get: {
+        parameters: {
+            query: {
+                /** @description pdf ou xlsx */
+                format: "pdf" | "xlsx";
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fichier exporté */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    receivables_kpis_api_v1_companies__company_id__receivables_kpis_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+                lookback_days?: number | null;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KpisOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     receivables_overdue_api_v1_companies__company_id__receivables_overdue_get: {
         parameters: {
             query?: {
@@ -13380,6 +13738,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OverdueOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_schedules_api_v1_companies__company_id__receivables_schedules_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulesOut"];
                 };
             };
             /** @description Not Found */
@@ -14542,6 +14943,121 @@ export interface operations {
             };
             /** @description Too Many Requests */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_schedule_api_v1_companies__company_id__sales__document_id__schedule_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replace_schedule_api_v1_companies__company_id__sales__document_id__schedule_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulePutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -548,3 +548,47 @@ export async function postRefundEntryAction(
   refresh();
   return { status: "success", message: t.sales.refundEntryPosted };
 }
+
+
+/** Remplace l'échéancier d'une facture émise (lot B-4) : tranches renumérotées
+ * 1..N, sémantique PUT idempotente. Jusqu'à trois tranches au formulaire ; le
+ * service refuse une somme supérieure au solde restant dû. */
+export async function updateScheduleAction(
+  companyId: string,
+  _: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const t = await actionDictionary();
+  const documentId = field(formData, "document_id");
+  if (!documentId) {
+    return { status: "error", message: t.sales.scheduleDocRequired };
+  }
+  const lines: { expected_on: string; expected_amount: number; note?: string }[] = [];
+  for (const slot of [1, 2, 3]) {
+    const day = field(formData, `expected_on_${slot}`);
+    const montant = Number(field(formData, `expected_amount_${slot}`) || "0");
+    if (!day && montant <= 0) continue;
+    if (!day || !Number.isFinite(montant) || montant <= 0) {
+      return { status: "error", message: t.sales.scheduleLineIncomplete };
+    }
+    const note = field(formData, `note_${slot}`);
+    lines.push({
+      expected_on: day,
+      expected_amount: Math.round(montant),
+      ...(note ? { note } : {}),
+    });
+  }
+  if (lines.length === 0) {
+    return { status: "error", message: t.sales.scheduleLinesRequired };
+  }
+  const { error, response } = await (await api()).PUT(
+    "/api/v1/companies/{company_id}/sales/{document_id}/schedule",
+    {
+      params: { path: { company_id: companyId, document_id: documentId } },
+      body: { lines },
+    },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  return { status: "success", message: t.sales.scheduleSaved };
+}

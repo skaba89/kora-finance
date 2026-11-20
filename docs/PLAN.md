@@ -234,6 +234,38 @@ email/WhatsApp, relances, balance âgée.
   22 tests nouveaux + deux tests datés en dur corrigés à la racine (échéances
   dynamiques).)
 
+- **B4 — Échéanciers clients, export de la balance âgée, indicateurs de
+  recouvrement et DSO** ✅ (2026-11-20, branche `feature/kora-b4-recouvrement` :
+  Phase B lot 4 de la mission DataSphere ; migration 0025
+  `sales_payment_schedule_lines` (RLS forcée, FK composite CASCADE vers
+  `sales_documents`, unicité (dossier, facture, tranche), montants strictement
+  positifs) ; l'échéancier est un **outil de planification du recouvrement** —
+  il n'écrit jamais en comptabilité et ne modifie jamais le solde ; le plan
+  d'une facture est remplacé en bloc (PUT idempotent, tranches renumérotées
+  1..N, maximum 24 tranches), la somme planifiée ne dépasse pas le solde
+  restant dû (contrôlé sous verrou FOR UPDATE du document — sérialisé avec les
+  règlements 4C : la course règlement/échéancier est testée) ; le statut des
+  tranches est calculé en lecture : les encaissements lettrés couvrent les
+  lignes dans l'ordre — réglée / en retard / à venir, à un as_of arbitraire ;
+  routes `GET/PUT /sales/{id}/schedule` et `GET /receivables/schedules` (liste
+  groupée du dossier, jamais N+1 requêtes), audit `sales_schedule.updated` ;
+  indicateurs de recouvrement calculés en lecture depuis les mêmes soldes que
+  la balance âgée 4C (`GET /receivables/kpis`) : encours, part échue en points
+  de base, retard moyen pondéré, **DSO en jours de ventes** borné à la fenêtre
+  (7..365 jours, 90 par défaut), **taux de recouvrement** = encaissements nets
+  des remboursements B-3 ÷ factures émises de la fenêtre, top débiteurs (cinq
+  tiers au plus fort solde avec leur retard maximum) ; export PDF/Excel de la
+  balance âgée (`GET /receivables/aging/export`, permission `sales:read`) :
+  une section par bucket, une ligne par facture non soldée, la même répartition
+  que la route JSON, sous quota d'exports KF-13 et journalisé
+  `export.generated` (contrat 126→130 chemins, 158→164 opérations, 200→208
+  schémas, pur ajout) ; page Ventes fr/en : carte Échéanciers clients (plans
+  statués + formulaire de planification de trois tranches), carte Indicateurs
+  de recouvrement (DSO, taux, part échue, top débiteurs), boutons PDF/Excel
+  sur la balance âgée ; 17 tests nouveaux (plan statué, ordre de couverture,
+  refus de statuts, bornes, RLS, permissions, audit, course sur le verrou du
+  document, dataset de KPIs à dates relatives, DSO borné, remboursements nets,
+  export PDF/Excel et traçabilité).)
 ## Phase 5 — Import et migration
 FEC, Excel, balance d'ouverture en tâche de fond, rapport de contrôle.
 - 100 000 lignes importées sans timeout, rapport exhaustif.
