@@ -2098,3 +2098,15 @@ lignes) ; WhatsApp (compte Business officiel requis — aucune intégration
 simulée).
 
 - Suivi : `AUDIT_SUIVI_20261109.md` §43.
+
+## UX Ventes — 20 novembre 2026
+
+L’accueil du dossier donne la priorité aux soldes et ouvre le formulaire de facture
+selon le rôle. Ventes répartit les écrans existants entre Documents, Encaissements et
+Recouvrement, accessibles par URL. La création réutilise la Server Action existante.
+Les documents et factures échues se lisent en fiches sous le seuil md. Les soldes
+de trésorerie reçus en chaînes passent directement en BigInt pour l’affichage.
+
+Recette ajoutée dans `apps/web/e2e/ventes.spec.ts` pour le parcours de création
+depuis un dossier neuf et la consultation par un lecteur. La suite Playwright
+décline ces scénarios sur ordinateur et mobile.

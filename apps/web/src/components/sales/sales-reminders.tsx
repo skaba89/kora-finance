@@ -42,8 +42,8 @@ export function SalesOverdueCard({
         {overdue.items.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t.sales.reminderEmpty}</p>
         ) : (
-          <Table>
-            <TableHeader>
+          <Table className="max-md:block">
+            <TableHeader className="max-md:sr-only">
               <TableRow>
                 <TableHead>{t.sales.reminderOverdueDoc}</TableHead>
                 <TableHead>{t.sales.reminderPartner}</TableHead>
@@ -53,22 +53,23 @@ export function SalesOverdueCard({
                 <TableHead className="text-right">{t.sales.reminderCount}</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="max-md:block">
               {overdue.items.map((item) => (
-                <TableRow key={item.document_id}>
+                <TableRow key={item.document_id} className="max-md:grid max-md:grid-cols-2 max-md:gap-x-2 max-md:py-3">
                   <TableCell className="font-mono text-xs">FAC-{item.number}</TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-normal wrap-anywhere max-md:order-first max-md:col-span-2 max-md:font-medium">
                     {item.partner_name}
                     {item.partner_email == null && (
                       <span className="text-muted-foreground"> — {t.sales.reminderNoEmail}</span>
                     )}
                   </TableCell>
-                  <TableCell>{item.due_on}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right md:text-left"><span className="text-muted-foreground block text-xs md:hidden">{t.sales.reminderDue}</span>{item.due_on}</TableCell>
+                  <TableCell className="text-right whitespace-normal max-md:text-left">
+                    <span className="text-muted-foreground block text-xs md:hidden">{t.sales.reminderBalance}</span>
                     {formatMoney(item.outstanding_ttc, item.currency)}
                   </TableCell>
-                  <TableCell className="text-right">{item.days_late} j</TableCell>
-                  <TableCell className="text-right">{item.reminders_count}</TableCell>
+                  <TableCell className="text-right"><span className="text-muted-foreground block text-xs md:hidden">{t.sales.reminderLate}</span>{item.days_late} j</TableCell>
+                  <TableCell className="text-right max-md:text-left"><span className="text-muted-foreground block text-xs md:hidden">{t.sales.reminderCount}</span>{item.reminders_count}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

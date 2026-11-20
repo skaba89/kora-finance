@@ -5,6 +5,8 @@ cabinets comptables : comptabilité SYSCOHADA révisé, rapprochement Mobile Mon
 bancaire, états financiers prêts pour un dossier de crédit, assistance IA.
 **Produit de production, pas une démo** : chaque livraison est complète, testée et sécurisée.
 
+Le parcours Ventes est organisé en Documents, Encaissements et Recouvrement. Le lien de création du tableau de bord ouvre le formulaire de brouillon pour les rôles autorisés.
+
 Journal daté des sessions : `worklog.md`. Le lire en début de session.
 
 ## État d'avancement

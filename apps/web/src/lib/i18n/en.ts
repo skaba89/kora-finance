@@ -570,6 +570,13 @@ export const en: typeof fr = {
     },
   },
   sales: {
+    firstPartnerHint: "Add an active customer to create your first invoice.",
+    openPartners: "Open the partner form",
+    paymentsView: "Receipts",
+    collectionView: "Collections",
+    createInvoice: "Create an invoice",
+    noMatchingDocuments: "No documents to display.",
+    partnerReference: "Partner reference",
     title: "Sales",
     subtitle:
       "Quotes, invoices and credit notes of the company, numbered sequentially without gaps (OHADA).",

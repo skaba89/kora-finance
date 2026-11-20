@@ -570,6 +570,13 @@ export const fr = {
     },
   },
   sales: {
+    firstPartnerHint: "Ajoutez un client actif pour créer votre première facture.",
+    openPartners: "Ouvrir la fiche tiers",
+    paymentsView: "Encaissements",
+    collectionView: "Recouvrement",
+    createInvoice: "Créer une facture",
+    noMatchingDocuments: "Aucun document à afficher.",
+    partnerReference: "Référence du tiers",
     title: "Ventes",
     subtitle:
       "Devis, factures et avoirs du dossier, numérotés chronologiquement sans trou (OHADA).",
@@ -609,8 +616,8 @@ export const fr = {
     create: "Créer le brouillon",
     createHint:
       "Le brouillon n'est jamais numéroté : il est modifiable et supprimable. Le numéro est attribué à l'émission (facture/avoir) ou à l'envoi (devis).",
-    partnerLabel: "Tier (client)",
-    partnerPlaceholder: "Choisir un tier du dossier",
+    partnerLabel: "Client",
+    partnerPlaceholder: "Choisir un tiers du dossier",
     notes: "Notes / conditions",
     lineTitle: "Ligne",
     lineLabel: "Désignation",
