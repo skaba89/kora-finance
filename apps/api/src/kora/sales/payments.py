@@ -793,6 +793,24 @@ class AgingBucket:
 
 
 @dataclass(frozen=True)
+class AgingRow:
+    """Une facture échue (ou à échoir) en détail : pour l'export PDF/Excel
+    (lot B-4) et tout affichage ligne à ligne. Le bucket est renvoyé avec la
+    ligne : la répartition reste la même que la balance âgée 4C."""
+
+    document_id: uuid.UUID
+    number: int
+    partner_id: uuid.UUID
+    partner_name: str
+    issued_on: date
+    due_on: date | None
+    days_late: int
+    outstanding_ttc: int
+    currency: str
+    bucket: str
+
+
+@dataclass(frozen=True)
 class AgingReport:
     """Balance âgée clients à une date donnée : buckets bornés (à-échoir,
     1-30, 31-60, 61-90, plus de 90 jours) et total général."""
@@ -802,10 +820,10 @@ class AgingReport:
     grand_total_ttc: int
 
 
-def receivables_aging(session: Session, company_id: uuid.UUID, as_of: date) -> AgingReport:
-    """Balance âgée clients (Phase 4C) : factures émises non soldées, réparties
-    par ancienneté de retard (échéance passée) au {as_of}. Un solde nul ou
-    négatif (avoir excédentaire) n'entre pas."""
+def receivables_aging_rows(session: Session, company_id: uuid.UUID, as_of: date) -> list[AgingRow]:
+    """Les factures émises non soldées, détaillées, au {as_of} — la matière de
+    la balance âgée 4C et de son export (B-4). Ordre : bucket puis numéro
+    décroissant (les plus récentes d'abord dans chaque bucket)."""
     invoices = list(
         session.execute(
             select(SalesDocument).where(
@@ -815,11 +833,19 @@ def receivables_aging(session: Session, company_id: uuid.UUID, as_of: date) -> A
             )
         ).scalars()
     )
+    if not invoices:
+        return []
     lettres = outstanding_for_documents(session, company_id, [i.id for i in invoices])
-    buckets: dict[str, AgingBucket] = {
-        cle: AgingBucket(count=0, total_ttc=0)
-        for cle in ("not_due", "d1_30", "d31_60", "d61_90", "d90_plus")
+    noms = {
+        p.id: p.name
+        for p in session.execute(
+            select(Partner).where(
+                Partner.tenant_id == company_id,
+                Partner.id.in_({i.partner_id for i in invoices}),
+            )
+        ).scalars()
     }
+    rows: list[AgingRow] = []
     for invoice in invoices:
         solde = invoice.total_ttc - lettres.get(invoice.id, 0)
         if solde <= 0:
@@ -835,8 +861,36 @@ def receivables_aging(session: Session, company_id: uuid.UUID, as_of: date) -> A
             cle = "d61_90"
         else:
             cle = "d90_plus"
-        precedent = buckets[cle]
-        buckets[cle] = AgingBucket(count=precedent.count + 1, total_ttc=precedent.total_ttc + solde)
+        rows.append(
+            AgingRow(
+                document_id=invoice.id,
+                number=invoice.number or 0,
+                partner_id=invoice.partner_id,
+                partner_name=noms.get(invoice.partner_id, "?"),
+                issued_on=invoice.issued_on or as_of,
+                due_on=invoice.due_on,
+                days_late=max(retard, 0),
+                outstanding_ttc=solde,
+                currency=invoice.currency,
+                bucket=cle,
+            )
+        )
+    return rows
+
+
+def receivables_aging(session: Session, company_id: uuid.UUID, as_of: date) -> AgingReport:
+    """Balance âgée clients (Phase 4C) : factures émises non soldées, réparties
+    par ancienneté de retard (échéance passée) au {as_of}. Un solde nul ou
+    négatif (avoir excédentaire) n'entre pas."""
+    buckets: dict[str, AgingBucket] = {
+        cle: AgingBucket(count=0, total_ttc=0)
+        for cle in ("not_due", "d1_30", "d31_60", "d61_90", "d90_plus")
+    }
+    for row in receivables_aging_rows(session, company_id, as_of):
+        precedent = buckets[row.bucket]
+        buckets[row.bucket] = AgingBucket(
+            count=precedent.count + 1, total_ttc=precedent.total_ttc + row.outstanding_ttc
+        )
     return AgingReport(
         as_of=as_of,
         buckets=buckets,

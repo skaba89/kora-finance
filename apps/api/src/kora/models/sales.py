@@ -634,3 +634,54 @@ class SalesDocumentEmail(Base):
         Index("ix_sales_document_emails_tenant_document", "tenant_id", "document_id"),
         Index("ix_sales_document_emails_tenant_partner", "tenant_id", "partner_id"),
     )
+
+
+class SalesPaymentScheduleLine(Base):
+    """Une échéance prévue du règlement d'une facture (lot B-4) : la date et le
+    montant attendus d'une tranche, convenue avec le client. L'échéancier est un
+    **outil de planification du recouvrement** : il n'écrit rien en comptabilité,
+    ne modifie jamais le solde (calculé en lecture depuis les affectations et
+    les avoirs, comme partout) et ne déclenche aucune écriture automatique.
+
+    Le plan d'une facture est remplacé en bloc (sémantique PUT) : les lignes sont
+    renumérotées 1..N à chaque mise à jour — aucune ligne n'est jamais éditée
+    isolément, donc aucune ligne « orpheline » d'un plan obsolète. Le montant
+    attendu est strictement positif ; la somme des lignes ne peut pas dépasser
+    le solde restant dû de la facture (contrôlé sous verrou FOR UPDATE du
+    document, sérialisé avec les règlements qui réduisent ce solde).
+
+    Le statut d'une ligne (réglée, en retard, à venir) est calculé en lecture
+    au jour demandé : les encaissements lettrés couvrent les lignes dans
+    l'ordre — aucun statut dérivé n'est stocké, aucune dérive possible."""
+
+    __tablename__ = "sales_payment_schedule_lines"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    document_id: Mapped[uuid.UUID]
+    # Numéro de la tranche dans le plan (1..N, renuméroté à chaque remplacement).
+    line_no: Mapped[int] = mapped_column(Integer)
+    expected_on: Mapped[date] = mapped_column(Date)
+    expected_amount: Mapped[int] = mapped_column(BigInteger)
+    note: Mapped[str | None] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = created_at_column()
+    updated_at: Mapped[datetime] = updated_at_column()
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "document_id", "line_no"),
+        CheckConstraint("line_no > 0", name="line_no_positive"),
+        CheckConstraint("expected_amount > 0", name="expected_amount_positive"),
+        CheckConstraint("note IS NULL OR length(trim(note)) > 0", name="note_not_blank"),
+        ForeignKeyConstraint(
+            ["tenant_id", "document_id"],
+            ["sales_documents.tenant_id", "sales_documents.id"],
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(["tenant_id"], ["companies.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["created_by_user_id"], ["users.id"]),
+        Index("ix_sales_schedule_lines_tenant_document", "tenant_id", "document_id"),
+        Index("ix_sales_schedule_lines_tenant_date", "tenant_id", "expected_on"),
+    )

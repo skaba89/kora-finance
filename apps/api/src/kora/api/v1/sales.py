@@ -19,6 +19,7 @@ from kora.accounting.entries import Actor
 from kora.api.v1.common import TENANT_ERRORS, WRITE_ERRORS, Limit, Offset, RequestBody
 from kora.auth.deps import Ctx, DbSession
 from kora.core.errors import ErrorResponse
+from kora.exports import service as export_service
 from kora.models.common import utcnow
 from kora.models.sales import (
     SalesDocument,
@@ -30,7 +31,16 @@ from kora.models.sales import (
     SalesReminder,
     SalesReminderPolicy,
 )
-from kora.sales import accounting, auto_reminders, document_emails, payments, reminders, service
+from kora.sales import (
+    accounting,
+    auto_reminders,
+    collections,
+    document_emails,
+    payments,
+    reminders,
+    schedules,
+    service,
+)
 from kora.sales.service import DocumentData, LineData
 from kora.tenancy.deps import EntriesPost, SalesManage, SalesRead, TenantContext
 from kora.worker.enqueue import enqueue_best_effort
@@ -1149,3 +1159,270 @@ def send_document_email(
     )
     queued = enqueue_best_effort(send_sales_document_email, str(tenant.company_id), str(envoi.id))
     return DocumentEmailCreatedOut(email=_document_email_out(envoi), email_queued=queued)
+
+
+# --- Échéanciers clients et indicateurs de recouvrement (lot B-4) -------------
+
+
+# Réponse binaire de l'export balance âgée : mêmes types de fichiers que les
+# exports comptables (PDF et Excel), même quota KF-13 côté service.
+_AGING_FILE: dict[int | str, dict[str, Any]] = {
+    200: {
+        "content": {
+            media: {"schema": {"type": "string", "format": "binary"}}
+            for media in (
+                "application/pdf",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+        "description": "Fichier exporté",
+    },
+    **TENANT_ERRORS,
+    422: TENANT_ERRORS[404],
+    429: {"model": ErrorResponse},
+}
+
+AgingFileFormat = Annotated[
+    Literal["pdf", "xlsx"], Query(alias="format", description="pdf ou xlsx")
+]
+
+
+class ScheduleLineBody(RequestBody):
+    """Une tranche du plan : date attendue, montant attendu (unités mineures,
+    strictement positif), note facultative."""
+
+    expected_on: date
+    expected_amount: Annotated[int, Field(gt=0)]
+    note: Annotated[str | None, Field(max_length=500)] = None
+
+
+class SchedulePutIn(RequestBody):
+    """Le plan complet d'une facture : remplacé en bloc (sémantique PUT), les
+    tranches renumérotées 1..N. Répéter le même plan = même état (idempotent)."""
+
+    lines: Annotated[list[ScheduleLineBody], Field(min_length=1, max_length=24)]
+
+
+class ScheduleLineOut(BaseModel):
+    line_no: int
+    expected_on: str
+    expected_amount: int
+    note: str | None
+    status: Literal["settled", "late", "upcoming"]
+
+
+class ScheduleOut(BaseModel):
+    document_id: uuid.UUID
+    document_number: int | None
+    currency: str
+    total_ttc: int
+    paid_ttc: int
+    outstanding_ttc: int
+    planned_total: int
+    planned_remaining: int
+    lines: list[ScheduleLineOut]
+
+
+class TopDebtorOut(BaseModel):
+    partner_id: uuid.UUID
+    partner_name: str
+    outstanding_ttc: int
+    max_days_late: int
+
+
+class KpisOut(BaseModel):
+    """Indicateurs de recouvrement au jour demandé : encours, part échue, DSO
+    en jours de ventes, taux de recouvrement et top débiteurs. Tout est calculé
+    en lecture depuis les mêmes soldes que la balance âgée 4C."""
+
+    as_of: str
+    lookback_days: int
+    outstanding_ttc: int
+    overdue_ttc: int
+    overdue_share_bp: int
+    weighted_days_late: int
+    dso_days: int
+    billed_ttc: int
+    collected_ttc: int
+    recovery_rate_bp: int
+    top_debtors: list[TopDebtorOut]
+
+
+def _schedule_out(view: schedules.ScheduleView) -> ScheduleOut:
+    return ScheduleOut(
+        document_id=view.document_id,
+        document_number=view.document_number,
+        currency=view.currency,
+        total_ttc=view.total_ttc,
+        paid_ttc=view.paid_ttc,
+        outstanding_ttc=view.outstanding_ttc,
+        planned_total=view.planned_total,
+        planned_remaining=view.planned_remaining,
+        lines=[
+            ScheduleLineOut(
+                line_no=line.line_no,
+                expected_on=line.expected_on.isoformat(),
+                expected_amount=line.expected_amount,
+                note=line.note,
+                status=line.status,
+            )
+            for line in view.lines
+        ],
+    )
+
+
+@router.get("/sales/{document_id}/schedule", responses={404: {"model": ErrorResponse}})
+def get_schedule(document_id: uuid.UUID, tenant: SalesRead, db: DbSession) -> ScheduleOut:
+    """L'échéancier d'une facture, statué au jour présent : chaque tranche est
+    réglée (cumul encaissé atteint), en retard (date passée) ou à venir. La
+    lecture n'écrit rien et n'écrit jamais en comptabilité."""
+    return _schedule_out(schedules.get_schedule(db, tenant.company_id, document_id))
+
+
+@router.put("/sales/{document_id}/schedule", responses=WRITE_ERRORS)
+def replace_schedule(
+    document_id: uuid.UUID, body: SchedulePutIn, tenant: SalesManage, db: DbSession, ctx: Ctx
+) -> ScheduleOut:
+    """Remplace le plan d'une facture émise en bloc (PUT idempotent). Refusé
+    pour un brouillon, un devis, un avoir ou une facture annulée ; la somme des
+    tranches ne peut pas dépasser le solde restant dû (contrôlé sous verrou du
+    document, sérialisé avec les règlements). Journalisé ; aucune écriture
+    comptable."""
+    view = schedules.replace_schedule(
+        db,
+        _actor(tenant, ctx),
+        document_id,
+        [
+            schedules.ScheduleLineIn(
+                expected_on=line.expected_on,
+                expected_amount=line.expected_amount,
+                note=line.note,
+            )
+            for line in body.lines
+        ],
+    )
+    return _schedule_out(view)
+
+
+class ScheduleSummaryOut(BaseModel):
+    document_id: uuid.UUID
+    document_number: int
+    partner_id: uuid.UUID
+    partner_name: str
+    currency: str
+    total_ttc: int
+    paid_ttc: int
+    outstanding_ttc: int
+    planned_total: int
+    planned_remaining: int
+    lines: list[ScheduleLineOut]
+
+
+class SchedulesOut(BaseModel):
+    as_of: str
+    items: list[ScheduleSummaryOut]
+
+
+@router.get("/receivables/schedules", responses={404: {"model": ErrorResponse}})
+def list_schedules(tenant: SalesRead, db: DbSession, as_of: date | None = None) -> SchedulesOut:
+    """Tous les échéanciers du dossier, statués au jour demandé (aujourd'hui par
+    défaut) : le plan de chaque facture émise qui en porte un, avec son contexte."""
+    body = schedules.list_schedules(db, tenant.company_id, as_of or utcnow().date())
+    return SchedulesOut(
+        as_of=(as_of or utcnow().date()).isoformat(),
+        items=[
+            ScheduleSummaryOut(
+                document_id=s.document_id,
+                document_number=s.document_number,
+                partner_id=s.partner_id,
+                partner_name=s.partner_name,
+                currency=s.currency,
+                total_ttc=s.total_ttc,
+                paid_ttc=s.paid_ttc,
+                outstanding_ttc=s.outstanding_ttc,
+                planned_total=s.planned_total,
+                planned_remaining=s.planned_remaining,
+                lines=[
+                    ScheduleLineOut(
+                        line_no=line.line_no,
+                        expected_on=line.expected_on.isoformat(),
+                        expected_amount=line.expected_amount,
+                        note=line.note,
+                        status=line.status,
+                    )
+                    for line in s.lines
+                ],
+            )
+            for s in body
+        ],
+    )
+
+
+@router.get("/receivables/kpis", responses={404: {"model": ErrorResponse}})
+def receivables_kpis(
+    tenant: SalesRead,
+    db: DbSession,
+    as_of: date | None = None,
+    lookback_days: Annotated[int | None, Query(ge=7, le=365)] = None,
+) -> KpisOut:
+    """Indicateurs de recouvrement au jour demandé (aujourd'hui par défaut),
+    fenêtre de mesure de 7 à 365 jours (90 par défaut)."""
+    body = collections.receivables_kpis(
+        db,
+        tenant.company_id,
+        as_of or utcnow().date(),
+        lookback_days if lookback_days is not None else collections.DEFAULT_LOOKBACK_DAYS,
+    )
+    return KpisOut(
+        as_of=body.as_of.isoformat(),
+        lookback_days=body.lookback_days,
+        outstanding_ttc=body.outstanding_ttc,
+        overdue_ttc=body.overdue_ttc,
+        overdue_share_bp=body.overdue_share_bp,
+        weighted_days_late=body.weighted_days_late,
+        dso_days=body.dso_days,
+        billed_ttc=body.billed_ttc,
+        collected_ttc=body.collected_ttc,
+        recovery_rate_bp=body.recovery_rate_bp,
+        top_debtors=[
+            TopDebtorOut(
+                partner_id=d.partner_id,
+                partner_name=d.partner_name,
+                outstanding_ttc=d.outstanding_ttc,
+                max_days_late=d.max_days_late,
+            )
+            for d in body.top_debtors
+        ],
+    )
+
+
+@router.get("/receivables/aging/export", response_class=Response, responses=_AGING_FILE)
+def export_receivables_aging(
+    tenant: SalesRead,
+    db: DbSession,
+    ctx: Ctx,
+    file_format: AgingFileFormat,
+    as_of: date | None = None,
+) -> Response:
+    """Export PDF/Excel de la balance âgée clients au jour demandé (lot B-4) :
+    une section par bucket, une ligne par facture non soldée — la même
+    répartition que la route JSON, sous quota d'exports (KF-13) et journalisée."""
+    exported = export_service.generate_aging(
+        db,
+        tenant.company_id,
+        as_of or utcnow().date(),
+        file_format=file_format,
+        actor_user_id=tenant.user.id,
+        ctx=ctx,
+    )
+    return Response(
+        content=exported.content,
+        media_type=exported.media_type,
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="{exported.filename}"; '
+                f"filename*=UTF-8''{quote(exported.filename)}"
+            ),
+            "Cache-Control": "no-store",
+        },
+    )

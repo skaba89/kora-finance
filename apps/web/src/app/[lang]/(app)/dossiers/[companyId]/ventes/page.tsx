@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/page-header";
 import { activeRateOptions, SALES_KINDS, SALES_STATUSES } from "@/components/sales/labels";
 import { SalesAgingCard } from "@/components/sales/sales-aging-card";
+import { SalesKpisCard } from "@/components/sales/sales-kpis-card";
+import { SalesScheduleCard } from "@/components/sales/sales-schedule-card";
 import {
   SalesCreateDocumentCard,
   SalesEmailFormCard,
@@ -26,10 +28,12 @@ import {
   getPartners,
   getSalesAging,
   getSalesDocuments,
+  getSalesKpis,
   getSalesOverdue,
   getSalesPayments,
   getSalesReminderPolicy,
   getSalesReminders,
+  getSalesSchedules,
   getTaxRates,
 } from "@/lib/dal";
 import { getDictionary } from "@/lib/i18n/server";
@@ -44,6 +48,9 @@ export async function generateMetadata(): Promise<Metadata> {
  * (facture/avoir) ou à l'envoi (devis) et n'est jamais réutilisé. La
  * comptabilisation (4E) est un acte explicite du comptable : elle crée l'écriture
  * validée et la lie au document ou au règlement.
+ *
+ * Le recouvrement (lot B-4) complète la page : échéanciers clients (tranches
+ * prévues), indicateurs de recouvrement et DSO, export de la balance âgée.
  *
  * La composition est déléguée aux composants de `@/components/sales/` : cette
  * page charge les données, résout les permissions et assemble. */
@@ -69,6 +76,8 @@ export default async function SalesPage({
     taxRates,
     payments,
     aging,
+    kpis,
+    schedules,
     overdue,
     reminders,
     policy,
@@ -80,6 +89,8 @@ export default async function SalesPage({
     getTaxRates(companyId),
     getSalesPayments(companyId, { limit: 50, offset: 0 }),
     getSalesAging(companyId),
+    getSalesKpis(companyId),
+    getSalesSchedules(companyId),
     getSalesOverdue(companyId),
     getSalesReminders(companyId, { limit: 50, offset: 0 }),
     getSalesReminderPolicy(companyId),
@@ -142,7 +153,22 @@ export default async function SalesPage({
         </CardContent>
       </Card>
 
-      <SalesAgingCard aging={aging} currency={company.company.currency} t={t} />
+      <SalesAgingCard
+        companyId={companyId}
+        aging={aging}
+        currency={company.company.currency}
+        t={t}
+      />
+
+      <SalesKpisCard kpis={kpis} currency={company.company.currency} t={t} />
+
+      <SalesScheduleCard
+        companyId={companyId}
+        documents={documents}
+        schedules={schedules}
+        t={t}
+        manage={manage}
+      />
 
       <SalesOverdueCard companyId={companyId} overdue={overdue} t={t} manage={manage} />
 

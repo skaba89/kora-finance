@@ -5,6 +5,8 @@ import type {
   getSalesOverdue,
   getSalesPayments,
   getSalesReminderPolicy,
+  getSalesSchedules,
+  getSalesKpis,
   getSalesReminders,
   getTaxRates,
 } from "@/lib/dal";
@@ -20,6 +22,8 @@ export type SalesOverdue = Awaited<ReturnType<typeof getSalesOverdue>>;
 export type SalesRemindersPage = Awaited<ReturnType<typeof getSalesReminders>>;
 export type SalesReminder = SalesRemindersPage["items"][number];
 export type SalesReminderPolicy = Awaited<ReturnType<typeof getSalesReminderPolicy>>;
+export type SalesSchedules = Awaited<ReturnType<typeof getSalesSchedules>>;
+export type SalesKpis = Awaited<ReturnType<typeof getSalesKpis>>;
 export type PartnersPage = Awaited<ReturnType<typeof getPartners>>;
 export type Partner = PartnersPage["items"][number];
 export type TaxRateList = Awaited<ReturnType<typeof getTaxRates>>;

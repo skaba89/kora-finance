@@ -1,7 +1,7 @@
 """Construction des documents exportés (balance, grand livre, écritures, états)."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ from kora.exports.document import Column, Document, Section, format_date
 from kora.models.accounting import Account
 from kora.models.identity import Company
 from kora.models.ledger import EntryStatus, Journal, JournalEntry, JournalLine
+from kora.sales import payments
 
 VALIDATED_ONLY = "Écritures validées uniquement (les brouillons sont exclus)."
 EXPERT_NOTICE = (
@@ -293,4 +294,88 @@ def cash_flows(session: Session, company: Company, period: Period) -> Document:
                 style="total" if line.kind == "total" else "normal",
             )
     document.sections.append(section)
+    return document
+
+
+AGING_BUCKET_LABELS = {
+    "not_due": "À échoir (échéance non passée)",
+    "d1_30": "Retard 1 à 30 jours",
+    "d31_60": "Retard 31 à 60 jours",
+    "d61_90": "Retard 61 à 90 jours",
+    "d90_plus": "Retard plus de 90 jours",
+}
+
+
+def receivables_aging(session: Session, company: Company, as_of: date) -> Document:
+    """Balance âgée clients détaillée au {as_of} (lot B-4) : une section par
+    bucket, une ligne par facture émise non soldée — exactement la même
+    répartition que la route JSON 4C (mêmes soldes, mêmes buckets)."""
+    rows = payments.receivables_aging_rows(session, company.id, as_of)
+    document = Document(
+        title="Balance âgée clients",
+        company_name=company.legal_name,
+        identifiers=(
+            " — ".join(
+                i
+                for i in (
+                    f"RCCM : {company.rccm}" if company.rccm else None,
+                    f"NIF : {company.nif}" if company.nif else None,
+                )
+                if i
+            )
+            or "RCCM et NIF non renseignés"
+        ),
+        period=f"Situation au {format_date(as_of)}",
+        currency=company.currency,
+        generated_at=datetime.now(UTC),
+        notes=[
+            "Factures émises non soldées : solde = TTC - règlements lettrés- avoirs partiels émis.",
+            "À échoir : échéance non passée au jour de la situation.",
+        ],
+        landscape=True,
+    )
+    grand_total = 0
+    for bucket in ("not_due", "d1_30", "d31_60", "d61_90", "d90_plus"):
+        section = Section(
+            AGING_BUCKET_LABELS[bucket],
+            [
+                Column("Facture", width=10),
+                Column("Tier", width=34),
+                Column("Émission", "date", 12),
+                Column("Échéance", "date", 12),
+                Column("Retard (j)", "number", 10),
+                Column("Solde TTC", "amount", 16),
+            ],
+        )
+        sous_total = 0
+        for row in sorted(
+            (r for r in rows if r.bucket == bucket), key=lambda r: (-r.days_late, r.number)
+        ):
+            sous_total += row.outstanding_ttc
+            section.add(
+                f"FAC-{row.number:05d}",
+                row.partner_name,
+                row.issued_on,
+                row.due_on,
+                row.days_late,
+                row.outstanding_ttc,
+            )
+        section.add(None, "Sous-total", None, None, None, sous_total, style="subtotal")
+        grand_total += sous_total
+        document.sections.append(section)
+    total = Section(
+        None,
+        [
+            Column("Total", width=10),
+            Column("Factures", width=34),
+            Column("Émission", "date", 12),
+            Column("Échéance", "date", 12),
+            Column("Retard (j)", "number", 10),
+            Column("Solde TTC", "amount", 16),
+        ],
+    )
+    total.add(
+        "Encours total", f"{len(rows)} facture(s)", None, None, None, grand_total, style="total"
+    )
+    document.sections.append(total)
     return document

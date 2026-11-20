@@ -2028,3 +2028,73 @@ simulée) ; CI GitHub Actions toujours bloquée par la facturation du compte
   aucune intégration simulée) ; CI GitHub Actions toujours bloquée par la
   facturation du compte (aucune exécution GitHub n'a validé cette phase).
 - Suivi : `AUDIT_SUIVI_20261109.md` §42.
+
+## 2026-11-20 — Phase B lot 4 : échéanciers clients, export de la balance âgée,
+indicateurs de recouvrement et DSO
+
+**Objet** — volet recouvrement validé au §42 de l'audit de suivi : planifier les
+tranches de règlement convenues avec le client, exporter la balance âgée,
+mesurer le recouvrement (DSO, taux, débiteurs prioritaires). Trois
+livraisons d'un même lot, toutes calculées en lecture depuis les seules
+sources de vérité existantes (factures 4B, règlements 4C, avoirs, remboursements B-3).
+
+**Échéanciers (migration 0025)** — `sales_payment_schedule_lines` : RLS forcée,
+FK composite CASCADE, unicité (dossier, facture, tranche), montant attendu
+strictement positif (unités mineures), note facultative. Le plan d'une facture
+émise est remplacé en bloc (PUT idempotent — répéter le même plan laisse le
+même état), tranches renumérotées 1..N (maximum 24) ; la somme planifiée ne
+dépasse jamais le solde restant dû, contrôle sous **verrou FOR UPDATE du
+document** — le même verrou que les règlements 4C, donc la course
+règlement/échéancier est sérialisée (testée : les deux chemins aboutissent
+selon l'ordre, jamais d'excédent planifié ni de double lettrage). Refus :
+brouillon, devis, avoir, facture annulée, plan vide, plan excédentaire, note
+blanche, plus de 24 tranches. Statut des tranches **calculé en lecture** : les
+encaissements lettrés couvrent les lignes dans l'ordre — réglée (cumul
+encaissé atteint), en retard (date passée), à venir, à un as_of arbitraire.
+Routes `GET/PUT /sales/{id}/schedule`, `GET /receivables/schedules` (liste
+groupée du dossier : lignes, factures, soldes et noms de tiers en trois
+requêtes, jamais N+1) ; audit `sales_schedule.updated`.
+
+**Indicateurs** — `GET /receivables/kpis?as_of=&lookback_days=` (7..365, 90 par
+défaut) : encours, part échue en points de base, retard moyen pondéré par les
+soldes, **DSO en jours de ventes** = encours ÷ facturé(fenêtre) × jours,
+arrondi au plus proche et **borné à la fenêtre** (un encours antérieur ne
+gonfle pas le DSO au-delà de la période observée), **taux de recouvrement** =
+encaissements **nets des remboursements B-3** ÷ factures émises de la fenêtre
+(en points de base), top débiteurs (cinq tiers au plus fort solde, retard
+maximum par tier). Arithmétique entièrement entière ; une fenêtre sans ventes
+facturées donne DSO 0 et taux 0 (jamais de division par zéro).
+
+**Export balance âgée** — `GET /receivables/aging/export?format=pdf|xlsx` ( permission
+`sales:read`) : une section par bucket, une ligne par facture non soldée
+(numéro, tier, émission, échéance, retard, solde), sous-totaux et total ; la
+même répartition que la route JSON 4C (calcul refactorisé en
+`receivables_aging_rows`, partagé par les deux chemins — les buckets ne peuvent
+pas diverger) ; quota d'exports KF-13 partagé, instantané de lecture KF-05,
+audit `export.generated`.
+
+**Front fr/en** — page Ventes : carte « Échéanciers clients » (plans statués
+avec badges réglée/en retard/à venir + formulaire de trois tranches avec
+sélection de facture émise non soldée), carte « Indicateurs de recouvrement »
+(quatre chiffres clés + top débiteurs), boutons PDF/Excel sur la balance âgée
+(lien BFF `/exports/balance-agee`, liste blanche `as_of` dans `lib/exports.ts`,
+téléchargement en flux sans mémoire) ; Server Action `updateScheduleAction` ;
+i18n fr/en (~40 clés).
+
+**Validation** — pytest 1147 verts (17 nouveaux : plan statué, ordre de
+couverture des encaissements, refus de statuts et de bornes, RLS, permissions,
+audit, course sur le verrou du document, dataset de KPIs à dates relatives —
+aucun jour calendaire en dur, DSO borné à la fenêtre, remboursements nets,
+export PDF/Excel et traçabilité) ; migrations 3/3 ; ruff 0 (format 0) ; mypy
+strict 0 (src + tests) ; ESLint 0 ; tsc 0 (typegen) ; Vitest 81/81 ; build
+Next.js OK ; contrat réexporté = committé (130 chemins, 164 opérations, 208
+schémas, pur ajout). Première phase validée **directement par la CI GitHub
+Actions** (repository passée en publique le 2026-11-19 : minutes Actions
+illimitées, pytest sur PostgreSQL réel + E2E Playwright + pip-audit — cf. §43
+de l'audit de suivi).
+
+**Reste** — imputation multi-comptes ; phase 5 import FEC/Excel (100 000
+lignes) ; WhatsApp (compte Business officiel requis — aucune intégration
+simulée).
+
+- Suivi : `AUDIT_SUIVI_20261109.md` §43.

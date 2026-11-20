@@ -10,6 +10,7 @@ export const EXPORT_KINDS = {
   "etats-financiers": "/api/v1/companies/{company_id}/exports/financial-statements",
   tft: "/api/v1/companies/{company_id}/exports/cash-flow-statement",
   "previsions-tresorerie": "/api/v1/companies/{company_id}/cashflow/forecast/export",
+  "balance-agee": "/api/v1/companies/{company_id}/receivables/aging/export",
 } as const;
 
 export type ExportKind = keyof typeof EXPORT_KINDS;
@@ -36,6 +37,12 @@ export type PrevisionsExportQuery = {
   scenario: "OPTIMISTE" | "NEUTRE" | "PRUDENT";
 };
 
+/** Balance âgée clients (lot B-4) : situation à une date arbitraire. */
+export type AgingExportQuery = {
+  format: ExportFormat;
+  as_of?: string;
+};
+
 const HORIZONS = new Set(["30", "60", "90"]);
 const SCENARIOS = new Set(["OPTIMISTE", "NEUTRE", "PRUDENT"]);
 
@@ -43,9 +50,16 @@ const SCENARIOS = new Set(["OPTIMISTE", "NEUTRE", "PRUDENT"]);
 export function exportQuery(
   kind: ExportKind,
   params: URLSearchParams,
-): ExportQuery | PrevisionsExportQuery | null {
+): ExportQuery | PrevisionsExportQuery | AgingExportQuery | null {
   const format = params.get("format");
   if (format !== "pdf" && format !== "xlsx") return null;
+  if (kind === "balance-agee") {
+    const query: AgingExportQuery = { format };
+    const asOf = params.get("au_jour");
+    if (asOf && DATE.test(asOf)) query.as_of = asOf;
+    // L'exercice ne s'applique pas à la balance âgée : ignoré, non reconnu.
+    return query;
+  }
   if (kind === "previsions-tresorerie") {
     const horizon = params.get("horizon") ?? "";
     const scenario = params.get("scenario") ?? "";
@@ -76,6 +90,13 @@ export function exportHref(
   if (params.dateTo) search.set("au", params.dateTo);
   if (params.accountId) search.set("compte_id", params.accountId);
   return `/dossiers/${companyId}/exports/${kind}?${search.toString()}`;
+}
+
+/** Lien de téléchargement de la balance âgée clients (lot B-4). */
+export function agingExportHref(companyId: string, format: ExportFormat, asOf?: string): string {
+  const search = new URLSearchParams({ format });
+  if (asOf) search.set("au_jour", asOf);
+  return `/dossiers/${companyId}/exports/balance-agee?${search.toString()}`;
 }
 
 /** Lien de téléchargement de la prévision de trésorerie (Phase 3E). */

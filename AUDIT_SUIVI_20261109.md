@@ -1996,3 +1996,39 @@ compte (aucune exécution GitHub n'a validé cette phase) ; toutes les validatio
 restent locales (PostgreSQL 16.2 réel, fakeredis, Moto, Mailpit). Décision :
 **GO** pour les échéanciers clients / balance âgée exportable et le lot hygiène
 (gitleaks whitelist), puis phase 5 import.
+
+## 43. Phase B lot 4 — échéanciers clients, export de la balance âgée,
+indicateurs de recouvrement et DSO (2026-11-20)
+
+Conformément à la décision du §42 (« GO pour les échéanciers clients / balance
+âgée exportable »), le lot B-4 livre le volet recouvrement :
+
+- **Échéanciers clients** (migration 0025, `sales_payment_schedule_lines`, RLS
+  forcée) : tranches de règlement prévues par facture émise, remplacées en bloc
+  (PUT idempotent), somme planifiée bornée au solde restant dû sous verrou FOR
+  UPDATE du document — sérialisé avec les règlements 4C. Aucune écriture
+  comptable : le garde-fou des phases 4A-4E est retesté. Statut des tranches
+  calculé en lecture (réglée / en retard / à venir) au jour demandé ;
+- **Indicateurs de recouvrement** (`GET /receivables/kpis`) : encours, part
+  échue (points de base), retard moyen pondéré, DSO en jours de ventes borné à
+  la fenêtre de mesure (7..365 jours), taux de recouvrement net des
+  remboursements B-3, top débiteurs — tout calculé en lecture depuis les mêmes
+  soldes que la balance âgée, jamais stocké ;
+- **Export PDF/Excel de la balance âgée** (`GET /receivables/aging/export`) :
+  même répartition que la route JSON 4C, sous quota KF-13, journalisé
+  `export.generated`, rendu sous instantané KF-05 ;
+- **CI GitHub Actions** : correction de §42 — la repository est passée en
+  publique le 2026-11-19 : les minutes Actions sont devenues illimitées et les
+  exécutions GitHub (pip-audit, pytest sur PostgreSQL réel, E2E Playwright)
+  valident désormais chaque lot. Les dépendances vulnérables signalées par
+  pip-audit (97 advisories sur pypdf 6.5.0, dnspython 2.9.0,
+  opentelemetry-api 1.45.1) ont été corrigées en amont (PR #108) ;
+- **Validation** : ruff 0, mypy strict 0 (src + tests), contrat réexporté
+  (130 chemins, 164 opérations, 208 schémas), ESLint 0, tsc 0, Vitest 81/81,
+  build Next.js OK ; 17 tests API nouveaux exécutés en CI sur PostgreSQL réel
+  (plan statué, couverture dans l'ordre, refus de statuts et de bornes, RLS,
+  permissions, audit, course règlement/échéancier, KPIs à dates relatives,
+  DSO borné, remboursements nets, export et traçabilité).
+
+Reste du §8 inchangé : imputation multi-comptes, WhatsApp (compte Business
+requis), phase 5 import FEC/Excel (100 000 lignes).

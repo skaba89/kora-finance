@@ -4386,6 +4386,73 @@
         "title": "JournalUpdate",
         "type": "object"
       },
+      "KpisOut": {
+        "description": "Indicateurs de recouvrement au jour demandé : encours, part échue, DSO\nen jours de ventes, taux de recouvrement et top débiteurs. Tout est calculé\nen lecture depuis les mêmes soldes que la balance âgée 4C.",
+        "properties": {
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "billed_ttc": {
+            "title": "Billed Ttc",
+            "type": "integer"
+          },
+          "collected_ttc": {
+            "title": "Collected Ttc",
+            "type": "integer"
+          },
+          "dso_days": {
+            "title": "Dso Days",
+            "type": "integer"
+          },
+          "lookback_days": {
+            "title": "Lookback Days",
+            "type": "integer"
+          },
+          "outstanding_ttc": {
+            "title": "Outstanding Ttc",
+            "type": "integer"
+          },
+          "overdue_share_bp": {
+            "title": "Overdue Share Bp",
+            "type": "integer"
+          },
+          "overdue_ttc": {
+            "title": "Overdue Ttc",
+            "type": "integer"
+          },
+          "recovery_rate_bp": {
+            "title": "Recovery Rate Bp",
+            "type": "integer"
+          },
+          "top_debtors": {
+            "items": {
+              "$ref": "#/components/schemas/TopDebtorOut"
+            },
+            "title": "Top Debtors",
+            "type": "array"
+          },
+          "weighted_days_late": {
+            "title": "Weighted Days Late",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "as_of",
+          "lookback_days",
+          "outstanding_ttc",
+          "overdue_ttc",
+          "overdue_share_bp",
+          "weighted_days_late",
+          "dso_days",
+          "billed_ttc",
+          "collected_ttc",
+          "recovery_rate_bp",
+          "top_debtors"
+        ],
+        "title": "KpisOut",
+        "type": "object"
+      },
       "LedgerAccountOut": {
         "properties": {
           "id": {
@@ -8162,6 +8229,258 @@
         "title": "Scenario",
         "type": "string"
       },
+      "ScheduleLineBody": {
+        "additionalProperties": false,
+        "description": "Une tranche du plan : date attendue, montant attendu (unités mineures,\nstrictement positif), note facultative.",
+        "properties": {
+          "expected_amount": {
+            "exclusiveMinimum": 0.0,
+            "title": "Expected Amount",
+            "type": "integer"
+          },
+          "expected_on": {
+            "format": "date",
+            "title": "Expected On",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "expected_on",
+          "expected_amount"
+        ],
+        "title": "ScheduleLineBody",
+        "type": "object"
+      },
+      "ScheduleLineOut": {
+        "properties": {
+          "expected_amount": {
+            "title": "Expected Amount",
+            "type": "integer"
+          },
+          "expected_on": {
+            "title": "Expected On",
+            "type": "string"
+          },
+          "line_no": {
+            "title": "Line No",
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "enum": [
+              "settled",
+              "late",
+              "upcoming"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line_no",
+          "expected_on",
+          "expected_amount",
+          "note",
+          "status"
+        ],
+        "title": "ScheduleLineOut",
+        "type": "object"
+      },
+      "ScheduleOut": {
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "document_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Number"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "outstanding_ttc": {
+            "title": "Outstanding Ttc",
+            "type": "integer"
+          },
+          "paid_ttc": {
+            "title": "Paid Ttc",
+            "type": "integer"
+          },
+          "planned_remaining": {
+            "title": "Planned Remaining",
+            "type": "integer"
+          },
+          "planned_total": {
+            "title": "Planned Total",
+            "type": "integer"
+          },
+          "total_ttc": {
+            "title": "Total Ttc",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "document_id",
+          "document_number",
+          "currency",
+          "total_ttc",
+          "paid_ttc",
+          "outstanding_ttc",
+          "planned_total",
+          "planned_remaining",
+          "lines"
+        ],
+        "title": "ScheduleOut",
+        "type": "object"
+      },
+      "SchedulePutIn": {
+        "additionalProperties": false,
+        "description": "Le plan complet d'une facture : remplacé en bloc (sémantique PUT), les\ntranches renumérotées 1..N. Répéter le même plan = même état (idempotent).",
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleLineBody"
+            },
+            "maxItems": 24,
+            "minItems": 1,
+            "title": "Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "lines"
+        ],
+        "title": "SchedulePutIn",
+        "type": "object"
+      },
+      "ScheduleSummaryOut": {
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "document_number": {
+            "title": "Document Number",
+            "type": "integer"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "outstanding_ttc": {
+            "title": "Outstanding Ttc",
+            "type": "integer"
+          },
+          "paid_ttc": {
+            "title": "Paid Ttc",
+            "type": "integer"
+          },
+          "partner_id": {
+            "format": "uuid",
+            "title": "Partner Id",
+            "type": "string"
+          },
+          "partner_name": {
+            "title": "Partner Name",
+            "type": "string"
+          },
+          "planned_remaining": {
+            "title": "Planned Remaining",
+            "type": "integer"
+          },
+          "planned_total": {
+            "title": "Planned Total",
+            "type": "integer"
+          },
+          "total_ttc": {
+            "title": "Total Ttc",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "document_id",
+          "document_number",
+          "partner_id",
+          "partner_name",
+          "currency",
+          "total_ttc",
+          "paid_ttc",
+          "outstanding_ttc",
+          "planned_total",
+          "planned_remaining",
+          "lines"
+        ],
+        "title": "ScheduleSummaryOut",
+        "type": "object"
+      },
+      "SchedulesOut": {
+        "properties": {
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleSummaryOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "items"
+        ],
+        "title": "SchedulesOut",
+        "type": "object"
+      },
       "Sense": {
         "enum": [
           "PRODUIT",
@@ -8625,6 +8944,35 @@
           "expires_in"
         ],
         "title": "TokenResponse",
+        "type": "object"
+      },
+      "TopDebtorOut": {
+        "properties": {
+          "max_days_late": {
+            "title": "Max Days Late",
+            "type": "integer"
+          },
+          "outstanding_ttc": {
+            "title": "Outstanding Ttc",
+            "type": "integer"
+          },
+          "partner_id": {
+            "format": "uuid",
+            "title": "Partner Id",
+            "type": "string"
+          },
+          "partner_name": {
+            "title": "Partner Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "partner_id",
+          "partner_name",
+          "outstanding_ttc",
+          "max_days_late"
+        ],
+        "title": "TopDebtorOut",
         "type": "object"
       },
       "TransferCreate": {
@@ -20469,6 +20817,232 @@
         ]
       }
     },
+    "/api/v1/companies/{company_id}/receivables/aging/export": {
+      "get": {
+        "description": "Export PDF/Excel de la balance âgée clients au jour demandé (lot B-4) :\nune section par bucket, une ligne par facture non soldée — la même\nrépartition que la route JSON, sous quota d'exports (KF-13) et journalisée.",
+        "operationId": "export_receivables_aging_api_v1_companies__company_id__receivables_aging_export_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "pdf ou xlsx",
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "description": "pdf ou xlsx",
+              "enum": [
+                "pdf",
+                "xlsx"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Fichier exporté"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Receivables Aging",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/receivables/kpis": {
+      "get": {
+        "description": "Indicateurs de recouvrement au jour demandé (aujourd'hui par défaut),\nfenêtre de mesure de 7 à 365 jours (90 par défaut).",
+        "operationId": "receivables_kpis_api_v1_companies__company_id__receivables_kpis_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lookback_days",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 365,
+                  "minimum": 7,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lookback Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KpisOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Receivables Kpis",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
     "/api/v1/companies/{company_id}/receivables/overdue": {
       "get": {
         "description": "Factures échues non soldées, candidates à la relance : retard en jours,\nhistorique de relances et adresse email du tier (absente : la fiche du tier\ndoit être complétée avant toute relance).",
@@ -20542,6 +21116,84 @@
           }
         ],
         "summary": "Receivables Overdue",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/receivables/schedules": {
+      "get": {
+        "description": "Tous les échéanciers du dossier, statués au jour demandé (aujourd'hui par\ndéfaut) : le plan de chaque facture émise qui en porte un, avec son contexte.",
+        "operationId": "list_schedules_api_v1_companies__company_id__receivables_schedules_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchedulesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Schedules",
         "tags": [
           "ventes"
         ]
@@ -22417,6 +23069,186 @@
           }
         ],
         "summary": "Export Document Pdf",
+        "tags": [
+          "ventes"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/sales/{document_id}/schedule": {
+      "get": {
+        "description": "L'échéancier d'une facture, statué au jour présent : chaque tranche est\nréglée (cumul encaissé atteint), en retard (date passée) ou à venir. La\nlecture n'écrit rien et n'écrit jamais en comptabilité.",
+        "operationId": "get_schedule_api_v1_companies__company_id__sales__document_id__schedule_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Schedule",
+        "tags": [
+          "ventes"
+        ]
+      },
+      "put": {
+        "description": "Remplace le plan d'une facture émise en bloc (PUT idempotent). Refusé\npour un brouillon, un devis, un avoir ou une facture annulée ; la somme des\ntranches ne peut pas dépasser le solde restant dû (contrôlé sous verrou du\ndocument, sérialisé avec les règlements). Journalisé ; aucune écriture\ncomptable.",
+        "operationId": "replace_schedule_api_v1_companies__company_id__sales__document_id__schedule_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulePutIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Replace Schedule",
         "tags": [
           "ventes"
         ]

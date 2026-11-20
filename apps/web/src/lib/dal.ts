@@ -437,6 +437,35 @@ export async function getSalesAging(companyId: string, asOf?: string) {
   );
 }
 
+/** Échéanciers clients du dossier (lot B-4) : tranches prévues par facture,
+ * statuées au jour présent (réglée, en retard, à venir). */
+export async function getSalesSchedules(companyId: string, asOf?: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/receivables/schedules", {
+      params: {
+        path: { company_id: companyId },
+        query: asOf ? { as_of: asOf } : undefined,
+      },
+    }),
+  );
+}
+
+/** Indicateurs de recouvrement (lot B-4) : encours, part échue, DSO, taux de
+ * recouvrement et top débiteurs — calculés en lecture au jour demandé. */
+export async function getSalesKpis(companyId: string, asOf?: string, lookbackDays?: number) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/receivables/kpis", {
+      params: {
+        path: { company_id: companyId },
+        query: {
+          ...(asOf ? { as_of: asOf } : {}),
+          ...(lookbackDays ? { lookback_days: lookbackDays } : {}),
+        },
+      },
+    }),
+  );
+}
+
 /** Factures échues candidates à la relance (Phase 4D) : retard en jours,
  * historique et adresse email du tier. */
 export async function getSalesOverdue(companyId: string, asOf?: string) {
