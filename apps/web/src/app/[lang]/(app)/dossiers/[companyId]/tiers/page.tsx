@@ -216,7 +216,7 @@ export default async function PartnersPage({
       )}
 
       {manage ? (
-        <Card className="mt-8">
+        <Card id="fiche-tiers" className="mt-8 scroll-mt-4">
           <CardHeader>
             <CardTitle className="text-base">
               {editing ? t.partners.editTitle : t.partners.addTitle}

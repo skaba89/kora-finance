@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MonthlyChart } from "@/components/dashboard/monthly-chart";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { components } from "@/lib/api/schema";
@@ -37,18 +38,20 @@ function Tile({
   hint,
   href,
   tone = "default",
+  primary = false,
 }: {
   label: string;
   value: string;
   hint?: string;
   href?: string;
   tone?: "default" | "negative";
+  primary?: boolean;
 }) {
   const body = (
-    <Card className={cn("h-full", href && "hover:bg-muted/50 transition-colors")}>
+    <Card className={cn("h-full", primary && "border-primary/30 bg-primary/5", href && "hover:bg-muted/50 transition-colors")}>
       <CardHeader className="gap-1">
         <p className="text-muted-foreground text-sm">{label}</p>
-        <p className={cn("text-2xl font-semibold tabular-nums", tone === "negative" && "text-destructive")}>{value}</p>
+        <p className={cn("text-2xl font-semibold tracking-tight tabular-nums", primary && "text-primary text-3xl", tone === "negative" && "text-destructive")}>{value}</p>
         {hint ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
       </CardHeader>
     </Card>
@@ -101,6 +104,11 @@ export default async function DashboardPage({ params }: PageProps<"/[lang]/dossi
     <>
       <PageHeader
         title={company.company.legal_name}
+        actions={can(company, "sales:manage") ? (
+          <Button asChild className="min-h-11 self-start">
+            <Link href={`${base}/ventes?vue=nouveau`}>{t.sales.createInvoice}</Link>
+          </Button>
+        ) : undefined}
         subtitle={
           fy && dashboard
             ? interpolate(d.asOf, {
@@ -122,6 +130,49 @@ export default async function DashboardPage({ params }: PageProps<"/[lang]/dossi
               </Link>
             </AlertDescription>
           </Alert>
+        ) : null}
+
+        {dashboard && dashboard.drafts > 0 ? (
+          <Alert role="status">
+            <AlertDescription>
+              {interpolate(d.drafts, { n: dashboard.drafts })}{" "}
+              <Link href={`${base}/ecritures?statut=DRAFT`} className="underline underline-offset-4">
+                {d.draftsLink}
+              </Link>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {dashboard && fy ? (
+          <section aria-label={d.title} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <Tile
+              primary
+              href={can(company, "treasury:read") ? `${base}/tresorerie` : undefined}
+              label={d.treasury}
+              value={money(dashboard.treasury_total)}
+              hint={d.treasuryHint}
+              tone={BigInt(dashboard.treasury_total) < 0n ? "negative" : "default"}
+            />
+            <Tile
+              label={`${d.revenue} — ${d.thisMonth}`}
+              value={money(dashboard.month.revenue)}
+              hint={interpolate(d.yearToDate, { amount: money(dashboard.year_to_date.revenue) })}
+            />
+            <Tile
+              label={`${d.expenses} — ${d.thisMonth}`}
+              value={money(dashboard.month.expenses)}
+              hint={interpolate(d.yearToDate, { amount: money(dashboard.year_to_date.expenses) })}
+            />
+            <Tile
+              label={d.result}
+              value={money(dashboard.year_to_date.result)}
+              hint={d.resultHint}
+              tone={BigInt(dashboard.year_to_date.result) < 0n ? "negative" : "default"}
+              href={`${base}/etats-financiers`}
+            />
+            <Tile label={d.receivables} value={money(dashboard.receivables)} href={`${base}/lettrage`} />
+            <Tile label={d.payables} value={money(dashboard.payables)} href={`${base}/lettrage`} />
+          </section>
         ) : null}
 
         {canWrite ? (
@@ -149,86 +200,45 @@ export default async function DashboardPage({ params }: PageProps<"/[lang]/dossi
           </section>
         ) : null}
 
-        {dashboard && dashboard.drafts > 0 ? (
-          <Alert role="status">
-            <AlertDescription>
-              {interpolate(d.drafts, { n: dashboard.drafts })}{" "}
-              <Link href={`${base}/ecritures?statut=DRAFT`} className="underline underline-offset-4">
-                {d.draftsLink}
-              </Link>
-            </AlertDescription>
-          </Alert>
-        ) : null}
-
         {dashboard && fy ? (
-          <>
-            <section aria-label={d.title} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <Tile
-                label={d.treasury}
-                value={money(dashboard.treasury_total)}
-                hint={d.treasuryHint}
-                tone={BigInt(dashboard.treasury_total) < 0n ? "negative" : "default"}
-              />
-              <Tile
-                label={`${d.revenue} — ${d.thisMonth}`}
-                value={money(dashboard.month.revenue)}
-                hint={interpolate(d.yearToDate, { amount: money(dashboard.year_to_date.revenue) })}
-              />
-              <Tile
-                label={`${d.expenses} — ${d.thisMonth}`}
-                value={money(dashboard.month.expenses)}
-                hint={interpolate(d.yearToDate, { amount: money(dashboard.year_to_date.expenses) })}
-              />
-              <Tile
-                label={d.result}
-                value={money(dashboard.year_to_date.result)}
-                hint={d.resultHint}
-                tone={BigInt(dashboard.year_to_date.result) < 0n ? "negative" : "default"}
-                href={`${base}/etats-financiers`}
-              />
-              <Tile label={d.receivables} value={money(dashboard.receivables)} href={`${base}/lettrage`} />
-              <Tile label={d.payables} value={money(dashboard.payables)} href={`${base}/lettrage`} />
-            </section>
-
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{d.chartTitle}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <MonthlyChart
-                    points={dashboard.monthly}
-                    currency={currency}
-                    locale={locale}
-                    labels={{ revenue: d.revenue, expenses: d.expenses, month: d.month, table: d.chartTable, title: d.chartTitle }}
-                  />
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{d.treasuryAccounts}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {dashboard.treasury.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">{d.noTreasury}</p>
-                  ) : (
-                    <ul className="flex flex-col gap-2 text-sm">
-                      {dashboard.treasury.map((a) => (
-                        <li key={a.account_id} className="flex items-baseline justify-between gap-3">
-                          <span>
-                            <span className="font-mono">{a.number}</span> {a.label}
-                          </span>
-                          <span className={cn("tabular-nums whitespace-nowrap", BigInt(a.balance) < 0n && "text-destructive")}>
-                            {money(a.balance)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{d.chartTitle}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MonthlyChart
+                  points={dashboard.monthly}
+                  currency={currency}
+                  locale={locale}
+                  labels={{ revenue: d.revenue, expenses: d.expenses, month: d.month, table: d.chartTable, title: d.chartTitle }}
+                />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{d.treasuryAccounts}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {dashboard.treasury.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">{d.noTreasury}</p>
+                ) : (
+                  <ul className="flex flex-col gap-2 text-sm">
+                    {dashboard.treasury.map((a) => (
+                      <li key={a.account_id} className="flex items-baseline justify-between gap-3">
+                        <span>
+                          <span className="font-mono">{a.number}</span> {a.label}
+                        </span>
+                        <span className={cn("tabular-nums whitespace-nowrap", BigInt(a.balance) < 0n && "text-destructive")}>
+                          {money(a.balance)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         ) : null}
 
         <div className="grid gap-4 lg:grid-cols-2">

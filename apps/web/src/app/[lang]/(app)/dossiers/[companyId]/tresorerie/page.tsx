@@ -141,7 +141,7 @@ export default async function TreasuryPage({
                   {account.gl_account_number}
                 </TableCell>
                 <TableCell className="text-right font-mono">
-                  {formatMoney(Number(account.balance), "GNF", locale)}
+                  {formatMoney(BigInt(account.balance), "GNF", locale)}
                 </TableCell>
               </TableRow>
             ))}
@@ -192,7 +192,7 @@ export default async function TreasuryPage({
                         {movement.counterpart_number}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        {formatMoney(Number(movement.amount), "GNF", locale)}
+                        {formatMoney(BigInt(movement.amount), "GNF", locale)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -223,7 +223,7 @@ export default async function TreasuryPage({
                 {t.treasury.rapprochement.overview.ignored} : {overview.lines_ignored}
                 {"  ·  "}
                 {t.treasury.rapprochement.overview.pendingNet} :{" "}
-                {formatMoney(Number(overview.pending_net), "GNF", locale)}
+                {formatMoney(BigInt(overview.pending_net), "GNF", locale)}
                 {"  ·  "}
                 {t.treasury.rapprochement.overview.movements} : {overview.movements_unmatched}
               </p>
@@ -271,7 +271,7 @@ export default async function TreasuryPage({
                           {line.reference}
                         </TableCell>
                         <TableCell className="text-right font-mono">
-                          {formatMoney(Number(line.amount), "GNF", locale)}
+                          {formatMoney(BigInt(line.amount), "GNF", locale)}
                         </TableCell>
                         <TableCell>
                           <Badge
@@ -356,7 +356,7 @@ export default async function TreasuryPage({
                       })}
                     </p>
                     <p className="text-muted-foreground mt-1 text-xs">
-                      {selectedLine?.value_date} · {formatMoney(Number(selectedLine?.amount ?? 0), "GNF", locale)} ·{" "}
+                      {selectedLine?.value_date} · {formatMoney(BigInt(selectedLine?.amount ?? 0), "GNF", locale)} ·{" "}
                       {selectedLine?.label}
                     </p>
                     <p className="text-muted-foreground mt-2 text-xs">
@@ -401,7 +401,7 @@ export default async function TreasuryPage({
                                 ) : null}
                               </TableCell>
                               <TableCell className="text-right font-mono">
-                                {formatMoney(Number(candidate.amount), "GNF", locale)}
+                                {formatMoney(BigInt(candidate.amount), "GNF", locale)}
                               </TableCell>
                               <TableCell className="hidden font-mono text-xs sm:table-cell">
                                 {candidate.days_apart}

@@ -1,4 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+
+import { Button } from "@/components/ui/button";
+import type { Dictionary } from "@/components/sales/types";
 
 import { PageHeader } from "@/components/page-header";
 import { activeRateOptions, SALES_KINDS, SALES_STATUSES } from "@/components/sales/labels";
@@ -43,155 +47,138 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.sales.title };
 }
 
-/** Page ventes (4B) : devis, factures et avoirs à numérotation sans trou. Créer un
- * brouillon n'écrit rien en comptabilité ; le numéro est attribué à l'émission
- * (facture/avoir) ou à l'envoi (devis) et n'est jamais réutilisé. La
- * comptabilisation (4E) est un acte explicite du comptable : elle crée l'écriture
- * validée et la lie au document ou au règlement.
- *
- * Le recouvrement (lot B-4) complète la page : échéanciers clients (tranches
- * prévues), indicateurs de recouvrement et DSO, export de la balance âgée.
- *
- * La composition est déléguée aux composants de `@/components/sales/` : cette
- * page charge les données, résout les permissions et assemble. */
-export default async function SalesPage({
-  params,
-  searchParams,
-}: PageProps<"/[lang]/dossiers/[companyId]/ventes">) {
-  const { companyId } = await params;
-  const { kind, statut } = await searchParams;
-  const kindParam =
-    typeof kind === "string" && SALES_KINDS.includes(kind as (typeof SALES_KINDS)[number])
-      ? (kind as (typeof SALES_KINDS)[number])
-      : undefined;
-  const statusParam =
-    typeof statut === "string" && SALES_STATUSES.includes(statut as (typeof SALES_STATUSES)[number])
-      ? (statut as (typeof SALES_STATUSES)[number])
-      : undefined;
-  const [
-    { t },
-    company,
-    documents,
-    partners,
-    taxRates,
-    payments,
-    aging,
-    kpis,
-    schedules,
-    overdue,
-    reminders,
-    policy,
-  ] = await Promise.all([
-    getDictionary(),
-    getCompany(companyId),
+type ViewProps = { companyId: string; t: Dictionary; manage: boolean };
+type DocumentParams = Awaited<PageProps<"/[lang]/dossiers/[companyId]/ventes">["searchParams"]>;
+
+async function DocumentsView({ companyId, t, manage, canPost, query }: ViewProps & {
+  canPost: boolean; query: DocumentParams;
+}) {
+  const { kind, statut } = query;
+  const kindParam = SALES_KINDS.find((value) => value === kind);
+  const statusParam = SALES_STATUSES.find((value) => value === statut);
+  const [documents, partners] = await Promise.all([
     getSalesDocuments(companyId, { kind: kindParam, status: statusParam, limit: 100, offset: 0 }),
-    getPartners(companyId, { active: true, limit: 200, offset: 0 }),
-    getTaxRates(companyId),
-    getSalesPayments(companyId, { limit: 50, offset: 0 }),
-    getSalesAging(companyId),
-    getSalesKpis(companyId),
-    getSalesSchedules(companyId),
-    getSalesOverdue(companyId),
-    getSalesReminders(companyId, { limit: 50, offset: 0 }),
-    getSalesReminderPolicy(companyId),
+    getPartners(companyId, { limit: 200, offset: 0 }),
   ]);
-  const manage = can(company, "sales:manage");
-  // La comptabilisation (4E) est un acte comptable : permission entries:post.
-  const canPost = can(company, "entries:post");
-  const rateOptions = activeRateOptions(taxRates);
+  const partnerNames = new Map(partners.items.map((p) => [p.id, p.name]));
 
   return (
     <>
-      <PageHeader title={t.sales.title} subtitle={t.sales.subtitle} />
-      <p className="text-muted-foreground -mt-4 mb-4 text-xs">{t.sales.noPostingNotice}</p>
-
       <SalesFilters t={t} kindParam={kindParam} statusParam={statusParam} />
-
       <Card>
-        <CardHeader>
-          <CardTitle>{t.sales.listTitle}</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>{t.sales.listTitle}</CardTitle></CardHeader>
         <CardContent>
-          {documents.items.length === 0 ? (
-            <p className="text-muted-foreground text-sm">{t.sales.empty}</p>
+          {documents.items.length ? (
+            <SalesDocumentsTable companyId={companyId} documents={documents} partnerNames={partnerNames}
+              manage={manage} canPost={canPost} t={t} />
           ) : (
-            <SalesDocumentsTable
-              companyId={companyId}
-              documents={documents}
-              t={t}
-              manage={manage}
-              canPost={canPost}
-            />
+            <p className="text-muted-foreground text-sm">
+              {kindParam || statusParam || !manage ? t.sales.noMatchingDocuments : t.sales.empty}
+            </p>
           )}
         </CardContent>
       </Card>
-
-      {manage && (
-        <>
-          <SalesPaymentFormCard companyId={companyId} documents={documents} t={t} />
-          <SalesDepositFormCard companyId={companyId} partners={partners} t={t} />
-        </>
-      )}
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>{t.sales.paymentsTitle}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {payments.items.length === 0 ? (
-            <p className="text-muted-foreground text-sm">{t.sales.paymentsEmpty}</p>
-          ) : (
-            <SalesPaymentsTable
-              companyId={companyId}
-              payments={payments}
-              documents={documents}
-              t={t}
-              manage={manage}
-              canPost={canPost}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      <SalesAgingCard
-        companyId={companyId}
-        aging={aging}
-        currency={company.company.currency}
-        t={t}
-      />
-
-      <SalesKpisCard kpis={kpis} currency={company.company.currency} t={t} />
-
-      <SalesScheduleCard
-        companyId={companyId}
-        documents={documents}
-        schedules={schedules}
-        t={t}
-        manage={manage}
-      />
-
-      <SalesOverdueCard companyId={companyId} overdue={overdue} t={t} manage={manage} />
-
-      <SalesRemindersHistoryCard
-        companyId={companyId}
-        reminders={reminders}
-        documents={documents}
-        t={t}
-        manage={manage}
-      />
-
-      <SalesReminderPolicyCard companyId={companyId} policy={policy} t={t} manage={manage} />
-
       {manage && <SalesEmailFormCard companyId={companyId} documents={documents} t={t} />}
+    </>
+  );
+}
 
-      {manage && (
-        <SalesCreateDocumentCard
-          companyId={companyId}
-          partners={partners}
-          rateOptions={rateOptions}
-          t={t}
-        />
-      )}
+async function PaymentsView({ companyId, t, manage, canPost }: ViewProps & { canPost: boolean }) {
+  const [payments, documents, partners] = await Promise.all([
+    getSalesPayments(companyId, { limit: 50, offset: 0 }),
+    getSalesDocuments(companyId, { limit: 100, offset: 0 }),
+    manage ? getPartners(companyId, { active: true, limit: 200, offset: 0 }) : null,
+  ]);
+  return (
+    <>
+      {manage && <SalesPaymentFormCard companyId={companyId} documents={documents} t={t} />}
+      {partners && <SalesDepositFormCard companyId={companyId} partners={partners} t={t} />}
+      <Card className="mt-6">
+        <CardHeader><CardTitle>{t.sales.paymentsTitle}</CardTitle></CardHeader>
+        <CardContent>
+          {payments.items.length ? (
+            <SalesPaymentsTable companyId={companyId} payments={payments} documents={documents}
+              t={t} manage={manage} canPost={canPost} />
+          ) : <p className="text-muted-foreground text-sm">{t.sales.paymentsEmpty}</p>}
+        </CardContent>
+      </Card>
+    </>
+  );
+}
+
+async function CollectionView({ companyId, t, manage, currency }: ViewProps & { currency: string }) {
+  const [documents, overdue, kpis, schedules, aging, reminders, policy] = await Promise.all([
+    getSalesDocuments(companyId, { limit: 100, offset: 0 }),
+    getSalesOverdue(companyId), getSalesKpis(companyId), getSalesSchedules(companyId),
+    getSalesAging(companyId), getSalesReminders(companyId, { limit: 50, offset: 0 }),
+    getSalesReminderPolicy(companyId),
+  ]);
+  return (
+    <>
+      <SalesOverdueCard companyId={companyId} overdue={overdue} t={t} manage={manage} />
+      <SalesKpisCard kpis={kpis} currency={currency} t={t} />
+      <SalesScheduleCard companyId={companyId} documents={documents} schedules={schedules} t={t} manage={manage} />
+      <SalesAgingCard companyId={companyId} aging={aging} currency={currency} t={t} />
+      <SalesRemindersHistoryCard companyId={companyId} reminders={reminders} documents={documents} t={t} manage={manage} />
+      <SalesReminderPolicyCard companyId={companyId} policy={policy} t={t} manage={manage} />
+    </>
+  );
+}
+
+async function CreateView({ companyId, t }: { companyId: string; t: Dictionary }) {
+  const [partners, rates] = await Promise.all([
+    getPartners(companyId, { active: true, limit: 200, offset: 0 }), getTaxRates(companyId),
+  ]);
+  if (partners.total === 0) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>{t.sales.createTitle}</CardTitle></CardHeader>
+        <CardContent>
+          <p className="mb-3 text-sm">{t.sales.firstPartnerHint}</p>
+          <Button asChild variant="outline">
+            <Link href={`/dossiers/${companyId}/tiers#fiche-tiers`}>{t.sales.openPartners}</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+  return <SalesCreateDocumentCard companyId={companyId} partners={partners} rateOptions={activeRateOptions(rates)} t={t} />;
+}
+
+export default async function SalesPage({ params, searchParams }: PageProps<"/[lang]/dossiers/[companyId]/ventes">) {
+  const { companyId } = await params;
+  const [query, { t }, company] = await Promise.all([searchParams, getDictionary(), getCompany(companyId)]);
+  const manage = can(company, "sales:manage");
+  const canPost = can(company, "entries:post");
+  const base = `/dossiers/${companyId}/ventes`;
+  const sections = [
+    { id: "documents", label: t.sales.listTitle, href: base },
+    { id: "encaissements", label: t.sales.paymentsView, href: `${base}?vue=encaissements` },
+    { id: "recouvrement", label: t.sales.collectionView, href: `${base}?vue=recouvrement` },
+  ];
+  const selected = query.vue === "nouveau" && manage ? "nouveau"
+    : sections.find((section) => section.id === query.vue)?.id ?? "documents";
+
+  return (
+    <>
+      <PageHeader title={t.sales.title} subtitle={t.sales.subtitle} actions={manage && selected !== "nouveau" ? (
+        <Button asChild className="min-h-11 self-start">
+          <Link href={`${base}?vue=nouveau`}>{t.sales.createInvoice}</Link>
+        </Button>
+      ) : undefined} />
+      <nav aria-label={t.sales.title} className="mb-5 flex flex-wrap gap-x-3 border-b sm:gap-x-5">
+        {sections.map(({ id, href, label }) => (
+          <Link key={id} href={href} aria-current={id === selected ? "page" : undefined}
+            className="text-muted-foreground hover:text-foreground aria-[current=page]:border-primary aria-[current=page]:text-primary inline-flex min-h-11 items-center border-b-2 border-transparent text-sm font-medium">
+            {label}
+          </Link>
+        ))}
+      </nav>
+      <p className="text-muted-foreground mb-4 max-w-prose text-sm">{t.sales.noPostingNotice}</p>
+      {selected === "documents" && <DocumentsView companyId={companyId} query={query} manage={manage} canPost={canPost} t={t} />}
+      {selected === "encaissements" && <PaymentsView companyId={companyId} manage={manage} canPost={canPost} t={t} />}
+      {selected === "recouvrement" && <CollectionView companyId={companyId} currency={company.company.currency} manage={manage} t={t} />}
+      {selected === "nouveau" && <CreateView companyId={companyId} t={t} />}
     </>
   );
 }
