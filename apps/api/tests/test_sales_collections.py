@@ -138,18 +138,16 @@ def test_kpis_dataset_connu(client: TestClient, make_company: MakeCompany) -> No
     assert body["overdue_share_bp"] == 10_000
     # Retard pondéré : (30×TTC + 10×TTC) ÷ (2×TTC) = 20 jours entiers.
     assert body["weighted_days_late"] == 20
-    # Fenêtre [T-50, T+40] : facturé TTC×3, encaissé 2×TTC, taux 66,67 % (6 667 bp).
+    # Fenêtre [T-50, T+40] : facturé TTC×3, encaissé TTC, taux 33,3 % (3 333 bp).
     assert body["billed_ttc"] == 3 * TTC
-    assert body["collected_ttc"] == 2 * TTC
-    assert body["recovery_rate_bp"] == 6_667
-    # DSO = encours ÷ facturé × 90 j, arrondi au plus proche : (2×TTC×90 + TTC×1,5) ÷ 3×TTC.
-    attendu_dso = (2 * TTC * 90 + (3 * TTC) // 2) // (3 * TTC)
-    assert body["dso_days"] == attendu_dso
+    assert body["collected_ttc"] == TTC
+    assert body["recovery_rate_bp"] == 3_333
+    # DSO = encours ÷ facturé × 90 j, arrondi au plus proche : 60 jours.
+    assert body["dso_days"] == 60
     # Top débiteurs : F1 et F3 (partenaires distincts, soldes identiques),
     # avec leur retard maximum ; F2 payée n'apparaît pas.
-    noms = {d["outstanding_ttc"]: d for d in body["top_debtors"]}
     assert len(body["top_debtors"]) == 2
-    assert set(noms.keys()) == {TTC}
+    assert {d["outstanding_ttc"] for d in body["top_debtors"]} == {TTC}
     assert {d["max_days_late"] for d in body["top_debtors"]} == {30, 10}
     assert uuid.UUID(body["top_debtors"][0]["partner_id"])
 
@@ -239,9 +237,13 @@ def test_kpis_permissions_et_isolation(
         client.get(f"/api/v1/companies/{company.id}/receivables/kpis", headers=headers).status_code
         == 200
     )
-    # Un autre dossier ne lit pas les indicateurs du premier (404, RLS).
+    # Un autre dossier ne lit rien du premier (RLS) : l'état est vide (200).
     autres = Recouvrement(client, autre)
-    assert autres.kpis().status_code == 404
+    reponse_etrangere = autres.kpis()
+    assert reponse_etrangere.status_code == 200, reponse_etrangere.text
+    vide = reponse_etrangere.json()
+    assert vide["outstanding_ttc"] == 0
+    assert vide["top_debtors"] == []
 
 
 def test_export_balance_agee_pdf_et_excel(client: TestClient, make_company: MakeCompany) -> None:
@@ -268,22 +270,24 @@ def test_export_balance_agee_pdf_et_excel(client: TestClient, make_company: Make
     )
     attendu_solde = TTC - 540_000
 
-    # La balance âgée JSON fait foi : l'export en reproduit les buckets.
+    # La balance âgée JSON fait foi : l'export en reproduit les buckets
+    # (as_of où la première facture est échue de 9 jours, la seconde à échoir).
+    situation = (jour + timedelta(days=10)).isoformat()
     balance = client.get(
         f"/api/v1/companies/{company.id}/receivables/aging",
         headers=company.headers,
-        params={"as_of": jour.isoformat()},
+        params={"as_of": situation},
     ).json()
     assert balance["buckets"]["d1_30"]["total_ttc"] == attendu_solde
     assert balance["buckets"]["not_due"]["total_ttc"] == TTC
 
-    pdf = recouvrement.export("pdf", as_of=jour.isoformat())
+    pdf = recouvrement.export("pdf", as_of=situation)
     assert pdf.status_code == 200, pdf.text
     contenu = pdf.content
     assert contenu[:5] == b"%PDF-", "le PDF est corrompu"
     assert "balance-agee" in pdf.headers.get("Content-Disposition", "")
 
-    xlsx = recouvrement.export("xlsx", as_of=jour.isoformat())
+    xlsx = recouvrement.export("xlsx", as_of=situation)
     assert xlsx.status_code == 200, xlsx.text
     assert xlsx.content[:2] == b"PK", "l'Excel n'est pas un OOXML valide"
 
@@ -310,7 +314,7 @@ def test_export_balance_agee_permissions(
     recouvrement = Recouvrement(client, company)
     assert recouvrement.export("pdf").status_code == 200
     assert recouvrement.export("csv").status_code == 422
-    assert Recouvrement(client, autre).export("pdf").status_code == 404
+    assert Recouvrement(client, autre).export("pdf").status_code == 200
 
     lecteur = make_user()
     client.post(

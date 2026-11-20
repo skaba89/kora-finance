@@ -671,6 +671,7 @@ class SalesPaymentScheduleLine(Base):
     updated_at: Mapped[datetime] = updated_at_column()
 
     __table_args__ = (
+        UniqueConstraint("tenant_id", "id"),
         UniqueConstraint("tenant_id", "document_id", "line_no"),
         CheckConstraint("line_no > 0", name="line_no_positive"),
         CheckConstraint("expected_amount > 0", name="expected_amount_positive"),
@@ -682,6 +683,6 @@ class SalesPaymentScheduleLine(Base):
         ),
         ForeignKeyConstraint(["tenant_id"], ["companies.id"], ondelete="CASCADE"),
         ForeignKeyConstraint(["created_by_user_id"], ["users.id"]),
-        Index("ix_sales_schedule_lines_tenant_document", "tenant_id", "document_id"),
+        Index("ix_sales_payment_schedule_lines_tenant_document", "tenant_id", "document_id"),
         Index("ix_sales_schedule_lines_tenant_date", "tenant_id", "expected_on"),
     )

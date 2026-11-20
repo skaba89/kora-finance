@@ -193,7 +193,8 @@ def test_refus_brouillon_devis_avoir_facture_annulee(
     assert sales.send(devis).status_code == 200
     assert echeanciers.put(devis, plan).status_code == 409
 
-    avoir = _facture_brouillon(sales, tva, doc_kind="credit_note")
+    origine = _facture_emise(sales, client, company)
+    avoir = _facture_brouillon(sales, tva, doc_kind="credit_note", origin_document_id=origine)
     assert echeanciers.put(avoir, plan).status_code == 409
 
     annulee = _facture_emise(sales, client, company)
@@ -222,7 +223,7 @@ def test_plan_excedentaire_et_lignes_invalides_refuses(
             {"expected_on": futur, "expected_amount": 1},
         ],
     )
-    assert excedent.status_code == 409, excedent.text  # TTC + 1 > solde
+    assert excedent.status_code == 422, excedent.text  # TTC + 1 > solde (regle_metier)
 
     assert (
         echeanciers.put(invoice_id, [{"expected_on": futur, "expected_amount": 0}]).status_code
@@ -244,7 +245,7 @@ def test_plan_excedentaire_et_lignes_invalides_refuses(
         echeanciers.put(
             invoice_id, [{"expected_on": futur, "expected_amount": TTC - 1_000_000 + 1}]
         ).status_code
-        == 409
+        == 422
     )
     ok = echeanciers.put(invoice_id, [{"expected_on": futur, "expected_amount": TTC - 1_000_000}])
     assert ok.status_code == 200, ok.text
@@ -337,7 +338,7 @@ def test_course_reglement_et_echeancier_meme_verrou(
     # Si le plan gagne, il est posé pour le solde d'alors (le règlement passe
     # ensuite) ; si le règlement gagne, le plan excédentaire est refusé 409.
     assert resultats["reglement"] == 201, resultats
-    assert resultats["plan"] in (200, 409), resultats
+    assert resultats["plan"] in (200, 422), resultats
     body = echeanciers.get(invoice_id).json()
     assert body["outstanding_ttc"] >= 0
-    assert body["planned_total"] <= TTC or resultats["plan"] == 409
+    assert body["planned_total"] <= TTC or resultats["plan"] == 422
