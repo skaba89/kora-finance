@@ -24,8 +24,8 @@ export function NavLink({ href, exact, children }: { href: string; exact?: boole
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "hover:bg-muted rounded-md px-3 py-2 text-sm",
-        active ? "bg-muted font-medium" : "text-muted-foreground",
+        "hover:bg-accent rounded-lg px-3 py-2.5 text-sm transition-colors",
+        active ? "bg-accent text-accent-foreground font-semibold" : "text-muted-foreground",
       )}
     >
       {children}

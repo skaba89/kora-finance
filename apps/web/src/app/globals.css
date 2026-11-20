@@ -7,9 +7,12 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-kora-sans), system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-kora-sans), system-ui, sans-serif;
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,21 +52,24 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: #f8fafc;
+  --foreground: #0f172a;
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: #0f172a;
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   /* Marque : émeraude (thème-color mobile #0f766e, teal-700) — boutons, liens, accents forts. */
-  --primary: oklch(0.51 0.09 195);
+  --primary: #0f766e;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --muted-foreground: #475569;
+  --accent: #e6f4f1;
+  --accent-foreground: #064e3b;
+  --success: #166534;
+  --warning: #92400e;
+  --info: #1d4ed8;
   --destructive: oklch(0.55 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
@@ -76,12 +82,12 @@
   --chart-4: oklch(0.54 0.22 293);
   --chart-5: oklch(0.44 0.08 196);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
+  --sidebar: #ffffff;
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.51 0.09 195);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-accent: #e6f4f1;
+  --sidebar-accent-foreground: #064e3b;
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.6 0.106 194);
 }
@@ -100,6 +106,9 @@
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
+  --success: #86efac;
+  --warning: #fcd34d;
+  --info: #93c5fd;
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.8 0.191 22.216);
@@ -130,5 +139,15 @@
   }
   html {
     @apply font-sans;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }

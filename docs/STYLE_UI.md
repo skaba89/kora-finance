@@ -25,7 +25,7 @@ dérivation doit être justifiée ici.
 
 ## 2. Tokens de couleur (globals.css)
 
-Palette OKLCH, thème clair (`:root`) et sombre (`.dark`). Trois règles :
+Palette OKLCH et hexadécimale, thème clair (`:root`) et sombre (`.dark`). Trois règles :
 
 - **Contraste AA obligatoire (4.5:1)** pour tout texte de taille normale, en clair
   comme en sombre. Le script `scripts/front-audit-contraste.py` vérifie les paires
@@ -116,3 +116,58 @@ recevra un quand le DAL exposera `date_from`/`date_to` (évolution API, hors lot
 Comme tout lot : Vitest verts, `next typegen && tsc --noEmit` à zéro,
 ESLint `--max-warnings=0`, `next build` OK — et pour tout changement de token ou
 de primitive, la sortie du script d'audit de contraste jointe à la PR.
+
+## 10. Kora Finance Premium — fondations UX/UI
+
+Lot 1, base `ce89b41` (PR #110). Le design se superpose au produit livré : aucun
+changement de calcul, permission, API, migration, session ou synchronisation.
+
+### Tokens et règles
+
+| Usage | Clair | Sombre |
+|---|---|---|
+| Fond | #F8FAFC | token background existant |
+| Texte principal | #0F172A | token foreground existant |
+| Primaire | #0F766E | émeraude claire existante |
+| Succès | #166534 | #86EFAC |
+| Avertissement | #92400E | #FCD34D |
+| Information | #1D4ED8 | #93C5FD |
+
+Inter variable, auto-hébergée par Next Font ; repli système. Références techniques
+en monospace système. Montants en `tabular-nums`, alignés à droite dans les colonnes
+monétaires ; conserver exclusivement les chaînes/BigInt existants. Ne jamais
+utiliser la couleur seule pour communiquer un état. Le thème sombre a des tokens
+mais son sélecteur et sa recette complète restent à réaliser.
+
+Titres 24 px mobile / 30 px desktop, sous-titre 14 px, cartes 16 px, navigation
+14 px. Espacements sur grille de 4 px ; rayon de base 10 px. Conteneur connecté
+jusqu'à 1536 px, navigation mobile accessible et défilante, navigation de bureau
+sur panneau dédié. Respecter le mouvement réduit et le focus visible.
+
+### Inventaire de continuité
+
+37 fichiers page.tsx ; modules : authentification (7 écrans), dossiers et compte,
+tableau de bord, écritures, saisie guidée, balance, grand livre, lettrage, états
+financiers, trésorerie et prévisions, tiers, ventes, achats, audit, paramètres,
+hors connexion. Primitives existantes : Alert, Badge, Button, Card, Input, Label,
+Separator, Table. PageHeader, PageSkeleton, FlashBanner, NavLink et OfflineSync
+sont conservés. La PR #110 a déjà livré le parcours Ventes par onglets.
+
+Contrôle des permissions : `can(company, permission)` dans la navigation du dossier ;
+les Server Actions et le BFF restent la source de vérité avec l'API et la RLS.
+
+### Suite priorisée
+
+1. Recette visuelle avant/après sur une pile de démonstration (360, 390, 768,
+   1024, 1440, 1920 px), contrastes et clavier ; ne pas certifier WCAG sans audit.
+2. AppShell et navigation par domaines, amélioration mobile, sélecteur d'entreprise,
+   thème utilisateur ; conserver les routes et contrôler les permissions.
+3. Dashboard et KpiCard réutilisable, vues métier ventes/achats/rapprochement,
+   DataTable avec filtres, densité et actions contextuelles.
+4. Parcours cabinet et fonctionnalités non encore livrées : ne pas simuler les
+   intégrations, droits, notifications ou fonctionnalités métier absentes.
+5. Mesures web vitals et tests utilisateurs avant tout score de maturité final.
+
+Références de benchmark fonctionnel : Pennylane (pilotage), QuickBooks (filtres),
+Xero (rapprochement), Odoo (modularité), Stripe (hiérarchie visuelle). Comparer
+sur les mêmes tâches et mesurer le temps et les erreurs, pas seulement l'apparence.

@@ -58,22 +58,26 @@ def parse_css(path):
         elif section and line.startswith("--"):
             name, _, value = line.partition(":")
             value = value.rstrip(";").strip()
-            if value.startswith("oklch("):
+            if value.startswith("oklch(") or re.fullmatch(r"#[0-9a-fA-F]{6}", value):
                 tokens[section][name.strip()] = value
             elif "oklch" in value and "/" in value:
                 base = value.split("/")[0].strip()
                 tokens[section][name.strip()] = base  # alpha ignoré (1% borders)
     return tokens
 
+def linear_rgb(value):
+    if value.startswith("#"):
+        rgb = [int(value[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+        return [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in rgb]
+    return oklch_to_linear_srgb(*parse_oklch(value))
+
 def lum(tokens, name):
-    return oklch_luminance(*parse_oklch(tokens[f"--{name}"]))
+    return linear_to_relative_lumiance(linear_rgb(tokens[f"--{name}"]))
 
 def lum_blend(tokens, fg_name, bg_name, alpha):
     """Lumiance du mélange fg sur bg (approximation sRGB de l'opacité)."""
-    Lf, Cf, hf = parse_oklch(tokens[f"--{fg_name}"])
-    Lb, Cb, hb = parse_oklch(tokens[f"--{bg_name}"])
-    lf = oklch_to_linear_srgb(Lf, Cf, hf)
-    lb = oklch_to_linear_srgb(Lb, Cb, hb)
+    lf = linear_rgb(tokens[f"--{fg_name}"])
+    lb = linear_rgb(tokens[f"--{bg_name}"])
     mix = [a * alpha + b * (1 - alpha) for a, b in zip(lf, lb)]
     return linear_to_relative_lumiance(mix)
 
@@ -92,6 +96,9 @@ PAIRS = [
     ("foreground", "secondary"),            # badge secondary
     ("sidebar-foreground", "sidebar"),
     ("sidebar-accent-foreground", "sidebar-accent"),
+    ("success", "background"),
+    ("warning", "background"),
+    ("info", "background"),
 ]
 BLENDS = [
     # badge/button destructive : fond teinté /10 en light comme en dark
@@ -111,7 +118,7 @@ def main():
             cd = contrast(lum(tokens["dark"], fg), lum(tokens["dark"], bg))
         except KeyError as e:
             print(f"{fg+'/'+bg:45s}  n/a ({e})")
-            continue
+            return 1
         ok = "OK" if min(cl, cd) >= 4.5 else ("large OK" if min(cl, cd) >= 3.0 else "INSUFFISANT")
         flags = ""
         if cl < 4.5:
@@ -138,8 +145,10 @@ def main():
         print("Paires sous AA normal :")
         for fg, bg, cl, cd in problems:
             print(f"  - {fg}/{bg} : light={cl:.2f} dark={cd:.2f}")
+        return 1
     else:
         print("Toutes les paires atteignent AA normal (4.5:1).")
+    return 0
 
 if __name__ == "__main__":
     sys.exit(main())

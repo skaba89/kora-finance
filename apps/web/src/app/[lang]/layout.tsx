@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Inter } from "next/font/google";
 import { lang } from "next/root-params";
 
 import { ServiceWorkerRegistrar } from "@/components/service-worker";
@@ -7,7 +7,7 @@ import { LOCALES } from "@/lib/i18n/config";
 
 import "../globals.css";
 
-const geistSans = Geist({ variable: "--font-sans", subsets: ["latin"] });
+const interSans = Inter({ variable: "--font-kora-sans", subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "Kora Finance", template: "%s · Kora Finance" },
@@ -29,7 +29,7 @@ export function generateStaticParams() {
 
 export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
   return (
-    <html lang={await lang()} className={`${geistSans.variable} h-full antialiased`}>
+    <html lang={await lang()} className={`${interSans.variable} h-full antialiased`}>
       <body className="bg-background text-foreground flex min-h-full flex-col">
         {children}
         <ServiceWorkerRegistrar />
