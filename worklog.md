@@ -2223,3 +2223,11 @@ de trésorerie reçus en chaînes passent directement en BigInt pour l’afficha
 Recette ajoutée dans `apps/web/e2e/ventes.spec.ts` pour le parcours de création
 depuis un dossier neuf et la consultation par un lecteur. La suite Playwright
 décline ces scénarios sur ordinateur et mobile.
+
+## UX Premium — lot 6A : trésorerie et rapprochement
+
+Migration des cinq tables vers DataTable, indicateurs de rapprochement KpiCard,
+montants tabulaires, compte sélectionné et libellés mobiles. Consultation des
+relevés sans droit d'écriture ; actions et précision BigInt inchangées. Correction
+des identifiants de champs et extension de la recette E2E avec captures avant et
+après confirmation du rapprochement. Prévisionnel : prochain lot.

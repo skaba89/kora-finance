@@ -12,7 +12,7 @@ function acceptDialogs(page: Page) {
 
 test("rapprochement bancaire : proposition assistée, confirmation humaine, réversible", async ({
   page,
-}) => {
+}, testInfo) => {
   acceptDialogs(page);
   await registerAndLogin(page);
   const companyId = await createCompany(page, "Sotracom SARL");
@@ -28,14 +28,13 @@ test("rapprochement bancaire : proposition assistée, confirmation humaine, rév
     .selectOption({ label: "521 — Banques locales" });
   await accountForm.getByRole("button", { name: "Créer" }).click();
   await expect(page.getByRole("cell", { name: "BCRG principal" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "BCRG principal" })).toHaveAttribute("aria-current", "page");
 
   // --- Mouvement correspondant : dépôt du 01/03/2026, 1 500 000 GNF ---
-  // (les deux formulaires de la page partagent l'id « kind » : on cible le premier
-  // select du formulaire de mouvement, le type y est la première colonne)
   const movementForm = page
     .locator("form")
-    .filter({ has: page.getByLabel("Montant (GNF)", { exact: true }) });
-  await movementForm.locator("select").first().selectOption({ label: "Dépôt" });
+    .filter({ has: page.getByRole("button", { name: "Mouvement", exact: true }) });
+  await movementForm.getByLabel("Type de mouvement").selectOption({ label: "Dépôt" });
   await movementForm.getByLabel("Montant (GNF)", { exact: true }).fill("1500000");
   await movementForm.getByLabel("Date", { exact: true }).fill("2026-03-01");
   await movementForm.getByLabel("Libellé", { exact: true }).fill("Virement client SOTRACOM");
@@ -43,8 +42,8 @@ test("rapprochement bancaire : proposition assistée, confirmation humaine, rév
     .getByLabel("Compte de contrepartie")
     .selectOption({ label: "101 — Capital social" });
   await movementForm.getByRole("button", { name: "Mouvement", exact: true }).click();
-  // La colonne libellé est masquée sur mobile : on vérifie le montant, toujours visible.
   await expect(page.getByRole("cell", { name: "1 500 000 GNF" }).first()).toBeVisible();
+  await expect(page.getByRole("table", { name: "Mouvements", exact: true }).getByText("Virement client SOTRACOM", { exact: true }).filter({ visible: true })).toBeVisible();
 
   // --- Import du relevé bancaire contenant l'opération ---
   await page.setInputFiles("#statement-file", {
@@ -57,9 +56,10 @@ test("rapprochement bancaire : proposition assistée, confirmation humaine, rév
 
   // --- Ouvrir les lignes du relevé ---
   await page.getByRole("link", { name: "Voir les lignes" }).click();
-  const ligne = page.getByRole("row").filter({ hasText: "Virement client SOTRACOM" });
+  const ligne = page.getByRole("table", { name: "releve-bcrg-03.csv" }).getByRole("row").filter({ hasText: "Virement client SOTRACOM" });
   await expect(ligne).toBeVisible();
   await expect(ligne.getByText("À rapprocher")).toBeVisible();
+  await testInfo.attach("rapprochement-avant", { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
 
   // --- Propositions : le moteur propose, l'humain confirme ---
   await ligne.getByRole("link", { name: "Rapprocher" }).click();
@@ -72,6 +72,7 @@ test("rapprochement bancaire : proposition assistée, confirmation humaine, rév
   // La ligne passe en MATCHED, le panneau disparaît (la ligne n'est plus à rapprocher).
   await expect(ligne.getByText("Rapprochée")).toBeVisible();
   await expect(panneau).not.toBeVisible();
+  await testInfo.attach("rapprochement-confirme", { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
 
   // --- Réversibilité : le dé-rapprochement remet la ligne en attente ---
   await ligne.getByRole("button", { name: "Retirer" }).click();
