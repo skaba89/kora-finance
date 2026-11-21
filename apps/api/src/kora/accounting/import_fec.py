@@ -2,10 +2,11 @@
 
 import csv
 import re
+from collections.abc import Callable
 from io import StringIO
 from typing import Literal
 
-from kora.accounting.import_validation import ImportIssue, ImportReport, validate_rows
+from kora.accounting.import_validation import ImportIssue, ImportLine, ImportReport, validate_rows
 
 MAX_FEC_BYTES = 32 * 1024 * 1024
 FEC_COLUMNS = (
@@ -56,7 +57,11 @@ def _normalize(row: list[str], scale: Literal[0, 2]) -> list[str]:
 
 
 def validate_fec(
-    content: bytes, *, scale: Literal[0, 2], delimiter: Literal["\t", "|"]
+    content: bytes,
+    *,
+    scale: Literal[0, 2],
+    delimiter: Literal["\t", "|"],
+    on_line: Callable[[ImportLine], None] | None = None,
 ) -> ImportReport:
     """Profil strict UTF-8 (BOM accepté), 18 colonnes, séparateur explicite.
 
@@ -73,4 +78,4 @@ def validate_fec(
     except UnicodeError:
         return ImportReport(issues=[ImportIssue(1, "invalid_encoding")])
     reader = csv.reader(stream, delimiter=delimiter, quoting=csv.QUOTE_NONE, strict=True)
-    return validate_rows(reader, FEC_COLUMNS, lambda row: _normalize(row, scale))
+    return validate_rows(reader, FEC_COLUMNS, lambda row: _normalize(row, scale), on_line=on_line)

@@ -2,7 +2,7 @@
 
 import re
 import zipfile
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from io import BytesIO
 from typing import Self
 from xml.parsers import expat
@@ -14,6 +14,7 @@ from kora.accounting.import_validation import (
     COLUMNS,
     MAX_IMPORT_ROWS,
     ImportIssue,
+    ImportLine,
     ImportReport,
     validate_rows,
 )
@@ -114,7 +115,9 @@ class _Rows:
         return [_cell(value, index) for index, value in enumerate(row)]
 
 
-def validate_xlsx(content: bytes) -> ImportReport:
+def validate_xlsx(
+    content: bytes, *, on_line: Callable[[ImportLine], None] | None = None
+) -> ImportReport:
     """Une seule feuille, sept colonnes CSV, dates ISO et montants mineurs entiers.
 
     Les identifiants doivent être textuels pour préserver les zéros initiaux.
@@ -133,7 +136,7 @@ def validate_xlsx(content: bytes) -> ImportReport:
                 raise _RejectedError("invalid_xlsx")
             sheet.reset_dimensions()
             rows = _Rows(sheet.iter_rows(max_col=len(COLUMNS), values_only=True))
-            return validate_rows(rows, COLUMNS, lambda row: row)
+            return validate_rows(rows, COLUMNS, lambda row: row, on_line=on_line)
         finally:
             workbook.close()
     except _RejectedError as exc:

@@ -19,6 +19,18 @@ class ImportIssue:
     code: str
 
 
+@dataclass(frozen=True)
+class ImportLine:
+    row: int
+    journal: str
+    entry: str
+    day: date
+    account: str
+    label: str
+    debit: int
+    credit: int
+
+
 @dataclass
 class ImportReport:
     rows: int = 0
@@ -64,7 +76,11 @@ def _text(raw: str, limit: int) -> bool:
 
 
 def _validate_row(
-    row: list[str], number: int, report: ImportReport, groups: dict[tuple[str, str], _Group]
+    row: list[str],
+    number: int,
+    report: ImportReport,
+    groups: dict[tuple[str, str], _Group],
+    on_line: Callable[[ImportLine], None] | None,
 ) -> None:
     if len(row) != len(COLUMNS):
         report.issues.append(ImportIssue(number, "column_count"))
@@ -89,9 +105,13 @@ def _validate_row(
     group.credit += credit
     report.debit += debit
     report.credit += credit
+    if on_line is not None:
+        on_line(ImportLine(number, journal, entry, day, account, label, debit, credit))
 
 
-def validate_normalized_csv(stream: TextIO) -> ImportReport:
+def validate_normalized_csv(
+    stream: TextIO, *, on_line: Callable[[ImportLine], None] | None = None
+) -> ImportReport:
     """CSV UTF-8 décodé, séparateur ';', dates ISO et unités mineures entières.
 
     Le rapport ne contient aucun contenu source. Les écritures non contiguës sont
@@ -100,7 +120,7 @@ def validate_normalized_csv(stream: TextIO) -> ImportReport:
     des comptes ou l'ouverture des exercices : contrôle métier ultérieur obligatoire.
     """
     reader = csv.reader(stream, delimiter=";", strict=True)
-    return validate_rows(reader, COLUMNS, lambda row: row)
+    return validate_rows(reader, COLUMNS, lambda row: row, on_line=on_line)
 
 
 class RowReader(Protocol):
@@ -116,7 +136,10 @@ def validate_rows(
     reader: RowReader,
     columns: tuple[str, ...],
     normalize: Callable[[list[str]], list[str]],
+    *,
+    on_line: Callable[[ImportLine], None] | None = None,
 ) -> ImportReport:
+    """Le callback est réservé aux contrôles purs, avant validation des groupes."""
     report = ImportReport()
     groups: dict[tuple[str, str], _Group] = {}
     try:
@@ -131,7 +154,7 @@ def validate_rows(
             if len(row) != len(columns):
                 report.issues.append(ImportIssue(reader.line_num, "column_count"))
                 continue
-            _validate_row(normalize(row), reader.line_num, report, groups)
+            _validate_row(normalize(row), reader.line_num, report, groups, on_line)
     except (csv.Error, UnicodeError):
         report.issues.append(ImportIssue(reader.line_num, "invalid_csv"))
     report.entries = len(groups)
