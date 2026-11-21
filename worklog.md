@@ -2259,3 +2259,9 @@ dépliables, état de vérification accessible. Sécurité du compte harmonisée
 identifiants MFA distincts et codes de secours adaptés au thème sombre.
 Les tests E2E couvrent les nouveaux contrôles sans exposer de secrets dans
 des captures supplémentaires. Aucun changement des actions ni des droits.
+
+## UX Premium — lot 10 : hors connexion
+
+Indicateur réseau, synthèse des statuts locaux, cartes de file et contrôles
+tactiles. Recette E2E étendue aux compteurs et à la perte de réseau. Aucun
+changement de l'API, du service worker ou du stockage chiffré.

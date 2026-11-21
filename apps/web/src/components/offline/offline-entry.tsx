@@ -19,11 +19,12 @@ import { currentUser, getItem, listItems, listSnapshots, onChange, putItem } fro
 import { type EntryIn, type GuidedIn, guidedBody, type Operation, OPERATIONS, parseEntryJson, UUID } from "@/lib/payloads";
 
 import { QueueList } from "./queue-list";
+import { NetworkIndicator } from "./network-indicator";
 
 type Phase = "loading" | "unsupported" | "none" | "ready";
 type Mode = "free" | "guided";
 
-const SELECT = "border-input bg-background h-9 rounded-md border px-3 text-sm";
+const SELECT = "border-input bg-background min-h-11 w-full min-w-0 rounded-md border px-3 text-sm";
 
 function today(): string {
   const now = new Date();
@@ -194,7 +195,8 @@ export function OfflineEntry({
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-6">
+      <NetworkIndicator online={online} labels={labels} />
       {online ? (
         <Alert role="status">
           <AlertDescription>
@@ -205,10 +207,10 @@ export function OfflineEntry({
           </AlertDescription>
         </Alert>
       ) : null}
-      <p className="text-muted-foreground text-sm">{labels.draftOnly}</p>
+      <p className="rounded-lg border bg-info/5 p-3 text-info text-sm">{labels.draftOnly}</p>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="flex flex-col gap-1.5">
+      <div className="grid gap-4 rounded-xl border bg-card p-4 sm:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <Label htmlFor="hors-ligne-dossier">{labels.company}</Label>
           <select
             id="hors-ligne-dossier"
@@ -227,7 +229,7 @@ export function OfflineEntry({
             ))}
           </select>
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <Label htmlFor="hors-ligne-type">{labels.mode}</Label>
           <select
             id="hors-ligne-type"
@@ -244,7 +246,7 @@ export function OfflineEntry({
           </select>
         </div>
         {mode === "guided" ? (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-1.5">
             <Label htmlFor="hors-ligne-operation">{labels.operation}</Label>
             <select
               id="hors-ligne-operation"

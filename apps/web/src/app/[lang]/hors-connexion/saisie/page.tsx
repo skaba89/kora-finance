@@ -17,9 +17,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function OfflineEntryPage() {
   const { t, locale } = await getDictionary();
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-4 py-6">
+    <main className="mx-auto flex w-full min-w-0 max-w-5xl flex-1 flex-col gap-6 px-4 py-6">
       <header className="flex flex-col gap-1">
-        <p className="font-semibold tracking-tight text-teal-700">{t.common.appName}</p>
+        <p className="font-semibold tracking-tight text-primary">{t.common.appName}</p>
         <h1 className="text-2xl font-semibold">{t.offline.pageTitle}</h1>
         <p className="text-muted-foreground">{t.offline.pageSubtitle}</p>
       </header>

@@ -23,6 +23,7 @@ import { syncPending } from "@/lib/offline/sync";
 
 import { sendItem } from "./offline-sync";
 import { QueueList } from "./queue-list";
+import { NetworkIndicator } from "./network-indicator";
 
 type Message = { tone: "info" | "error"; text: string };
 
@@ -100,12 +101,13 @@ export function DevicePanel({
   const hasPending = items.some((i) => i.status === "pending");
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
-      <section aria-labelledby="offline-device" className="flex flex-col gap-3">
+    <div className="flex min-w-0 max-w-5xl flex-col gap-6">
+      <NetworkIndicator online={online} labels={labels} />
+      <section aria-labelledby="offline-device" className="flex flex-col gap-4 rounded-xl border bg-card p-4 sm:p-6">
         <h2 id="offline-device" className="font-medium">
           {labels.deviceTitle}
         </h2>
-        <p className="text-sm" data-testid="etat-appareil">
+        <p role="status" className={`rounded-lg p-3 text-sm ${snapshot && !expired ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`} data-testid="etat-appareil">
           {!snapshot
             ? labels.notPrepared
             : expired
@@ -116,22 +118,21 @@ export function DevicePanel({
                 })}
         </p>
         <div className="flex flex-wrap gap-3">
-          <Button type="button" onClick={prepare} disabled={preparing || !online}>
+          <Button type="button" className="min-h-11 whitespace-normal" onClick={prepare} disabled={preparing || !online}>
             {preparing ? labels.preparing : snapshot ? labels.update : labels.prepare}
           </Button>
           {snapshot && !expired ? (
             // Navigation complète (pas de <Link>) : hors connexion, seul le service worker
             // peut servir cette page ; une navigation client de Next échouerait.
-            // eslint-disable-next-line @next/next/no-html-link-for-pages
             <a
-              href="/hors-connexion/saisie"
-              className="border-input hover:bg-muted inline-flex h-9 items-center rounded-md border px-3 text-sm"
+              href={`/hors-connexion/saisie?dossier=${companyId}`}
+              className="border-input hover:bg-muted inline-flex min-h-11 items-center rounded-md border px-3 py-2 text-sm"
             >
               {labels.open}
             </a>
           ) : null}
           {snapshot ? (
-            <Button type="button" variant="ghost" onClick={() => void deleteSnapshot(userId, companyId)}>
+            <Button type="button" variant="ghost" className="min-h-11 h-auto whitespace-normal" onClick={() => void deleteSnapshot(userId, companyId)}>
               {labels.remove}
             </Button>
           ) : null}
@@ -139,7 +140,7 @@ export function DevicePanel({
         <p className="text-muted-foreground text-sm">{labels.securityNote}</p>
       </section>
 
-      <section aria-labelledby="offline-queue" className="flex flex-col gap-3">
+      <section aria-labelledby="offline-queue" className="flex min-w-0 flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 id="offline-queue" className="font-medium">
             {labels.queueTitle}

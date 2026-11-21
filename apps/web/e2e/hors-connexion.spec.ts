@@ -27,6 +27,7 @@ async function goOffline(context: BrowserContext, page: Page) {
   await page.goto("/hors-connexion/saisie");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Saisie hors connexion");
   await expect(page.getByRole("combobox", { name: "Dossier" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Sans réseau" })).toBeVisible();
 }
 
 function queued(page: Page, label: string) {
@@ -52,6 +53,7 @@ test("saisie sans réseau, synchronisation en brouillons, correction d'un refus 
   await page.getByRole("button", { name: "Enregistrer sur l'appareil" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Saisie enregistrée sur l'appareil" })).toBeVisible();
   await expect(queued(page, "Achat de riz au marché")).toContainText("En attente");
+  await expect(page.getByTestId("offline-summary").locator("dd").first()).toHaveText("1");
   // Le formulaire repart à vide pour la saisie suivante.
   await expect(page.getByLabel("Libellé", { exact: true })).toHaveValue("");
 
@@ -84,6 +86,7 @@ test("saisie sans réseau, synchronisation en brouillons, correction d'un refus 
   await expect(queued(page, "Ventes du samedi")).toContainText("Brouillon créé");
   const rejected = queued(page, "Transport de marchandises");
   await expect(rejected).toContainText("Refusée");
+  await expect(page.getByTestId("offline-summary").locator("dd")).toHaveText(["0", "1", "2"]);
   await expect(rejected.getByRole("alert")).toContainText("Aucun exercice ne couvre le 15/01/2024");
 
   // Correction de la saisie refusée, puis nouvelle synchronisation.

@@ -307,3 +307,10 @@ vérification de chaîne reste annoncé et utilise les tokens sémantiques. Les
 formulaires MFA ont des identifiants distincts, et les codes de secours restent
 lisibles en thème sombre et sur petit écran. Aucun changement du protocole
 d'authentification, de la réauthentification ou des permissions.
+
+### Lot 10 — hors connexion
+
+Indicateur réseau FR/EN, cartes d'état de la file par statut, badges sémantiques,
+état vide et cibles tactiles. Le lien de saisie conserve le dossier sélectionné.
+Les montants restent tabulaires et le protocole de synchronisation, le stockage
+chiffré, l'expiration et les permissions sont inchangés.
