@@ -186,6 +186,8 @@ d'écrire du code Next.** Points déjà rencontrés :
 - Langue : `await lang()` de `next/root-params` (Server Components). Indisponible dans
   les Server Actions → `actionDictionary()` (cookie). Liens internes **sans** préfixe de
   langue : le proxy réécrit.
+- Le sélecteur de dossier utilise la liste autorisée du DAL sous Suspense, avec
+  confirmation explicite et retour au tableau de bord du dossier cible (voir `docs/UX_TOPBAR.md`).
 - `usePathname()` renvoie le chemin réécrit : pour l'URL visible, lire `window.location`
   après hydratation (voir `components/nav-link.tsx`).
 - Les tests E2E tournent sur desktop et mobile (Pixel 5) : une colonne masquée sur

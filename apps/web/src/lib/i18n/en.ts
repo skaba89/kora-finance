@@ -73,6 +73,7 @@ export const en: typeof fr = {
     switchCompany: "Switch company",
     language: "Language",
     mainMenu: "Main menu",
+    openSelectedCompany: "Open company",
   },
   auth: {
     emailsDisabled: "Email sending is not enabled on this installation yet: password reset by email is unavailable. Contact your Kora administrator.",

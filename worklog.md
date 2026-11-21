@@ -26,6 +26,14 @@ Validation locale : Vitest 84/84, ESLint, typecheck, build Next (115 pages) et
 diff check OK. Le scénario Playwright joint une capture de la navigation dans
 le rapport CI desktop/mobile ; non exécuté localement (Docker indisponible).
 
+## 2026-11-21 — Kora Premium, lot 2C : barre supérieure et sélecteur de dossier
+
+Branche indépendante du lot 2B, base `b77c53b` (PR #113 intégrée). TopBar commune,
+accès liste et sécurité mobile, sélecteur natif limité aux dossiers autorisés,
+confirmation explicite avant navigation, libellés FR/EN. Aucun changement API,
+session, permissions ou calculs. Scénario Playwright dédié avec captures FR/EN.
+Voir `docs/UX_TOPBAR.md` pour les détails et limites.
+
 ## 2026-11-21 — Kora Premium, lot 1 : fondations visuelles
 
 Base `ce89b41` (PR #110, parcours Ventes conservé). Aucune PR ouverte au début ;
