@@ -1,0 +1,80 @@
+"""Précontrôle d'import dans un dossier autorisé, sans écriture comptable."""
+
+import uuid
+from typing import Literal
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from kora.accounting.import_business import ImportCatalog, ImportPeriod, validate_import
+from kora.accounting.import_validation import ImportIssue, ImportReport
+from kora.core.errors import ForbiddenError, NotFoundError
+from kora.db.snapshot import lecture_instantanee
+from kora.models.accounting import Account
+from kora.models.identity import Company, User
+from kora.models.ledger import Journal
+from kora.models.organization import FiscalYear, FiscalYearStatus
+from kora.tenancy.access import resolve_role
+from kora.tenancy.permissions import Permission, permissions_for
+
+
+def _catalog(session: Session, company_id: uuid.UUID) -> ImportCatalog:
+    journals = session.execute(
+        select(Journal.code, Journal.is_active).where(Journal.tenant_id == company_id)
+    ).all()
+    accounts = session.execute(
+        select(Account.number, Account.is_active).where(Account.tenant_id == company_id)
+    ).all()
+    years = session.execute(
+        select(FiscalYear).where(FiscalYear.tenant_id == company_id)
+    ).scalars()
+    return ImportCatalog(
+        journals={code: active for code, active in journals},
+        accounts={number: active for number, active in accounts},
+        periods=[
+            ImportPeriod(
+                year.start_date,
+                year.end_date,
+                year.status == FiscalYearStatus.OPEN,
+                year.locked_until,
+            )
+            for year in years
+        ],
+    )
+
+
+def precheck_import_for_company(
+    user: User,
+    company_id: uuid.UUID,
+    content: bytes,
+    *,
+    file_format: Literal["csv", "fec", "xlsx"],
+    source_currency: str,
+    fec_delimiter: Literal["\t", "|"] = "|",
+) -> ImportReport:
+    """Autorisation et catalogue sous un même instantané RLS.
+
+    L'utilisateur doit provenir de l'authentification serveur. Le fichier est
+    contrôlé après fermeture de la transaction : pas de connexion immobilisée
+    pendant le parsing. Les droits et références devront être revérifiés lors
+    de l'intégration effective. Le premier profil tenant accepte uniquement GNF.
+    """
+    with lecture_instantanee(company_id) as session:
+        role = resolve_role(session, user, company_id)
+        if role is None:
+            raise NotFoundError("Dossier introuvable.")
+        if Permission.ENTRIES_WRITE not in permissions_for(role):
+            raise ForbiddenError("Votre rôle ne permet pas cette action.")
+        currency = session.execute(
+            select(Company.currency).where(Company.id == company_id)
+        ).scalar_one_or_none()
+        if currency is None:
+            raise NotFoundError("Dossier introuvable.")
+        if currency != source_currency:
+            return ImportReport(issues=[ImportIssue(1, "currency_mismatch")])
+        if currency != "GNF":
+            return ImportReport(issues=[ImportIssue(1, "unsupported_currency")])
+        catalog = _catalog(session, company_id)
+    return validate_import(
+        content, file_format=file_format, catalog=catalog, fec_scale=0, fec_delimiter=fec_delimiter
+    )

@@ -317,6 +317,15 @@ Le futur service doit charger le catalogue dans le contexte tenant autorisé,
 contrôler les doublons persistants, la devise et revalider sous transaction
 avant import. Aucun endpoint ni stockage ajouté dans ce lot.
 
+**5D2a — Catalogue réel et accès tenant.** Le service de précontrôle résout
+le rôle effectif sous un instantané REPEATABLE READ avec RLS et exige
+`entries:write`. Tous les référentiels sont filtrés par tenant ; un dossier
+inaccessible retourne 404, une permission insuffisante 403. Le premier
+profil tenant exige une devise source explicitement déclarée GNF, identique
+à la devise du dossier. Le parsing ne retient pas la connexion PostgreSQL.
+Ce service ne crée aucune écriture ni route publique ; staging, doublons,
+exécution et revalidation des droits restent à livrer.
+
 ## Phase 6 — Dossier de financement
 Pack généré en un clic, lien signé, révocable et expirable, journal des consultations.
 - Un lien révoqué renvoie 410 et ne donne plus accès à aucun document.

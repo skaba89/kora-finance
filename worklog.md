@@ -3,6 +3,14 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-21 — Phase 5D2a : catalogue tenant réel
+
+PR #138 fusionnée (`9e1d415`), CI #320 verte. Service de précontrôle en
+instantané RLS, vérification du rôle et de la devise GNF, lecture du catalogue
+réel sans écriture. 16 tests purs réussis ; 4 tests PostgreSQL ajoutés pour
+le catalogue, l'isolation, les permissions et la devise, à exécuter en CI.
+Staging et exécution différée restent à livrer.
+
 ## 2026-11-21 — Phase 5D1 : contrôle métier commun
 
 PR #137 fusionnée (`2a2488e`), CI #318 verte. Contrôles purs CSV/FEC/XLSX
