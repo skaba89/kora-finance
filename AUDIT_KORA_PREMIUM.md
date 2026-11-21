@@ -164,3 +164,14 @@ et de la navigation sont réduits uniquement sur mobile. L'alerte email et le
 comportement de déconnexion hors connexion sont conservés. La recette mesure
 une hauteur d'en-tête cible de 120 px maximum à 360 et 390 px et vérifie les
 commandes disponibles. Captures et résultats effectifs à confirmer en CI.
+
+## 9. Lot 15A — colonnes configurables du journal
+
+PR #133 fusionnée (`73899ff`), CI #306 verte (run 44916025878).
+Le journal des écritures permet de choisir indépendamment Pièce et Statut ;
+date, journal, libellé et montant restent toujours affichés. La préférence
+est validée par liste blanche, portée par l'URL et conservée en pagination ;
+les filtres réinitialisent aussi les colonnes. En mobile, le choix s'applique
+aux badges et références sous le libellé. Les exports, requêtes et calculs
+financiers ne changent pas. Recette des écritures enrichie : montant exact,
+masquage, rechargement et retour aux valeurs par défaut. CI à confirmer.

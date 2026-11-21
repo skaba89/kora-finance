@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { tablePreferences, tableRange } from "./table-preferences";
+import { optionalColumns, tablePreferences, tableRange } from "./table-preferences";
 
 describe("préférences de tableau", () => {
+  it("valide les colonnes facultatives et conserve le défaut historique", () => {
+    const allowed = ["reference", "statut"] as const;
+    expect(optionalColumns({}, allowed)).toEqual(allowed);
+    expect(optionalColumns({ colonne: "reference" }, allowed)).toEqual(allowed);
+    expect(optionalColumns({ colonnes: "1", colonne: ["statut", "statut", "montant", "invalid"] }, allowed)).toEqual(["statut"]);
+    expect(optionalColumns({ colonnes: "1" }, allowed)).toEqual([]);
+    expect(optionalColumns({ colonnes: "1", colonne: "reference" }, allowed)).toEqual(["reference"]);
+  });
   it("conserve le défaut historique", () => {
     expect(tablePreferences({})).toEqual({ size: 50, page: 1, density: "comfortable", offset: 0 });
     expect(tablePreferences({}, 100)).toEqual({ size: 100, page: 1, density: "comfortable", offset: 0 });

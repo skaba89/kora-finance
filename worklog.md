@@ -2297,3 +2297,10 @@ PR #132 fusionnée, CI #304 verte et 126 mesures sans écart. Garde étendue
 à tous les écrans de la recette. En-tête mobile compact, accès compte et
 déconnexion tactiles et nommés, espacement du dossier réduit. Contrôle de
 hauteur et disponibilité des commandes dans Playwright ; alertes conservées.
+
+## UX Premium — lot 15A : colonnes du journal des écritures
+
+PR #133 fusionnée, CI #306 verte. Choix indépendant des colonnes facultatives
+Pièce et Statut, avec préférence URL conservée lors de la pagination. Les
+quatre colonnes essentielles restent visibles ; exports et calculs inchangés.
+Tests de validation des préférences et recette desktop/mobile enrichis.
