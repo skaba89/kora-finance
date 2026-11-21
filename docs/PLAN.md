@@ -270,6 +270,21 @@ email/WhatsApp, relances, balance âgée.
 FEC, Excel, balance d'ouverture en tâche de fond, rapport de contrôle.
 - 100 000 lignes importées sans timeout, rapport exhaustif.
 
+**5A — Précontrôle structurel (premier incrément).** CSV normalisé UTF-8,
+séparateur `;`, en-tête exact `journal;ecriture;date;compte;libelle;debit;credit`.
+Dates ISO, montants en unités mineures entières (GNF sans décimale), identifiant
+source unique par journal sur le fichier. Le libellé est celui de l'écriture,
+identique sur ses lignes. Le groupe peut être non contigu. Les bornes de montant
+et de lignes par écriture sont partagées avec le modèle comptable.
+Le moteur de contrôle est sans effet de bord, limité à 100 000 lignes, et
+retourne compteurs, totaux exacts des lignes structurellement valides et erreurs
+numérotées sans données source. Une erreur de groupe invalide le rapport entier.
+Rapport valide ne signifie pas écritures importables : il reste à vérifier le
+plan comptable, les journaux, dates, exercices, droits et doublons en base.
+Les adaptateurs FEC/Excel, limites de taille en octets et décodage des fichiers,
+staging isolé, exécution asynchrone, idempotence et validation humaine sont
+les incréments suivants ; aucun endpoint d'import ni écriture n'est ajouté en 5A.
+
 ## Phase 6 — Dossier de financement
 Pack généré en un clic, lien signé, révocable et expirable, journal des consultations.
 - Un lien révoqué renvoie 410 et ne donne plus accès à aucun document.
