@@ -2304,3 +2304,11 @@ PR #133 fusionnée, CI #306 verte. Choix indépendant des colonnes facultatives
 Pièce et Statut, avec préférence URL conservée lors de la pagination. Les
 quatre colonnes essentielles restent visibles ; exports et calculs inchangés.
 Tests de validation des préférences et recette desktop/mobile enrichis.
+
+## Phase 5A — précontrôle import comptable
+
+PR #134 fusionnée, CI #309 verte. Premier moteur CSV normalisé indépendant
+de la base, limites communes avec le journal, contrôle des groupes et rapport
+sans valeurs source. Quatre tests purs exécutés en local, dont 100 000 lignes
+et dépassement de plafond ; CI backend complète encore requise. Aucun import
+persistant, API ni migration : les étapes suivantes sont décrites dans le plan.

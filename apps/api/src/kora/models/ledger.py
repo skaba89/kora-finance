@@ -30,13 +30,12 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
+from kora.accounting import limits
 from kora.db.base import Base
 from kora.models.common import created_at_column, updated_at_column, uuid_pk
 
-# Montant maximal d'une ligne, en unités mineures (10 000 milliards de GNF). Les sommes
-# d'une écriture restent ainsi très en deçà des limites d'un BIGINT.
-MAX_LINE_AMOUNT = 10**13
-MAX_LINES_PER_ENTRY = 500
+MAX_LINE_AMOUNT = limits.MAX_LINE_AMOUNT
+MAX_LINES_PER_ENTRY = limits.MAX_LINES_PER_ENTRY
 
 
 class JournalKind(StrEnum):
