@@ -1243,6 +1243,7 @@ export const fr = {
     chartOutflow: "Sorties",
     chartWeek: "Semaine",
     chartTable: "Prévision hebdomadaire des flux et du solde projeté",
+    independentScales: "Les barres de flux et la courbe de solde utilisent des échelles distinctes. Consultez les montants exacts par semaine ci-dessous.",
     dailyTable: "Détail journalier",
     dailySummary: "{n} jours — dépliez pour le détail",
     date: "Date",

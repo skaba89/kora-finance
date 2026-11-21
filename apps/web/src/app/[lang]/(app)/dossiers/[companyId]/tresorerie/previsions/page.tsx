@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Download, Lock } from "lucide-react";
+import { CalendarClock, Download, Lock, TrendingDown, Wallet } from "lucide-react";
 
 import { ForecastChart } from "@/components/cashflow/forecast-chart";
+import { DataTable } from "@/components/data-table";
+import { KpiCard } from "@/components/kpi-card";
 import { InlineAction } from "@/components/forms/inline-action";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -81,26 +83,31 @@ export default async function CashflowPage({
     <>
       <PageHeader title={t.cashflow.title} subtitle={t.cashflow.subtitle} />
 
-      <div className="flex flex-wrap items-center gap-2">
-        {HORIZONS.map((value) => (
-          <Link
-            key={value}
-            href={`?horizon=${value}&scenario=${scenario}`}
-            className={value === horizon ? "underline" : "text-muted-foreground"}
-          >
-            {interpolate(t.cashflow.horizonDays, { n: value })}
-          </Link>
-        ))}
-        <span className="mx-2 text-muted-foreground">·</span>
-        {SCENARIOS.map((value) => (
-          <Link
-            key={value}
-            href={`?horizon=${horizon}&scenario=${value}`}
-            className={value === scenario ? "underline" : "text-muted-foreground"}
-          >
-            {t.cashflow[SCENARIO_KEYS[value]]}
-          </Link>
-        ))}
+      <div className="grid gap-4 rounded-xl border bg-card p-4 sm:grid-cols-2">
+        <div role="group" aria-label={t.cashflow.horizon} className="space-y-2">
+          <p className="text-sm font-medium">{t.cashflow.horizon}</p>
+          <div className="flex flex-wrap gap-2">
+            {HORIZONS.map((value) => (
+              <Button key={value} asChild variant={value === horizon ? "default" : "outline"}>
+                <Link href={`?horizon=${value}&scenario=${scenario}`} aria-current={value === horizon ? "true" : undefined}>
+                  {interpolate(t.cashflow.horizonDays, { n: value })}
+                </Link>
+              </Button>
+            ))}
+          </div>
+        </div>
+        <div role="group" aria-label={t.cashflow.scenario} className="space-y-2">
+          <p className="text-sm font-medium">{t.cashflow.scenario}</p>
+          <div className="flex flex-wrap gap-2">
+            {SCENARIOS.map((value) => (
+              <Button key={value} asChild variant={value === scenario ? "default" : "outline"}>
+                <Link href={`?horizon=${horizon}&scenario=${value}`} aria-current={value === scenario ? "true" : undefined}>
+                  {t.cashflow[SCENARIO_KEYS[value]]}
+                </Link>
+              </Button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {forecast.insufficient_data && (
@@ -109,35 +116,34 @@ export default async function CashflowPage({
         </Alert>
       )}
 
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-muted-foreground">{t.cashflow.status}</span>
         <Badge variant={tone}>{statusLabel(forecast.status, locale)}</Badge>
-        <span>
-          {t.cashflow.openingTotal} :{" "}
-          <strong>{formatMoney(BigInt(forecast.opening_total), currency, locale)}</strong>
-        </span>
-        <span>
-          {t.cashflow.lowestBalance} :{" "}
-          <strong>{formatMoney(BigInt(forecast.lowest_balance), currency, locale)}</strong>{" "}
-          ({forecast.lowest_balance_date})
-        </span>
-        <span>
-          {t.cashflow.firstCritical} :{" "}
-          <strong>{forecast.first_critical_date ?? t.cashflow.noCritical}</strong>
-        </span>
       </div>
-
-      <ForecastChart
-        forecast={forecast}
-        currency={currency}
-        locale={locale}
-        labels={{
-          balance: t.cashflow.chartBalance,
-          inflow: t.cashflow.chartInflow,
-          outflow: t.cashflow.chartOutflow,
-          week: t.cashflow.chartWeek,
-          table: t.cashflow.chartTable,
-        }}
-      />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <KpiCard label={t.cashflow.openingTotal} value={formatMoney(BigInt(forecast.opening_total), currency, locale)} icon={Wallet} primary />
+        <KpiCard label={t.cashflow.lowestBalance} value={formatMoney(BigInt(forecast.lowest_balance), currency, locale)} hint={forecast.lowest_balance_date} icon={TrendingDown} negative={BigInt(forecast.lowest_balance) < 0n} />
+        <KpiCard label={t.cashflow.firstCritical} value={forecast.first_critical_date ?? t.cashflow.noCritical} icon={CalendarClock} negative={forecast.first_critical_date !== null} />
+      </div>
+      <Card className="min-w-0">
+        <CardHeader><h2 className="text-base font-semibold">{t.cashflow.chartTable}</h2></CardHeader>
+        <CardContent className="min-w-0">
+          <ForecastChart
+            key={`${horizon}-${scenario}`}
+            forecast={forecast}
+            currency={currency}
+            locale={locale}
+            labels={{
+              balance: t.cashflow.chartBalance,
+              inflow: t.cashflow.chartInflow,
+              outflow: t.cashflow.chartOutflow,
+              week: t.cashflow.chartWeek,
+              table: t.cashflow.chartTable,
+              independentScales: t.cashflow.independentScales,
+            }}
+          />
+        </CardContent>
+      </Card>
 
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t.cashflow.exportPdf}>
         {(["pdf", "xlsx"] as const).map((format) => (
@@ -166,9 +172,9 @@ export default async function CashflowPage({
         ) : null}
       </div>
 
-      <section aria-label={t.cashflow.accounts}>
+      <section className="min-w-0 space-y-3" aria-label={t.cashflow.accounts}>
         <h2 className="text-lg font-semibold">{t.cashflow.accounts}</h2>
-        <Table>
+        <DataTable label={t.cashflow.accounts}>
           <TableHeader>
             <TableRow>
               <TableHead>{t.cashflow.accountNumber}</TableHead>
@@ -207,15 +213,15 @@ export default async function CashflowPage({
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+        </DataTable>
       </section>
 
-      <details>
+      <details className="min-w-0 space-y-3 rounded-xl border bg-card p-4">
         <summary className="cursor-pointer text-lg font-semibold">
           {t.cashflow.dailyTable} —{" "}
           {interpolate(t.cashflow.dailySummary, { n: forecast.days.length })}
         </summary>
-        <Table>
+        <DataTable label={t.cashflow.dailyTable} density="compact">
           <TableHeader>
             <TableRow>
               <TableHead>{t.cashflow.date}</TableHead>
@@ -231,21 +237,21 @@ export default async function CashflowPage({
             {forecast.days.map((day) => (
               <TableRow key={day.flow_date}>
                 <TableCell>{day.flow_date}</TableCell>
-                <TableCell className="text-right">{day.committed_inflow}</TableCell>
-                <TableCell className="text-right">{day.committed_outflow}</TableCell>
-                <TableCell className="text-right">{day.estimated_inflow}</TableCell>
-                <TableCell className="text-right">{day.estimated_outflow}</TableCell>
-                <TableCell className="text-right">{day.balance}</TableCell>
+                <TableCell className="text-right">{formatMoney(BigInt(day.committed_inflow), currency, locale)}</TableCell>
+                <TableCell className="text-right">{formatMoney(BigInt(day.committed_outflow), currency, locale)}</TableCell>
+                <TableCell className="text-right">{formatMoney(BigInt(day.estimated_inflow), currency, locale)}</TableCell>
+                <TableCell className="text-right">{formatMoney(BigInt(day.estimated_outflow), currency, locale)}</TableCell>
+                <TableCell className="text-right font-semibold">{formatMoney(BigInt(day.balance), currency, locale)}</TableCell>
                 <TableCell>
                   <Badge variant={statusVariant(day.status)}>{statusLabel(day.status, locale)}</Badge>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+        </DataTable>
       </details>
 
-      <details>
+      <details className="space-y-3 rounded-xl border bg-card p-4">
         <summary className="cursor-pointer text-lg font-semibold">
           {t.cashflow.assumptions}
         </summary>
@@ -277,12 +283,12 @@ export default async function CashflowPage({
         <p className="mt-2 text-muted-foreground">{t.cashflow.expertNotice}</p>
       </details>
 
-      <section aria-label={t.cashflow.snapshots}>
+      <section className="min-w-0 space-y-3" aria-label={t.cashflow.snapshots}>
         <h2 className="text-lg font-semibold">{t.cashflow.snapshots}</h2>
         {snapshots.length === 0 ? (
           <p className="text-muted-foreground">{t.cashflow.snapshotsEmpty}</p>
         ) : (
-          <Table>
+          <DataTable label={t.cashflow.snapshots}>
             <TableHeader>
               <TableRow>
                 <TableHead>{t.cashflow.snapshotAt}</TableHead>
@@ -318,7 +324,7 @@ export default async function CashflowPage({
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </DataTable>
         )}
       </section>
     </>

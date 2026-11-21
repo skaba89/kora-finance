@@ -271,3 +271,12 @@ mobile. Les cinq indicateurs de rapprochement utilisent KpiCard et les valeurs
 de l'API sans recalcul. Les relevés restent consultables en lecture seule ; les
 mutations restent réservées à treasury:manage. Les champs des mouvements ont
 des identifiants distincts des formulaires de création et de virement.
+
+### Lot 6B — prévisionnel de trésorerie
+
+Horizons et scénarios affichés en groupes de liens avec état courant explicite ;
+trois KpiCard rendent les soldes et le seuil critique visibles. Le graphique
+hebdomadaire distingue ses deux échelles et expose les trois montants exacts
+par semaine via un sélecteur accessible. Les tables par compte, journalière et
+des instantanés utilisent DataTable ; le détail journalier formate les montants
+en BigInt. Les requêtes, droits, exports et hypothèses métier restent inchangés.

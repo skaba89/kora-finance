@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { formatMoney } from "@/lib/format";
 import type { Locale } from "@/lib/i18n/config";
@@ -12,6 +12,7 @@ type Labels = {
   outflow: string;
   week: string;
   table: string;
+  independentScales: string;
 };
 
 const HEIGHT = 180;
@@ -37,10 +38,12 @@ export function ForecastChart({
   locale: Locale;
   labels: Labels;
 }) {
-  const [active, setActive] = useState<number | null>(null);
+  const [active, setActive] = useState(0);
+  const weekSelectId = useId();
   const tag = locale === "en" ? "en-GB" : "fr-FR";
   const weeks = aggregateWeekly(forecast.days);
-  if (weeks.length === 0) return null;
+  const selected = weeks[Math.max(0, Math.min(active, weeks.length - 1))];
+  if (!selected) return null;
 
   const maxFlow = weeks.reduce(
     (m, w) => (w.inflow > m ? w.inflow : w.outflow > m ? w.outflow : m),
@@ -71,10 +74,11 @@ export function ForecastChart({
     .join(" ");
 
   return (
-    <figure>
+    <figure className="min-w-0 space-y-4">
+      <div className="overflow-x-auto rounded-lg border p-2" tabIndex={0} role="region" aria-label={labels.table}>
       <svg
         viewBox={`0 0 ${weeks.length * BAND} ${HEIGHT + 24}`}
-        className="w-full"
+        className="w-full min-w-[420px] max-h-72"
         role="img"
         aria-label={labels.table}
       >
@@ -85,11 +89,7 @@ export function ForecastChart({
           return (
             <g
               key={week.week_start}
-              onMouseEnter={() => setActive(index)}
-              onMouseLeave={() => setActive(null)}
-              onFocus={() => setActive(index)}
-              onBlur={() => setActive(null)}
-              tabIndex={0}
+              onClick={() => setActive(index)}
             >
               <rect
                 x={xOf(index) - 2}
@@ -129,6 +129,7 @@ export function ForecastChart({
           />
         ))}
       </svg>
+      </div>
       <figcaption className="text-sm text-muted-foreground">
         <span className="mr-3">
           <span className="inline-block size-2 rounded-full bg-[var(--chart-1)] align-middle" />{" "}
@@ -139,13 +140,22 @@ export function ForecastChart({
           {labels.outflow}
         </span>
         <span>— {labels.balance}</span>
-        {active !== null && weeks[active] !== undefined && (
-          <span className="ml-2 font-medium text-foreground">
-            {weekLabel(weeks[active].week_start)} :{" "}
-            {formatMoney(weeks[active].end_balance, currency, locale)} ({labels.balance})
-          </span>
-        )}
+        <p className="mt-1 text-xs">{labels.independentScales}</p>
       </figcaption>
+      <div className="rounded-lg bg-muted/40 p-3 space-y-3">
+        <label htmlFor={weekSelectId} className="block text-sm font-medium">{labels.week}</label>
+        <select id={weekSelectId} value={selected.week_start} onChange={(event) => setActive(weeks.findIndex((week) => week.week_start === event.target.value))} className="h-10 w-full rounded-md border bg-background px-3 text-sm sm:w-auto">
+          {weeks.map((week) => <option key={week.week_start} value={week.week_start}>{weekLabel(week.week_start)}</option>)}
+        </select>
+        <dl className="grid gap-3 sm:grid-cols-3" aria-live="polite">
+          {([[labels.inflow, selected.inflow], [labels.outflow, selected.outflow], [labels.balance, selected.end_balance]] as const).map(([label, amount]) => (
+            <div key={label} className="min-w-0">
+              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dd className="wrap-anywhere font-semibold tabular-nums">{formatMoney(amount, currency, locale)}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
     </figure>
   );
 }
