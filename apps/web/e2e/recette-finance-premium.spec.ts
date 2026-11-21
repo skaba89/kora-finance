@@ -45,6 +45,16 @@ test("recette responsive : finance et administration", async ({ page }, testInfo
         await page.setViewportSize({ width, height: 900 });
         await expect(heading).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
+        if (route === "ecritures" && width <= 390) {
+          const header = page.getByRole("banner");
+          await expect(header.getByRole("combobox", { name: "Thème d’affichage" })).toBeVisible();
+          await expect(header.getByRole("button", { name: "Langue : English" })).toBeVisible();
+          await expect(header.getByRole("link", { name: "Aminata Sylla" })).toBeVisible();
+          const logout = header.getByRole("button", { name: "Se déconnecter" });
+          await expect(logout).toBeVisible();
+          await expect.poll(async () => (await header.boundingBox())?.height ?? Infinity).toBeLessThanOrEqual(120);
+          await expect.poll(async () => (await logout.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+        }
         const dimensions = await page.evaluate(() => new Promise<{ viewport: number; overflow: number }>((resolve) => {
           requestAnimationFrame(() => requestAnimationFrame(() => {
             const root = document.documentElement;
@@ -60,10 +70,9 @@ test("recette responsive : finance et administration", async ({ page }, testInfo
   }
 
   const outliers = measurements.filter(({ overflow }) => overflow > 1);
-  // Les 72 mesures financières de la CI #302 sont sans débordement : non-régression
-  // bloquante. Les nouveaux écrans administratifs constituent une première baseline.
+  // Les 126 mesures de la CI #304 sont sans écart : non-régression bloquante.
   await testInfo.attach("reflow-finance", { body: JSON.stringify({ measurements, outliers }, null, 2), contentType: "application/json" });
   expect(measurements).toHaveLength((routes.length + administrativeRoutes.length) * widths.length);
   expect(measurements.filter(({ width, viewport }) => width !== viewport), "Largeurs réellement testées").toEqual([]);
-  expect(outliers.filter(({ route }) => routes.some(([financialRoute]) => financialRoute === route)), "Régression de débordement financier").toEqual([]);
+  expect(outliers, "Régression de débordement global").toEqual([]);
 });

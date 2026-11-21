@@ -17,7 +17,7 @@ async function CompanyNav({ params }: { params: Params }) {
   const groups = companyNavigation(base, t.nav, permission => can(company, permission));
   return (
     <CompanyNavigation groups={groups} labels={t.nav} header={
-      <div className="mb-2 flex items-center gap-2 px-1 md:mb-3 md:block md:px-3">
+      <div className="flex min-h-11 min-w-0 items-center gap-2 px-1 md:mb-3 md:block md:min-h-0 md:px-3">
         <p className="truncate font-semibold leading-tight">{company.company.legal_name}</p>
         <Badge variant="secondary" className="md:mt-1">
           {t.roles[company.role]}
@@ -38,14 +38,14 @@ async function CompanySwitcherSlot({ params }: { params: Params }) {
 
 export default function CompanyLayout({ children, params }: LayoutProps<"/[lang]/dossiers/[companyId]">) {
   return (
-    <div className="flex flex-1 flex-col gap-6 md:flex-row">
+    <div className="flex flex-1 flex-col gap-3 md:flex-row md:gap-6">
       <aside className="company-sidebar min-w-0 md:w-60 md:shrink-0 md:self-start md:rounded-xl md:border md:bg-sidebar md:p-3">
         <Suspense fallback={<div className="bg-muted h-64 animate-pulse rounded" />}>
           <CompanyNav params={params} />
         </Suspense>
       </aside>
       <main id="main-content" tabIndex={-1} className="min-w-0 flex-1">
-        <div className="mb-4 min-w-0">
+        <div className="mb-3 min-w-0 md:mb-4">
           <Suspense fallback={<div className="bg-muted h-11 w-full max-w-96 animate-pulse rounded-lg" />}>
             <CompanySwitcherSlot params={params} />
           </Suspense>

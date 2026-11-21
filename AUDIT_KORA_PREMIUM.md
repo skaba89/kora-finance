@@ -150,3 +150,17 @@ Revue visuelle ciblée des captures #302 : ventes et nouvelle écriture à 390 p
 La hauteur cumulée de l'en-tête mobile, de l'alerte de vérification email et
 de la navigation repousse toutefois le contenu métier : compacter ces zones
 sans masquer les actions ni les alertes importantes est le prochain chantier.
+
+## 8. Lot 14 — en-tête mobile compact
+
+PR #132 fusionnée (`502e387`), CI #304 verte (run 44914033626,
+artefact 14710479033) : 63 mesures par profil, aucun écart de reflow supérieur
+à 1 px. Les 126 cas deviennent bloquants.
+
+Sur smartphone, en-tête en deux rangées avec les commandes système/langue,
+compte et déconnexion conservées ; les deux dernières utilisent des icônes
+avec nom accessible et cibles de 44 px. Les espacements du contexte dossier
+et de la navigation sont réduits uniquement sur mobile. L'alerte email et le
+comportement de déconnexion hors connexion sont conservés. La recette mesure
+une hauteur d'en-tête cible de 120 px maximum à 360 et 390 px et vérifie les
+commandes disponibles. Captures et résultats effectifs à confirmer en CI.

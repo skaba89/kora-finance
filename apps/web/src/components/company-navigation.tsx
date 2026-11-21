@@ -41,11 +41,11 @@ export function CompanyNavigation({ groups, labels, header }: { groups: Navigati
         </button>
       </div>
       <div id={menuId} className="company-navigation-content">
-      <div className="company-navigation-search relative mb-3">
+      <div className="company-navigation-search relative mb-2 md:mb-3">
         <Search aria-hidden className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
         <input ref={input} type="search" aria-label={labels.searchModules} placeholder={labels.searchModules} value={query} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Escape") setQuery(""); }} className="border-input bg-background h-10 w-full rounded-lg border pl-9 pr-2 text-sm" />
       </div>
-      <div className="-mx-4 flex gap-2 overflow-x-auto border-b px-4 pb-2 whitespace-nowrap md:mx-0 md:flex-col md:overflow-visible md:border-0 md:px-0 md:pb-0">
+      <div className="-mx-4 flex gap-2 overflow-x-auto border-b px-4 pb-1 whitespace-nowrap md:mx-0 md:flex-col md:overflow-visible md:border-0 md:px-0 md:pb-0">
         {filtered.map((group, index) => (
           <div key={`${index}-${group.label}`} className="flex gap-1 md:flex-col">
             {group.label && <p className="company-navigation-group text-muted-foreground mt-2 hidden px-3 text-xs font-semibold uppercase tracking-wide md:block">{group.label}</p>}

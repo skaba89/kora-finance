@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { interpolate } from "@/lib/i18n/interpolate";
@@ -45,8 +46,9 @@ export function LogoutButton({
         })();
       }}
     >
-      <Button type="submit" variant="outline" size="sm">
-        {label}
+      <Button type="submit" variant="outline" size="sm" className="min-h-11 min-w-11 sm:min-h-7 sm:min-w-0" title={label}>
+        <LogOut aria-hidden className="size-5 sm:hidden" />
+        <span className="sr-only sm:not-sr-only">{label}</span>
       </Button>
     </form>
   );
