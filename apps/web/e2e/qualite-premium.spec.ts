@@ -18,7 +18,9 @@ async function audit(page: Page, name: string, testInfo: TestInfo) {
   };
   await testInfo.attach(`axe-${name}`, { body: JSON.stringify(report, null, 2), contentType: "application/json" });
   expect(report.passedRules, "Le moteur axe doit avoir évalué la page").toBeGreaterThan(0);
-  // Première baseline : les violations sont publiées, sans prétendre à une certification WCAG.
+  // Les deux règles observées et corrigées sont désormais bloquantes ; les autres
+  // anomalies et revues manuelles restent publiées pour traitement progressif.
+  expect(report.violations.filter(({ id }) => ["label-content-name-mismatch", "nested-interactive"].includes(id)), `${name} : régression d'accessibilité`).toEqual([]);
 }
 
 test("audit WCAG automatisé : connexion FR/EN et tableau de bord", async ({ page }, testInfo) => {
@@ -33,6 +35,9 @@ test("audit WCAG automatisé : connexion FR/EN et tableau de bord", async ({ pag
   await createCompany(page, "Qualité UX SARL");
   await expect(page.getByRole("searchbox", { name: "Rechercher un module" })).toBeVisible();
   await audit(page, "dashboard", testInfo);
+  await page.getByRole("combobox", { name: "Thème d’affichage" }).selectOption("dark");
+  await expect(page.locator("html")).toHaveClass(/\bdark\b/);
+  await audit(page, "dashboard-dark", testInfo);
 });
 
 type LabMetrics = { lcpMs: number | null; cls: number; longestInteractionMs: number | null; interactionEntries: number };
