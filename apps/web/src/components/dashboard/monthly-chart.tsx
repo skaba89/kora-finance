@@ -56,7 +56,7 @@ export function MonthlyChart({
           {labels.expenses}
         </span>
       </div>
-      <div className="relative overflow-x-auto">
+      <div className="relative min-w-0 overflow-x-auto rounded-lg border bg-background/50 p-2">
         <svg
           viewBox={`0 0 ${width} ${HEIGHT + TOP + 24}`}
           width={width}
@@ -66,6 +66,7 @@ export function MonthlyChart({
           className="max-w-none"
         >
           <line x1={0} x2={width} y1={TOP} y2={TOP} className="stroke-border" strokeDasharray="2 4" />
+          {[1, 2, 3].map(step => <line key={step} x1={0} x2={width} y1={TOP + HEIGHT * step / 4} y2={TOP + HEIGHT * step / 4} className="stroke-border" strokeDasharray="2 4" />)}
           <line x1={0} x2={width} y1={TOP + HEIGHT} y2={TOP + HEIGHT} className="stroke-border" />
           {points.map((p, i) => {
             const x = i * BAND + (BAND - (2 * BAR + GAP)) / 2;
@@ -81,6 +82,11 @@ export function MonthlyChart({
                 onMouseLeave={() => setActive(null)}
                 onFocus={() => setActive(i)}
                 onBlur={() => setActive(null)}
+                onClick={() => setActive(i)}
+                onKeyDown={event => {
+                  if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setActive(i); }
+                  if (event.key === "Escape") setActive(null);
+                }}
                 className="outline-none focus-visible:[&>rect:first-child]:fill-muted"
               >
                 <rect x={i * BAND} y={0} width={BAND} height={HEIGHT + TOP + 24} className={active === i ? "fill-muted" : "fill-transparent"} />
@@ -114,8 +120,9 @@ export function MonthlyChart({
         ) : null}
       </div>
       <details className="text-sm">
-        <summary className="text-muted-foreground cursor-pointer">{labels.table}</summary>
-        <table className="mt-2 w-full text-left">
+        <summary className="text-muted-foreground hover:text-foreground cursor-pointer py-2 font-medium">{labels.table}</summary>
+        <div className="min-w-0 overflow-x-auto">
+        <table className="mt-2 w-full min-w-[20rem] text-left">
           <thead>
             <tr className="text-muted-foreground">
               <th className="py-1 font-normal">{labels.month}</th>
@@ -133,6 +140,7 @@ export function MonthlyChart({
             ))}
           </tbody>
         </table>
+        </div>
       </details>
     </figure>
   );

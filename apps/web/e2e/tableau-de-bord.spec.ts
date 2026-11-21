@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { createCompany, registerAndLogin } from "./helpers";
 
-test("tableau de bord : raccourcis, indicateurs après une vente et une dépense, accueil direct", async ({ page }) => {
+test("tableau de bord : raccourcis, indicateurs après une vente et une dépense, accueil direct", async ({ page }, testInfo) => {
   await registerAndLogin(page);
   const companyId = await createCompany(page, "Superette de Taouyah SARL");
 
@@ -40,6 +40,15 @@ test("tableau de bord : raccourcis, indicateurs après une vente et une dépense
   await page.getByText("Voir les chiffres").click();
   await expect(page.getByRole("row").filter({ hasText: "1 000 000" }).first()).toBeVisible();
   await expect(page.getByRole("listitem").filter({ hasText: "Caisse siège social" })).toContainText(/1\s180\s000 GNF/);
+
+  // Les six résolutions cibles sont réparties entre Chromium et Pixel 5.
+  const widths = testInfo.project.name === "mobile" ? [360, 390, 768] : [1024, 1440, 1920];
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(tiles.getByText("Trésorerie disponible")).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+    await testInfo.attach(`dashboard-${width}`, { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
+  }
 
   // Un seul dossier : l'accueil mène directement à son tableau de bord.
   await page.goto("/dossiers");

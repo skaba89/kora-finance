@@ -215,6 +215,8 @@ d'écrire du code Next.** Points déjà rencontrés :
   traité, donc attendre puis cliquer ne marche pas non plus (échecs CI #44/#45).
 - Montants : chaînes de chiffres (unités mineures) de bout en bout ; saisie par
   `parseAmount`, sommes en BigInt (`lib/amounts.ts`), affichage par `formatMoney`.
+- `KpiCard` est une primitive visuelle : reçoit un montant déjà formaté et ne
+  réalise aucun calcul ; ne pas y ajouter de conversions financières.
 
 ## Décisions d'architecture
 

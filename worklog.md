@@ -3,6 +3,17 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-21 — Kora Premium, lot 3A : tableau de bord financier
+
+Base `8d65f57` (PR #114 et #115 intégrées dans main, CI des deux verte).
+KpiCard réutilisable, six indicateurs inchangés, grille responsive, montants
+tabulaires, raccourcis métier tactiles, comptes/écritures sans troncature,
+graphique mensuel et détail clavier/toucher. Aucun changement de source de
+données ni d'arithmétique. Deux tests unitaires du format et des liens ; scénario
+E2E existant enrichi avec vérification du débordement aux six résolutions et
+captures. Tests intégrés à exécuter en CI (Docker indisponible localement).
+Validation locale : ESLint, typecheck, Vitest 86/86 et build Next 115/115 OK.
+
 ## 2026-11-21 — Kora Premium, lot 2B : navigation repliable
 
 Base `b77c53b` (PR #113 réintégrant le lot 2A dans main, CI verte).
