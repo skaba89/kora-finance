@@ -1,24 +1,26 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { FileSearch } from "lucide-react";
 
+import { DataTable } from "@/components/data-table";
 import { ExportLinks } from "@/components/ledger/export-links";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { can, getCompany, getEntries, getFiscalYears, getJournals } from "@/lib/dal";
 import { formatDate, formatMoney } from "@/lib/format";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { getDictionary } from "@/lib/i18n/server";
 import { pickFiscalYear } from "@/lib/periods";
+import { PAGE_SIZES, tablePreferences, tableRange } from "@/lib/table-preferences";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getDictionary();
   return { title: t.entries.title };
 }
 
-const PAGE_SIZE = 50;
 const STATUSES = ["DRAFT", "POSTED"] as const;
 
 function one(value: string | string[] | undefined): string | undefined {
@@ -33,9 +35,10 @@ export default async function EntriesPage({
   const query = await searchParams;
   const q = one(query.q)?.slice(0, 100) || undefined;
   const journalParam = one(query.journal);
+  const yearParam = one(query.exercice);
   const statusParam = one(query.statut);
   const status = STATUSES.find((s) => s === statusParam);
-  const page = Math.max(1, Number.parseInt(one(query.page) ?? "1", 10) || 1);
+  const { page, size, density, offset } = tablePreferences(query);
 
   const [{ t, locale }, company, journals, years] = await Promise.all([
     getDictionary(),
@@ -45,12 +48,15 @@ export default async function EntriesPage({
   ]);
   const currentYear = pickFiscalYear(years, undefined, new Date().toISOString().slice(0, 10));
   const journal = journals.find((j) => j.id === journalParam);
+  const year = years.find((y) => y.id === yearParam);
+  const exportYear = year ?? currentYear;
   const entries = await getEntries(companyId, {
     q,
     journal_id: journal?.id,
+    fiscal_year_id: year?.id,
     status,
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
+    limit: size,
+    offset,
   });
   const currency = company.company.currency;
   const base = `/dossiers/${companyId}/ecritures`;
@@ -58,12 +64,17 @@ export default async function EntriesPage({
     const search = new URLSearchParams();
     if (q) search.set("q", q);
     if (journal) search.set("journal", journal.id);
+    if (year) search.set("exercice", year.id);
     if (status) search.set("statut", status);
+    search.set("taille", String(size));
+    search.set("densite", density);
     search.set("page", String(target));
     return `?${search.toString()}`;
   };
-  const from = entries.total === 0 ? 0 : entries.offset + 1;
-  const to = entries.offset + entries.items.length;
+  const { from, to, lastPage } = tableRange(entries.total, entries.offset, entries.items.length, size);
+  // Les contrôles non contrôlés doivent être recréés quand les critères de l'URL
+  // changent, notamment lors d'une réinitialisation par navigation Next.
+  const filterKey = pageHref(1);
 
   return (
     <>
@@ -79,18 +90,18 @@ export default async function EntriesPage({
         }
       />
 
-      <form method="get" className="mb-4 flex flex-wrap items-end gap-3" role="search">
-        <div className="flex min-w-56 flex-1 flex-col gap-1.5">
+      <form key={filterKey} method="get" className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4" role="search" aria-label={t.entries.title}>
+        <div className="flex w-full min-w-0 flex-col gap-1.5 sm:flex-1 sm:basis-48">
           <label htmlFor="recherche-ecriture" className="text-sm font-medium">
             {t.common.search}
           </label>
-          <Input id="recherche-ecriture" name="q" defaultValue={q} />
+          <Input id="recherche-ecriture" name="q" defaultValue={q} maxLength={100} className="min-h-11" />
         </div>
         <select
           name="journal"
           defaultValue={journal?.id ?? ""}
           aria-label={t.entries.journal}
-          className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+          className="border-input bg-background min-h-11 min-w-0 max-w-full rounded-lg border px-3 text-sm"
         >
           <option value="">{t.entries.allJournals}</option>
           {journals.map((j) => (
@@ -103,7 +114,7 @@ export default async function EntriesPage({
           name="statut"
           defaultValue={status ?? ""}
           aria-label={t.common.status}
-          className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+          className="border-input bg-background min-h-11 min-w-0 max-w-full rounded-lg border px-3 text-sm"
         >
           <option value="">{t.entries.allStatuses}</option>
           {STATUSES.map((s) => (
@@ -112,30 +123,47 @@ export default async function EntriesPage({
             </option>
           ))}
         </select>
-        <Button type="submit" variant="secondary">
+        <select name="exercice" defaultValue={year?.id ?? ""} aria-label={t.nav.fiscalYears} className="border-input bg-background min-h-11 min-w-0 max-w-full rounded-lg border px-3 text-sm">
+          <option value="">{t.entries.allFiscalYears}</option>
+          {years.map(y => <option key={y.id} value={y.id}>{formatDate(y.start_date, locale)} – {formatDate(y.end_date, locale)}</option>)}
+        </select>
+        <select name="taille" defaultValue={String(size)} aria-label={t.table.pageSize} className="border-input bg-background min-h-11 rounded-lg border px-3 text-sm">
+          {PAGE_SIZES.map(value => <option key={value} value={value}>{interpolate(t.table.rowsPerPage, { count: value })}</option>)}
+        </select>
+        <select name="densite" defaultValue={density} aria-label={t.table.density} className="border-input bg-background min-h-11 rounded-lg border px-3 text-sm">
+          <option value="comfortable">{t.table.comfortable}</option>
+          <option value="compact">{t.table.compact}</option>
+        </select>
+        <Button type="submit" className="min-h-11">
           {t.common.filter}
         </Button>
+        {/* Navigation complète : réinitialise aussi les modifications non soumises
+            lorsque l'URL est déjà celle par défaut. */}
+        <Button asChild variant="ghost" className="min-h-11"><a href={base}>{t.table.reset}</a></Button>
       </form>
 
-      {currentYear ? (
+      {exportYear ? (
         <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-muted-foreground">{t.reports.exportJournal}</span>
+          <span className="text-muted-foreground">{t.reports.exportJournal} — {t.table.fullFiscalYear}</span>
           <ExportLinks
             companyId={companyId}
             kind="ecritures"
-            fiscalYearId={currentYear.id}
+            fiscalYearId={exportYear.id}
             label={t.reports.exportJournal}
           />
         </div>
       ) : null}
 
       {entries.items.length === 0 ? (
-        <p className="text-muted-foreground text-sm">{t.entries.empty}</p>
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card p-8 text-center">
+          <FileSearch aria-hidden className="text-muted-foreground size-8" />
+          <p className="text-muted-foreground text-sm">{t.entries.empty}</p>
+        </div>
       ) : (
-        <Table>
+        <DataTable label={t.entries.title} density={density}>
           <TableHeader>
             <TableRow>
-              <TableHead>{t.entries.date}</TableHead>
+              <TableHead aria-sort="descending">{t.entries.date}</TableHead>
               <TableHead>{t.entries.journal}</TableHead>
               <TableHead className="hidden sm:table-cell">{t.entries.reference}</TableHead>
               <TableHead>{t.entries.label}</TableHead>
@@ -156,11 +184,10 @@ export default async function EntriesPage({
                   <Link href={`${base}/${entry.id}`} className="underline-offset-4 hover:underline">
                     {entry.label}
                   </Link>
-                  {entry.status === "DRAFT" ? (
-                    <Badge variant="outline" className="ml-2 sm:hidden">
-                      {t.entries.statuses.DRAFT}
-                    </Badge>
-                  ) : null}
+                  <div className="mt-1 flex flex-wrap items-center gap-1 sm:hidden">
+                    <Badge variant={entry.status === "POSTED" ? "secondary" : "outline"}>{t.entries.statuses[entry.status]}</Badge>
+                    {entry.reference && <span className="text-muted-foreground wrap-anywhere text-xs">{entry.reference}</span>}
+                  </div>
                 </TableCell>
                 <TableCell className="text-right whitespace-nowrap tabular-nums">
                   {formatMoney(BigInt(entry.total_debit), currency, locale)}
@@ -173,28 +200,26 @@ export default async function EntriesPage({
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+        </DataTable>
       )}
 
-      {entries.total > PAGE_SIZE ? (
-        <nav className="mt-4 flex items-center justify-between text-sm" aria-label="pagination">
+      <nav className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm" aria-label={t.table.pagination}>
           <span className="text-muted-foreground">
             {interpolate(t.common.pageRange, { from, to, total: entries.total })}
           </span>
           <div className="flex gap-2">
             {page > 1 ? (
               <Button asChild variant="outline" size="sm">
-                <Link href={pageHref(page - 1)}>{t.common.previous}</Link>
+                <Link href={pageHref(Math.min(page - 1, lastPage))}>{t.common.previous}</Link>
               </Button>
             ) : null}
-            {to < entries.total ? (
+            {page < lastPage ? (
               <Button asChild variant="outline" size="sm">
                 <Link href={pageHref(page + 1)}>{t.common.next}</Link>
               </Button>
             ) : null}
           </div>
-        </nav>
-      ) : null}
+      </nav>
     </>
   );
 }

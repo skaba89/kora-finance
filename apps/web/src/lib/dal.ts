@@ -197,6 +197,7 @@ export async function getActiveAccounts(companyId: string) {
 
 export type EntriesQuery = {
   journal_id?: string;
+  fiscal_year_id?: string;
   status?: "DRAFT" | "POSTED";
   q?: string;
   limit: number;

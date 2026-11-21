@@ -27,6 +27,16 @@ export const fr = {
     expertNotice: "À valider par un expert-comptable guinéen.",
     close: "Fermer",
   },
+  table: {
+    pageSize: "Taille de page",
+    rowsPerPage: "{count} lignes par page",
+    density: "Densité du tableau",
+    comfortable: "Confortable",
+    compact: "Compacte",
+    reset: "Réinitialiser les filtres",
+    pagination: "Pagination",
+    fullFiscalYear: "Exercice complet",
+  },
   errors: {
     title: "Une erreur est survenue",
     description:
@@ -308,6 +318,7 @@ export const fr = {
     editTitle: "Modifier le brouillon",
     empty: "Aucune écriture pour ces critères.",
     allJournals: "Tous les journaux",
+    allFiscalYears: "Tous les exercices",
     allStatuses: "Tous les statuts",
     statuses: { DRAFT: "Brouillon", POSTED: "Validée" },
     date: "Date",

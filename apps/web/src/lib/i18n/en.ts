@@ -29,6 +29,16 @@ export const en: typeof fr = {
     expertNotice: "To be validated by a Guinean chartered accountant.",
     close: "Dismiss",
   },
+  table: {
+    pageSize: "Page size",
+    rowsPerPage: "{count} rows per page",
+    density: "Table density",
+    comfortable: "Comfortable",
+    compact: "Compact",
+    reset: "Reset filters",
+    pagination: "Pagination",
+    fullFiscalYear: "Full fiscal year",
+  },
   errors: {
     title: "Something went wrong",
     description:
@@ -309,6 +319,7 @@ export const en: typeof fr = {
     editTitle: "Edit draft",
     empty: "No entries match these criteria.",
     allJournals: "All journals",
+    allFiscalYears: "All fiscal years",
     allStatuses: "All statuses",
     statuses: { DRAFT: "Draft", POSTED: "Posted" },
     date: "Date",
