@@ -67,6 +67,7 @@ export const fr = {
     switchCompany: "Changer de dossier",
     language: "Langue",
     mainMenu: "Menu principal",
+    openSelectedCompany: "Ouvrir le dossier",
   },
   auth: {
     emailsDisabled: "L'envoi d'emails n'est pas encore activé sur cette installation : la réinitialisation par email est indisponible. Contactez l'administrateur de Kora.",
