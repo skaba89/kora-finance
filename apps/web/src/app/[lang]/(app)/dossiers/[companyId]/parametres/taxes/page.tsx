@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DataTable } from "@/components/data-table";
 
 import { ActionForm } from "@/components/forms/action-form";
 import { Field, SelectField } from "@/components/forms/field";
@@ -7,7 +8,7 @@ import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { addTaxRateAction, verifyTaxRateAction } from "@/lib/actions/companies";
 import { can, getCompany, getTaxRates } from "@/lib/dal";
 import { formatDate, formatRate } from "@/lib/format";
@@ -34,11 +35,11 @@ export default async function TaxesPage({
     <>
       <PageHeader title={t.taxes.title} subtitle={t.taxes.subtitle} />
       {unverified ? (
-        <Alert className="mb-4 border-amber-300 bg-amber-50 text-amber-950">
-          <AlertDescription className="text-amber-950">{t.taxes.dgiNotice}</AlertDescription>
+        <Alert className="mb-4 border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
+          <AlertDescription className="text-amber-950 dark:text-amber-100">{t.taxes.dgiNotice}</AlertDescription>
         </Alert>
       ) : null}
-      <Table>
+      <DataTable label={t.taxes.title}>
         <TableHeader>
           <TableRow>
             <TableHead>{t.taxes.code}</TableHead>
@@ -81,7 +82,7 @@ export default async function TaxesPage({
             </TableRow>
           ))}
         </TableBody>
-      </Table>
+      </DataTable>
 
       {manage ? (
         <Card className="mt-8 max-w-2xl">

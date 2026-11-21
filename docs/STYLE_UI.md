@@ -289,3 +289,12 @@ soldes du TFT. DataTable apporte en-têtes fixes et densité conservée dans l'U
 les fiches mobiles distinguent explicitement N et N-1. Les avertissements de
 cohérence et la validation expert-comptable, les exports officiels, les calculs
 et la précision BigInt sont inchangés.
+
+### Lot 8 — paramètres du dossier
+
+Plan comptable, journaux, taxes, utilisateurs et invitations utilisent les
+tables accessibles DataTable. Le plan comptable propose densité et pagination
+serveur 25/50/100, avec conservation des filtres dans l'URL. La fiche entreprise
+est une carte responsive, y compris en lecture seule. Les exercices conservent
+leurs actions de clôture et verrouillage ; l'alerte DGI s'adapte au thème sombre.
+Les permissions et mutations demeurent inchangées.

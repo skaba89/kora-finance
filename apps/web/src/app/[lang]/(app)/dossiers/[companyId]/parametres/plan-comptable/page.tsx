@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DataTable } from "@/components/data-table";
+import { TableDensitySelect } from "@/components/table-density-select";
 
 import { ActionForm } from "@/components/forms/action-form";
 import { Field } from "@/components/forms/field";
@@ -9,18 +11,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { createAccountAction, toggleAccountAction } from "@/lib/actions/companies";
 import { can, getAccounts, getCompany } from "@/lib/dal";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { getDictionary } from "@/lib/i18n/server";
+import { tablePreferences, tableRange } from "@/lib/table-preferences";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getDictionary();
   return { title: t.chart.title };
 }
-
-const PAGE_SIZE = 50;
 
 function one(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -36,7 +37,7 @@ export default async function ChartPage({
   const classNumber = Number(one(query.classe));
   const accountClass = Number.isInteger(classNumber) && classNumber >= 1 && classNumber <= 8 ? classNumber : undefined;
   const activeOnly = one(query.actifs) === "1";
-  const page = Math.max(1, Number.parseInt(one(query.page) ?? "1", 10) || 1);
+  const { page, size, density, offset } = tablePreferences(query);
 
   const [{ t }, company, accounts] = await Promise.all([
     getDictionary(),
@@ -45,8 +46,8 @@ export default async function ChartPage({
       q,
       class: accountClass,
       active_only: activeOnly,
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
+      limit: size,
+      offset,
     }),
   ]);
   const manage = can(company, "accounts:manage");
@@ -55,29 +56,30 @@ export default async function ChartPage({
     if (q) search.set("q", q);
     if (accountClass) search.set("classe", String(accountClass));
     if (activeOnly) search.set("actifs", "1");
+    search.set("taille", String(size));
+    search.set("densite", density);
     search.set("page", String(target));
     return `?${search.toString()}`;
   };
-  const from = accounts.total === 0 ? 0 : accounts.offset + 1;
-  const to = accounts.offset + accounts.items.length;
+  const { from, to } = tableRange(accounts.total, accounts.offset, accounts.items.length, size);
 
   return (
     <>
       <PageHeader title={t.chart.title} subtitle={t.chart.subtitle} />
       <p className="text-muted-foreground -mt-4 mb-4 text-xs">{t.common.expertNotice}</p>
 
-      <form method="get" className="mb-4 flex flex-wrap items-end gap-3" role="search">
-        <div className="flex min-w-56 flex-1 flex-col gap-1.5">
+      <form method="get" className="mb-4 flex min-w-0 flex-wrap items-end gap-3 rounded-xl border bg-card p-4" role="search">
+        <div className="flex min-w-0 basis-full flex-1 flex-col gap-1.5 sm:basis-auto">
           <label htmlFor="recherche-compte" className="text-sm font-medium">
             {t.common.search}
           </label>
-          <Input id="recherche-compte" name="q" defaultValue={q} placeholder={t.chart.searchPlaceholder} />
+          <Input id="recherche-compte" name="q" defaultValue={q} placeholder={t.chart.searchPlaceholder} className="min-h-11" />
         </div>
         <select
           name="classe"
           defaultValue={accountClass ?? ""}
           aria-label={t.common.filter}
-          className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+          className="border-input bg-background min-h-11 rounded-lg border px-3 text-sm"
         >
           <option value="">{t.chart.allClasses}</option>
           {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
@@ -90,7 +92,11 @@ export default async function ChartPage({
           <input type="checkbox" name="actifs" value="1" defaultChecked={activeOnly} />
           {t.chart.activeOnly}
         </label>
-        <Button type="submit" variant="secondary">
+        <TableDensitySelect density={density} labels={t.table} />
+        <select name="taille" defaultValue={size} aria-label={t.table.pageSize} className="border-input bg-background min-h-11 rounded-lg border px-3 text-sm">
+          {[25, 50, 100].map((value) => <option key={value} value={value}>{value}</option>)}
+        </select>
+        <Button type="submit" variant="secondary" className="min-h-11">
           {t.common.search}
         </Button>
       </form>
@@ -98,7 +104,7 @@ export default async function ChartPage({
       {accounts.items.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t.chart.empty}</p>
       ) : (
-        <Table>
+        <DataTable label={t.chart.title} density={density}>
           <TableHeader>
             <TableRow>
               <TableHead className="w-28">{t.chart.number}</TableHead>
@@ -137,10 +143,10 @@ export default async function ChartPage({
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+        </DataTable>
       )}
 
-      <nav className="mt-4 flex items-center justify-between text-sm" aria-label="Pagination">
+      <nav className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm" aria-label="Pagination">
         <span className="text-muted-foreground">
           {interpolate(t.common.pageRange, { from, to, total: accounts.total })}
         </span>
@@ -150,7 +156,7 @@ export default async function ChartPage({
               <Link href={pageHref(page - 1)}>{t.common.previous}</Link>
             </Button>
           ) : null}
-          {to < accounts.total ? (
+          {accounts.items.length > 0 && to < accounts.total ? (
             <Button asChild variant="outline" size="sm">
               <Link href={pageHref(page + 1)}>{t.common.next}</Link>
             </Button>

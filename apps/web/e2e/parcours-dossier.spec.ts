@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { createCompany, registerAndLogin } from "./helpers";
 
-test("inscription, création d'un dossier et paramétrage comptable", async ({ page }) => {
+test("inscription, création d'un dossier et paramétrage comptable", async ({ page }, testInfo) => {
   await registerAndLogin(page);
   await expect(page.getByText("Vous n'avez encore aucun dossier.")).toBeVisible();
 
@@ -13,6 +13,14 @@ test("inscription, création d'un dossier et paramétrage comptable", async ({ p
   // Plan comptable SYSCOHADA préchargé et recherche.
   await page.getByRole("link", { name: "Plan comptable" }).click();
   await expect(page.getByText("1–50 sur 520")).toBeVisible();
+  await page.getByRole("combobox", { name: "Taille de page" }).selectOption("25");
+  await page.getByRole("combobox", { name: "Densité du tableau" }).selectOption("compact");
+  await page.getByRole("button", { name: "Rechercher" }).click();
+  await expect(page.getByText("1–25 sur 520")).toBeVisible();
+  await page.getByRole("link", { name: "Suivant", exact: true }).click();
+  await expect(page.getByText("26–50 sur 520")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Densité du tableau" })).toHaveValue("compact");
+  await testInfo.attach("plan-comptable-premium", { body: await page.screenshot(), contentType: "image/png" });
   await page.getByRole("textbox", { name: "Rechercher", exact: true }).fill("téléphone portable");
   await page.getByRole("button", { name: "Rechercher" }).click();
   await expect(page.getByRole("cell", { name: "552", exact: true })).toBeVisible();
@@ -68,7 +76,7 @@ test("un comptable invité n'a pas les droits du dirigeant", async ({ browser })
   await owner.goto(`/dossiers/${companyId}/parametres/utilisateurs`);
   await owner.getByLabel("Email").fill(accountantEmail);
   await owner.getByRole("button", { name: "Ajouter" }).click();
-  // L'email est masqué sur petit écran : on vérifie le nom.
+  // Le nom reste accessible même lorsque la colonne email est masquée.
   await expect(owner.getByRole("cell", { name: "Kadiatou Camara" })).toBeVisible();
 
   await accountant.goto(`/dossiers/${companyId}/parametres/entreprise`);

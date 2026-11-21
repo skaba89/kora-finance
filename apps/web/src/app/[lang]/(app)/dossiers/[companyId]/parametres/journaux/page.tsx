@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DataTable } from "@/components/data-table";
 
 import { ActionForm } from "@/components/forms/action-form";
 import { Field, SelectField } from "@/components/forms/field";
@@ -6,7 +7,7 @@ import { InlineAction } from "@/components/forms/inline-action";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { createJournalAction, toggleJournalAction } from "@/lib/actions/ledger";
 import { can, getCompany, getJournals } from "@/lib/dal";
 import { getDictionary } from "@/lib/i18n/server";
@@ -30,7 +31,7 @@ export default async function JournalsPage({ params }: PageProps<"/[lang]/dossie
     <>
       <PageHeader title={t.journals.title} subtitle={t.journals.subtitle} />
       <p className="text-muted-foreground -mt-4 mb-4 text-xs">{t.common.expertNotice}</p>
-      <Table>
+      <DataTable label={t.journals.title}>
         <TableHeader>
           <TableRow>
             <TableHead className="w-20">{t.journals.code}</TableHead>
@@ -64,7 +65,7 @@ export default async function JournalsPage({ params }: PageProps<"/[lang]/dossie
             </TableRow>
           ))}
         </TableBody>
-      </Table>
+      </DataTable>
 
       {manage ? (
         <Card className="mt-8 max-w-xl">
