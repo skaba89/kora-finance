@@ -110,3 +110,21 @@ du contraste (11 desktop, 26 mobile). Le correctif du graphique mensuel utilise
 un groupe accessible et inclut le libellé visible dans le nom de chaque mois.
 Les deux règles deviennent bloquantes dans la CI, avec audit supplémentaire du
 thème sombre. La validation de ce correctif et la revue manuelle restent à faire.
+
+## 6. Recette responsive financière — lot 13A (21 novembre 2026)
+
+La PR #130 est fusionnée (`a6cc2ec`), CI #300 verte (run 44908757635).
+Le test historique du graphique a été aligné sur son nouveau rôle accessible.
+La revue manuelle des contrastes reste ouverte.
+
+La recette `recette-finance-premium.spec.ts` étend la couverture à douze
+écrans financiers réels avec un dossier synthétique neuf : écritures, création,
+saisie guidée, balance, grand livre, lettrage, ventes, achats, tiers, trésorerie,
+prévisions et états financiers. Les six largeurs sont réparties entre les deux
+projets Playwright : 360/390/768 et 1024/1440/1920. Chaque écran produit une
+capture à 390 et 1440 px et un relevé JSON du débordement global (72 mesures
+au total). Le titre attendu est contrôlé à chaque largeur ; le débordement
+reste informatif pour cette première baseline. Les états détaillés, peuplés,
+les autres routes, la recette anglaise et les corrections éventuelles restent
+à traiter. Aucun résultat ni point de maturité supplémentaire n'est acquis
+avant lecture du rapport CI.

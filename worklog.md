@@ -2277,3 +2277,10 @@ Audit WCAG exhaustif et mesures de performance terrain restent à effectuer.
 Rapports axe-core et laboratoire sous réseau/CPU ralentis, export CI également
 en cas de succès ; préchargement des liens du menu désactivé. Les mesures
 terrain et la correction des violations restent conditionnées aux résultats.
+
+## UX Premium — lot 13A : recette responsive financière
+
+PR #130 fusionnée, CI #300 verte. Extension de la recette Playwright à douze
+écrans financiers, six largeurs, captures et rapport de débordement global.
+Baseline informative pour identifier les corrections suivantes ; la présence
+des pages est bloquante. Aucun changement du métier, des API ou des permissions.
