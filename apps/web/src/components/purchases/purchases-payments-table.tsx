@@ -2,8 +2,8 @@ import { ActionForm } from "@/components/forms/action-form";
 import { Field, SelectField } from "@/components/forms/field";
 import { InlineAction } from "@/components/forms/inline-action";
 import { Badge } from "@/components/ui/badge";
+import { DataTable } from "@/components/data-table";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -40,13 +40,13 @@ export function PurchasesPaymentsTable({
   canPost: boolean;
 }) {
   return (
-    <Table>
+    <DataTable label={t.purchases.paymentsTitle}>
       <TableHeader>
         <TableRow>
           <TableHead>{t.purchases.paymentDate}</TableHead>
           <TableHead>{t.purchases.paymentMethod}</TableHead>
-          <TableHead>{t.purchases.totalLabel}</TableHead>
-          <TableHead>{t.purchases.unallocatedBadge}</TableHead>
+          <TableHead className="text-right">{t.purchases.totalLabel}</TableHead>
+          <TableHead className="text-right">{t.purchases.unallocatedBadge}</TableHead>
           <TableHead>{t.purchases.paymentsAllocations}</TableHead>
           <TableHead>{t.purchases.paymentReference}</TableHead>
           <TableHead className="text-right">{t.common.actions}</TableHead>
@@ -60,8 +60,8 @@ export function PurchasesPaymentsTable({
               {(t.purchases.methods as Record<string, string>)[payment.method] ??
                 payment.method}
             </TableCell>
-            <TableCell>{formatMoney(payment.amount, payment.currency)}</TableCell>
-            <TableCell>
+            <TableCell className="text-right font-medium tabular-nums">{formatMoney(payment.amount, payment.currency)}</TableCell>
+            <TableCell className="text-right">
               {payment.unallocated > 0 ? (
                 <Badge variant="secondary">
                   {t.purchases.unallocatedBadge}{" "}
@@ -114,6 +114,7 @@ export function PurchasesPaymentsTable({
                     <SelectField
                       label={t.purchases.paymentDoc}
                       name="document_id"
+                      id={`achat-affectation-facture-${payment.id}`}
                       required
                       options={documents.items
                         .filter(
@@ -130,6 +131,7 @@ export function PurchasesPaymentsTable({
                     <Field
                       label={t.purchases.allocateTarget}
                       name="target"
+                      id={`achat-affectation-cible-${payment.id}`}
                       type="number"
                       min="1"
                       step="1"
@@ -153,6 +155,7 @@ export function PurchasesPaymentsTable({
                     <Field
                       label={t.purchases.refundAmount}
                       name="amount"
+                      id={`achat-remboursement-montant-${payment.id}`}
                       type="number"
                       min="1"
                       step="1"
@@ -161,6 +164,7 @@ export function PurchasesPaymentsTable({
                     <Field
                       label={t.purchases.paymentDate}
                       name="refunded_on"
+                      id={`achat-remboursement-date-${payment.id}`}
                       type="date"
                       required
                     />
@@ -201,6 +205,6 @@ export function PurchasesPaymentsTable({
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+    </DataTable>
   );
 }

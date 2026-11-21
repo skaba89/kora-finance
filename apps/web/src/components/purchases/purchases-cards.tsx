@@ -1,8 +1,10 @@
 import { ActionForm } from "@/components/forms/action-form";
 import { Field, SelectField } from "@/components/forms/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable } from "@/components/data-table";
+import { KpiCard } from "@/components/kpi-card";
+import { ReceiptText } from "lucide-react";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -26,19 +28,19 @@ export function PurchasesAgingCard({
   t: Dictionary;
 }) {
   return (
-    <Card className="mt-6">
+    <Card id="echeancier" className="mt-6 scroll-mt-4">
       <CardHeader>
         <CardTitle>{t.purchases.agingTitle}</CardTitle>
         <p className="text-muted-foreground text-sm">
-          {t.purchases.agingAsOf} {aging.as_of} —{" "}
-          {formatMoney(aging.grand_total_ttc, currency)}
+          {t.purchases.agingAsOf} {aging.as_of}
         </p>
       </CardHeader>
       <CardContent>
+        <div className="mb-4 max-w-sm"><KpiCard primary icon={ReceiptText} label={t.purchases.agingTotal} value={formatMoney(aging.grand_total_ttc, currency)} /></div>
         {aging.grand_total_ttc === 0 ? (
           <p className="text-muted-foreground text-sm">{t.purchases.agingEmpty}</p>
         ) : (
-          <Table>
+          <DataTable label={t.purchases.agingTitle}>
             <TableHeader>
               <TableRow>
                 <TableHead>{t.purchases.agingTitle}</TableHead>
@@ -63,7 +65,7 @@ export function PurchasesAgingCard({
                 );
               })}
             </TableBody>
-          </Table>
+          </DataTable>
         )}
       </CardContent>
     </Card>
@@ -85,7 +87,7 @@ export function PurchasesCreateDocumentCard({
   t: Dictionary;
 }) {
   return (
-    <Card className="mt-6">
+    <Card id="nouvel-achat" className="mt-6 scroll-mt-4">
       <CardHeader>
         <CardTitle>{t.purchases.createTitle}</CardTitle>
       </CardHeader>
@@ -112,6 +114,7 @@ export function PurchasesCreateDocumentCard({
             <SelectField
               label={t.purchases.partnerLabel}
               name="partner_id"
+              id="achat-document-fournisseur"
               required
               options={[
                 { value: "", label: t.purchases.partnerPlaceholder },
@@ -121,7 +124,7 @@ export function PurchasesCreateDocumentCard({
                 })),
               ]}
             />
-            <Field label={t.purchases.reference} name="reference" />
+            <Field label={t.purchases.reference} name="reference" id="achat-document-reference" />
           </div>
           {[1, 2, 3].map((slot) => (
             <fieldset key={slot} className="grid gap-3 rounded-md border p-3 sm:grid-cols-6">

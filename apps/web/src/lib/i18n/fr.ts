@@ -849,6 +849,8 @@ export const fr = {
     filterAll: "Tous les documents",
     listTitle: "Documents d'achat",
     empty: "Aucun document : enregistrez votre première facture fournisseur.",
+    noMatchingDocuments: "Aucun document d'achat à afficher.",
+    paymentPageHint: "Les factures proposées correspondent à la page de documents affichée. Changez les filtres ou la page pour accéder aux autres factures.",
     numberLabel: "Numéro",
     kindLabel: "Type",
     statusLabel: "Statut",

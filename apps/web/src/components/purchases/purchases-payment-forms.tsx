@@ -6,11 +6,12 @@ import { formatMoney } from "@/lib/format";
 import { PURCHASE_PAYMENT_METHODS } from "./labels";
 import type { Dictionary, PartnersPage, PurchaseDocumentsPage } from "./types";
 
-function MethodSelect({ t }: { t: Dictionary }) {
+function MethodSelect({ t, id }: { t: Dictionary; id: string }) {
   return (
     <SelectField
       label={t.purchases.paymentMethod}
       name="method"
+      id={id}
       options={PURCHASE_PAYMENT_METHODS.map((method) => ({
         value: method,
         label: (t.purchases.methods as Record<string, string>)[method] ?? method,
@@ -34,6 +35,7 @@ export function PurchasesPaymentFormCard({
     <Card className="mt-6">
       <CardHeader>
         <CardTitle>{t.purchases.paymentFormTitle}</CardTitle>
+        <p className="text-muted-foreground text-sm">{t.purchases.paymentPageHint}</p>
       </CardHeader>
       <CardContent>
         <ActionForm
@@ -46,6 +48,7 @@ export function PurchasesPaymentFormCard({
             <SelectField
               label={t.purchases.paymentDoc}
               name="document_id"
+              id="achat-reglement-facture"
               required
               options={[
                 { value: "", label: t.purchases.paymentDocPlaceholder },
@@ -65,14 +68,15 @@ export function PurchasesPaymentFormCard({
             <Field
               label={t.purchases.paymentAmount}
               name="amount"
+              id="achat-reglement-montant"
               type="number"
               min="1"
               step="1"
               required
             />
-            <Field label={t.purchases.paymentDate} name="paid_on" type="date" required />
-            <MethodSelect t={t} />
-            <Field label={t.purchases.paymentReference} name="reference" />
+            <Field label={t.purchases.paymentDate} name="paid_on" id="achat-reglement-date" type="date" required />
+            <MethodSelect t={t} id="achat-reglement-mode" />
+            <Field label={t.purchases.paymentReference} name="reference" id="achat-reglement-reference" />
           </div>
           <p className="text-muted-foreground text-xs">{t.purchases.paymentHint}</p>
         </ActionForm>
@@ -108,6 +112,7 @@ export function PurchasesAdvanceFormCard({
             <SelectField
               label={t.purchases.advancePartner}
               name="partner_id"
+              id="achat-avance-fournisseur"
               required
               options={[
                 { value: "", label: t.purchases.advancePartner },
@@ -119,14 +124,15 @@ export function PurchasesAdvanceFormCard({
             <Field
               label={t.purchases.advanceAmount}
               name="amount"
+              id="achat-avance-montant"
               type="number"
               min="1"
               step="1"
               required
             />
-            <Field label={t.purchases.paymentDate} name="paid_on" type="date" required />
-            <MethodSelect t={t} />
-            <Field label={t.purchases.paymentReference} name="reference" />
+            <Field label={t.purchases.paymentDate} name="paid_on" id="achat-avance-date" type="date" required />
+            <MethodSelect t={t} id="achat-avance-mode" />
+            <Field label={t.purchases.paymentReference} name="reference" id="achat-avance-reference" />
           </div>
           <p className="text-muted-foreground text-xs">{t.purchases.advanceHint}</p>
         </ActionForm>
