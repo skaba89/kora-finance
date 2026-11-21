@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowLeftRight, CheckCircle2, Clock, ListChecks, Wallet } from "lucide-react";
 
+import { DataTable } from "@/components/data-table";
+import { KpiCard } from "@/components/kpi-card";
 import { ActionForm } from "@/components/forms/action-form";
 import { InlineAction } from "@/components/forms/inline-action";
 import { Field, SelectField } from "@/components/forms/field";
@@ -8,7 +11,6 @@ import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -98,7 +100,7 @@ export default async function TreasuryPage({
       {accounts.length === 0 ? (
         <p className="text-muted-foreground mb-6">{t.treasury.empty}</p>
       ) : (
-        <Table>
+        <DataTable label={t.treasury.title}>
           <TableHeader>
             <TableRow>
               <TableHead>{t.treasury.name}</TableHead>
@@ -109,11 +111,12 @@ export default async function TreasuryPage({
           </TableHeader>
           <TableBody>
             {accounts.map((account) => (
-              <TableRow key={account.id} className={account.is_active ? undefined : "opacity-60"}>
+              <TableRow key={account.id} className={`${account.is_active ? "" : "opacity-60"} ${account.id === selected?.id ? "bg-primary/5" : ""}`}>
                 <TableCell className="whitespace-normal">
                   <Link
                     href={`?compte=${account.id}`}
-                    className="font-medium underline-offset-4 hover:underline"
+                    aria-current={account.id === selected?.id ? "page" : undefined}
+                    className="font-medium text-primary underline-offset-4 hover:underline"
                   >
                     {account.name}
                   </Link>
@@ -140,13 +143,13 @@ export default async function TreasuryPage({
                 <TableCell className="hidden font-mono text-xs md:table-cell">
                   {account.gl_account_number}
                 </TableCell>
-                <TableCell className="text-right font-mono">
+                <TableCell className="text-right font-semibold tabular-nums">
                   {formatMoney(BigInt(account.balance), "GNF", locale)}
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+        </DataTable>
       )}
 
       {selected && movements ? (
@@ -160,7 +163,7 @@ export default async function TreasuryPage({
             {movements.items.length === 0 ? (
               <p className="text-muted-foreground">{t.treasury.noMovement}</p>
             ) : (
-              <Table>
+              <DataTable label={t.treasury.movements}>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-28">{t.treasury.movementDate}</TableHead>
@@ -179,9 +182,10 @@ export default async function TreasuryPage({
                         <span className="text-muted-foreground block text-xs">
                           {t.treasury.direction[movement.direction]}
                         </span>
+                        <span className="block whitespace-normal text-xs sm:hidden">{movement.label}</span>
                       </TableCell>
                       <TableCell className="hidden whitespace-normal sm:table-cell">
-                        {movement.label}
+                        <span>{movement.label}</span>
                         {movement.entry_number ? (
                           <span className="text-muted-foreground block font-mono text-xs">
                             {t.treasury.entryNumber} n°{movement.entry_number}
@@ -191,13 +195,13 @@ export default async function TreasuryPage({
                       <TableCell className="hidden font-mono text-xs md:table-cell">
                         {movement.counterpart_number}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell className="text-right tabular-nums">
                         {formatMoney(BigInt(movement.amount), "GNF", locale)}
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </DataTable>
             )}
           </CardContent>
         </Card>
@@ -213,20 +217,13 @@ export default async function TreasuryPage({
           <CardContent className="flex flex-col gap-4">
             <p className="text-muted-foreground text-sm">{t.treasury.releves.subtitle}</p>
             {overview ? (
-              <p className="text-muted-foreground text-xs">
-                <span className="font-medium text-foreground">
-                  {t.treasury.rapprochement.overview.pending} : {overview.lines_pending}
-                </span>
-                {"  ·  "}
-                {t.treasury.rapprochement.overview.matched} : {overview.lines_matched}
-                {"  ·  "}
-                {t.treasury.rapprochement.overview.ignored} : {overview.lines_ignored}
-                {"  ·  "}
-                {t.treasury.rapprochement.overview.pendingNet} :{" "}
-                {formatMoney(BigInt(overview.pending_net), "GNF", locale)}
-                {"  ·  "}
-                {t.treasury.rapprochement.overview.movements} : {overview.movements_unmatched}
-              </p>
+              <div className="grid grid-cols-2 gap-3 xl:grid-cols-3 2xl:grid-cols-5">
+                <KpiCard label={t.treasury.rapprochement.overview.pending} value={String(overview.lines_pending)} icon={Clock} primary />
+                <KpiCard label={t.treasury.rapprochement.overview.matched} value={String(overview.lines_matched)} icon={CheckCircle2} />
+                <KpiCard label={t.treasury.rapprochement.overview.ignored} value={String(overview.lines_ignored)} icon={ListChecks} />
+                <KpiCard label={t.treasury.rapprochement.overview.pendingNet} value={formatMoney(BigInt(overview.pending_net), "GNF", locale)} icon={Wallet} />
+                <KpiCard label={t.treasury.rapprochement.overview.movements} value={String(overview.movements_unmatched)} icon={ArrowLeftRight} />
+              </div>
             ) : null}
             {selectedStatement && statementLines ? (
               <>
@@ -242,7 +239,7 @@ export default async function TreasuryPage({
                     {selectedStatement.line_count} {t.treasury.releves.linesCount.toLowerCase()}
                   </span>
                 </p>
-                <Table>
+                <DataTable label={selectedStatement.filename}>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-12">{t.treasury.releves.lineNo}</TableHead>
@@ -270,7 +267,7 @@ export default async function TreasuryPage({
                         <TableCell className="hidden font-mono text-xs md:table-cell">
                           {line.reference}
                         </TableCell>
-                        <TableCell className="text-right font-mono">
+                        <TableCell className="text-right tabular-nums">
                           {formatMoney(BigInt(line.amount), "GNF", locale)}
                         </TableCell>
                         <TableCell>
@@ -342,11 +339,11 @@ export default async function TreasuryPage({
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                </DataTable>
 
                 {candidates ? (
                   <div
-                    className="rounded-md border p-4"
+                    className="min-w-0 space-y-3 rounded-xl border p-4"
                     role="region"
                     aria-labelledby="candidates-title"
                   >
@@ -367,7 +364,7 @@ export default async function TreasuryPage({
                         {t.treasury.rapprochement.noCandidates}
                       </p>
                     ) : (
-                      <Table className="mt-3">
+                      <DataTable label={t.treasury.rapprochement.propose}>
                         <TableHeader>
                           <TableRow>
                             <TableHead className="w-28">{t.treasury.movementDate}</TableHead>
@@ -400,7 +397,7 @@ export default async function TreasuryPage({
                                   </span>
                                 ) : null}
                               </TableCell>
-                              <TableCell className="text-right font-mono">
+                              <TableCell className="text-right tabular-nums">
                                 {formatMoney(BigInt(candidate.amount), "GNF", locale)}
                               </TableCell>
                               <TableCell className="hidden font-mono text-xs sm:table-cell">
@@ -425,7 +422,7 @@ export default async function TreasuryPage({
                             </TableRow>
                           ))}
                         </TableBody>
-                      </Table>
+                      </DataTable>
                     )}
                     <p className="mt-3">
                       <Link
@@ -441,14 +438,14 @@ export default async function TreasuryPage({
             ) : statements.items.length === 0 ? (
               <p className="text-muted-foreground">{t.treasury.releves.noStatement}</p>
             ) : (
-              <Table>
+              <DataTable label={t.treasury.releves.title}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t.treasury.releves.filename}</TableHead>
                     <TableHead className="w-20">{t.treasury.releves.format}</TableHead>
                     <TableHead className="hidden sm:table-cell">{t.treasury.releves.period}</TableHead>
                     <TableHead className="text-right">{t.treasury.releves.linesCount}</TableHead>
-                    {manage ? <TableHead className="w-40" /> : null}
+                    <TableHead className="w-40" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -461,28 +458,28 @@ export default async function TreasuryPage({
                       <TableCell className="hidden text-sm sm:table-cell">
                         {view.period_start} → {view.period_end}
                       </TableCell>
-                      <TableCell className="text-right font-mono">{view.line_count}</TableCell>
-                      {manage ? (
-                        <TableCell className="flex flex-wrap items-center gap-3">
+                      <TableCell className="text-right tabular-nums">{view.line_count}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap items-center gap-3">
                           <Link
                             href={`?compte=${selected.id}&releve=${view.id}`}
                             className="text-sm underline underline-offset-4"
                           >
                             {t.treasury.releves.viewLines}
                           </Link>
-                          <InlineAction
+                          {manage ? <InlineAction
                             action={deleteStatementAction.bind(null, companyId, view.id)}
                             label={t.treasury.releves.delete}
                             pendingLabel={t.common.pending}
                             variant="destructive"
                             confirm={t.treasury.releves.deleteConfirm}
-                          />
-                        </TableCell>
-                      ) : null}
+                          /> : null}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </DataTable>
             )}
           </CardContent>
         </Card>
@@ -553,6 +550,7 @@ export default async function TreasuryPage({
                 >
                   <SelectField
                     label={t.treasury.movementKind}
+                    id="treasury-movement-kind"
                     name="kind"
                     required
                     options={MOVEMENTS.map((kind) => ({
@@ -562,14 +560,15 @@ export default async function TreasuryPage({
                   />
                   <Field
                     label={t.treasury.amount}
+                    id="treasury-movement-amount"
                     name="amount"
                     type="number"
                     required
                     min="1"
                     step="1"
                   />
-                  <Field label={t.treasury.movementDate} name="movement_date" type="date" required />
-                  <Field label={t.treasury.label} name="label" required maxLength={200} />
+                  <Field id="treasury-movement-date" label={t.treasury.movementDate} name="movement_date" type="date" required />
+                  <Field id="treasury-movement-label" label={t.treasury.label} name="label" required maxLength={200} />
                   <SelectField
                     label={t.treasury.counterpart}
                     name="counterpart_account_id"
@@ -580,7 +579,7 @@ export default async function TreasuryPage({
                       label: `${account.number} — ${account.label}`,
                     }))}
                   />
-                  <Field label={t.treasury.reference} name="reference" maxLength={60} />
+                  <Field id="treasury-movement-reference" label={t.treasury.reference} name="reference" maxLength={60} />
                 </ActionForm>
               )}
             </CardContent>

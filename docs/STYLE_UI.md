@@ -261,3 +261,13 @@ deviennent des fiches sur téléphone. Les sélecteurs de règlements restent li
 à la page de documents, avec périmètre annoncé en FR/EN. DataTable pour les
 décaissements et les tranches d'ancienneté, KpiCard pour le total des dettes
 fourni par l'API. Aucune modification de calcul, de permission ni de mutation.
+
+### Lot 6A — trésorerie et rapprochement
+
+Les cinq tableaux de trésorerie utilisent DataTable : en-têtes fixes, défilement
+local accessible au clavier et montants tabulaires. Le compte actif est signalé
+visuellement et par aria-current. Le libellé du mouvement reste visible sur
+mobile. Les cinq indicateurs de rapprochement utilisent KpiCard et les valeurs
+de l'API sans recalcul. Les relevés restent consultables en lecture seule ; les
+mutations restent réservées à treasury:manage. Les champs des mouvements ont
+des identifiants distincts des formulaires de création et de virement.
