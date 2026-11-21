@@ -95,10 +95,16 @@ def put(object_key: str, sealed: SealedObject) -> None:
         raise ServiceUnavailableError(_UNAVAILABLE) from exc
 
 
-def get(object_key: str) -> bytes:
+def get(object_key: str, *, max_bytes: int | None = None) -> bytes:
     try:
         response = _client().get_object(Bucket=get_settings().s3_bucket, Key=object_key)
-        body: bytes = response["Body"].read()
+        stream = response["Body"]
+        try:
+            body: bytes = stream.read() if max_bytes is None else stream.read(max_bytes + 1)
+        finally:
+            stream.close()
+        if max_bytes is not None and len(body) > max_bytes:
+            raise CorruptedObjectError(object_key)
     except (BotoCoreError, ClientError) as exc:
         logger.exception("Lecture impossible dans le stockage", extra={"objet": object_key})
         raise ServiceUnavailableError(_UNAVAILABLE) from exc

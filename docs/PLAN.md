@@ -336,6 +336,15 @@ n'est encore déposé : le service suivant implémentera chiffrement S3,
 contrôle de droits, idempotence et purge des objets expirés/abandonnés.
 La migration ne modifie aucune table métier existante.
 
+**5D2b2 — Dépôt et lecture chiffrés.** Service interne de staging avec
+permission `entries:write`, RLS, devise GNF, plafonds par format et durée de
+vie de 24 heures. Le verrou du dossier sérialise les dépôts concurrents ;
+le rejeu identique conserve l'identifiant et l'expiration. Le contenu est
+chiffré avant dépôt S3, puis authentifié et contrôlé en taille et SHA-256
+à la lecture. Une erreur de dépôt annule les métadonnées. La purge des
+références expirées et des objets orphelins reste indispensable avant
+l'exposition de ce service par une API. Aucune écriture comptable créée.
+
 ## Phase 6 — Dossier de financement
 Pack généré en un clic, lien signé, révocable et expirable, journal des consultations.
 - Un lien révoqué renvoie 410 et ne donne plus accès à aucun document.
