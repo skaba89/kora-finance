@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
-import { NavLink } from "@/components/nav-link";
+import { CompanyNavigation } from "@/components/company-navigation";
+import { companyNavigation } from "@/lib/company-navigation";
 import { PageSkeleton } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { can, getCompany } from "@/lib/dal";
@@ -12,28 +13,7 @@ async function CompanyNav({ params }: { params: Params }) {
   const { companyId } = await params;
   const [{ t }, company] = await Promise.all([getDictionary(), getCompany(companyId)]);
   const base = `/dossiers/${companyId}`;
-  const accounting = [
-    { href: `${base}/saisie-guidee`, label: t.nav.guided, permission: "entries:write" },
-    { href: `${base}/ecritures`, label: t.nav.entries, permission: "entries:read" },
-    { href: `${base}/balance`, label: t.nav.balance, permission: "entries:read" },
-    { href: `${base}/grand-livre`, label: t.nav.ledger, permission: "entries:read" },
-    { href: `${base}/lettrage`, label: t.nav.lettering, permission: "entries:read" },
-    { href: `${base}/tresorerie`, label: t.nav.treasury, permission: "treasury:read" },
-    { href: `${base}/tresorerie/previsions`, label: t.nav.forecast, permission: "treasury:read" },
-    { href: `${base}/tiers`, label: t.nav.partners, permission: "partners:read" },
-    { href: `${base}/ventes`, label: t.nav.sales, permission: "sales:read" },
-    { href: `${base}/achats`, label: t.nav.purchases, permission: "purchases:read" },
-    { href: `${base}/etats-financiers`, label: t.nav.statements, permission: "entries:read" },
-    { href: `${base}/hors-connexion`, label: t.nav.offline, permission: "entries:write" },
-  ].filter((item) => can(company, item.permission));
-  const settings = [
-    { href: `${base}/parametres/entreprise`, label: t.nav.company, permission: "company:read" },
-    { href: `${base}/parametres/exercices`, label: t.nav.fiscalYears, permission: "fiscal_years:read" },
-    { href: `${base}/parametres/plan-comptable`, label: t.nav.chart, permission: "accounts:read" },
-    { href: `${base}/parametres/journaux`, label: t.nav.journals, permission: "entries:read" },
-    { href: `${base}/parametres/taxes`, label: t.nav.taxes, permission: "taxes:read" },
-    { href: `${base}/parametres/utilisateurs`, label: t.nav.members, permission: "members:read" },
-  ].filter((item) => can(company, item.permission));
+  const groups = companyNavigation(base, t.nav, permission => can(company, permission));
   return (
     <nav aria-label={t.nav.mainMenu}>
       <div className="mb-2 flex items-center gap-2 px-1 md:mb-3 md:block md:px-3">
@@ -42,36 +22,7 @@ async function CompanyNav({ params }: { params: Params }) {
           {t.roles[company.role]}
         </Badge>
       </div>
-      {/* Téléphone : barre horizontale défilante pour laisser le contenu en premier écran. */}
-      <div className="-mx-4 flex gap-1 overflow-x-auto border-b px-4 pb-2 whitespace-nowrap md:mx-0 md:flex-col md:overflow-visible md:border-0 md:px-0 md:pb-0">
-      <NavLink href={base} exact>
-        {t.nav.dashboard}
-      </NavLink>
-      {accounting.length > 0 ? (
-        <p className="text-muted-foreground mt-3 hidden px-3 text-xs font-medium uppercase md:block">
-          {t.nav.accounting}
-        </p>
-      ) : null}
-      {accounting.map((item) => (
-        <NavLink key={item.href} href={item.href}>
-          {item.label}
-        </NavLink>
-      ))}
-      <p className="text-muted-foreground mt-3 hidden px-3 text-xs font-medium uppercase md:block">
-        {t.nav.settings}
-      </p>
-      {settings.map((item) => (
-        <NavLink key={item.href} href={item.href}>
-          {item.label}
-        </NavLink>
-      ))}
-      {can(company, "audit:read") ? (
-        <NavLink href={`${base}/journal-audit`}>{t.nav.audit}</NavLink>
-      ) : null}
-      <NavLink href="/dossiers?liste=1" exact>
-        {t.nav.switchCompany}
-      </NavLink>
-      </div>
+      <CompanyNavigation groups={groups} searchLabel={t.nav.searchModules} emptyLabel={t.nav.noModules} />
     </nav>
   );
 }

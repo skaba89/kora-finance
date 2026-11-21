@@ -3,6 +3,18 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-21 — Kora Premium, lot 2A : navigation métier et recherche
+
+Branche dépendante du lot 1 (PR #111). Organisation des 21 destinations existantes
+par domaine, icônes décoratives, recherche FR/EN sans accent ni casse, raccourci
+Ctrl/Cmd+K, état vide et effacement à la navigation. Permissions filtrées côté
+serveur avant transmission des seuls liens accessibles. Aucun changement de route,
+de DAL, d'API, de rôle ni de comptabilité. Trois tests unitaires du modèle et un
+scénario Playwright de recherche/navigation ajoutés ; recette intégrée à confirmer.
+Validation locale : Vitest 84/84, ESLint, typecheck, build Next (115 pages) et
+diff check OK. Le scénario Playwright joint une capture de la navigation dans
+le rapport CI desktop/mobile ; non exécuté localement (Docker indisponible).
+
 ## 2026-11-21 — Kora Premium, lot 1 : fondations visuelles
 
 Base `ce89b41` (PR #110, parcours Ventes conservé). Aucune PR ouverte au début ;

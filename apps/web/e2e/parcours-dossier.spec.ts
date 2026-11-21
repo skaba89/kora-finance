@@ -13,7 +13,7 @@ test("inscription, création d'un dossier et paramétrage comptable", async ({ p
   // Plan comptable SYSCOHADA préchargé et recherche.
   await page.getByRole("link", { name: "Plan comptable" }).click();
   await expect(page.getByText("1–50 sur 520")).toBeVisible();
-  await page.getByLabel("Rechercher").fill("téléphone portable");
+  await page.getByRole("textbox", { name: "Rechercher", exact: true }).fill("téléphone portable");
   await page.getByRole("button", { name: "Rechercher" }).click();
   await expect(page.getByRole("cell", { name: "552", exact: true })).toBeVisible();
 
@@ -22,7 +22,7 @@ test("inscription, création d'un dossier et paramétrage comptable", async ({ p
   await page.getByLabel("Libellé").fill("Orange Money – compte principal");
   await page.getByRole("button", { name: "Créer", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Modifications enregistrées." })).toBeVisible();
-  await page.getByLabel("Rechercher").fill("5521");
+  await page.getByRole("textbox", { name: "Rechercher", exact: true }).fill("5521");
   await page.getByRole("button", { name: "Rechercher" }).click();
   await expect(page.getByRole("cell", { name: "Orange Money – compte principal" })).toBeVisible();
 

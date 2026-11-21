@@ -171,3 +171,15 @@ les Server Actions et le BFF restent la source de vérité avec l'API et la RLS.
 Références de benchmark fonctionnel : Pennylane (pilotage), QuickBooks (filtres),
 Xero (rapprochement), Odoo (modularité), Stripe (hiérarchie visuelle). Comparer
 sur les mêmes tâches et mesurer le temps et les erreurs, pas seulement l'apparence.
+
+### Lot 2A — navigation par domaines
+
+Le modèle `company-navigation.ts` regroupe les routes existantes en Gestion
+financière, Comptabilité et Paramètres avec 21 destinations au maximum.
+Les permissions sont résolues avant la frontière serveur/client ; les groupes
+vides disparaissent. La recherche accent-insensible porte exclusivement sur
+les labels et groupes accessibles, sans appel API ni index de données client.
+Raccourci Ctrl/Cmd+K pour focaliser la recherche, Échap pour effacer. Navigation
+restant disponible sur mobile par défilement horizontal et filtrage. La recherche
+de transactions et documents, le sélecteur d'exercice et la sidebar rétractable
+sont hors de ce lot ; aucune interface simulée.
