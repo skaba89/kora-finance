@@ -14,6 +14,12 @@ enrichi (filtres combinés, densité, pagination, retour aux défauts, capture).
 Backend et E2E à exécuter en CI (Docker indisponible localement).
 Validation locale : ESLint, typecheck, Vitest 90/90, build Next 115/115 et diff check OK.
 
+Correctif PR #117 : CI E2E 70/72 (desktop et mobile, même assertion de reset).
+La navigation client conservait la valeur DOM 25 malgré l'URL réinitialisée.
+Clé de formulaire dérivée des critères et lien de réinitialisation en navigation
+complète ; assertions renforcées pour recherche, statut, exercice et densité,
+y compris le reset d'une modification non soumise. Aucun test supprimé.
+
 ## 2026-11-21 — Kora Premium, lot 3A : tableau de bord financier
 
 Base `8d65f57` (PR #114 et #115 intégrées dans main, CI des deux verte).

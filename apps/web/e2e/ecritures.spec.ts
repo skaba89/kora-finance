@@ -52,6 +52,13 @@ test("saisie d'une écriture équilibrée, validation numérotée puis contre-pa
   await filters.getByRole("link", { name: "Réinitialiser les filtres" }).click();
   await expect(page).toHaveURL(new RegExp(`/dossiers/${companyId}/ecritures$`));
   await expect(filters.getByRole("combobox", { name: "Taille de page" })).toHaveValue("50");
+  await expect(filters.getByRole("combobox", { name: "Densité du tableau" })).toHaveValue("comfortable");
+  await expect(filters.getByRole("combobox", { name: "Exercices" })).toHaveValue("");
+  await expect(filters.getByRole("combobox", { name: "Statut" })).toHaveValue("");
+  await expect(filters.getByRole("textbox", { name: "Rechercher", exact: true })).toHaveValue("");
+  await filters.getByRole("combobox", { name: "Taille de page" }).selectOption("100");
+  await filters.getByRole("link", { name: "Réinitialiser les filtres" }).click();
+  await expect(filters.getByRole("combobox", { name: "Taille de page" })).toHaveValue("50");
 });
 
 test("un brouillon déséquilibré s'enregistre mais ne se valide pas", async ({ page }) => {

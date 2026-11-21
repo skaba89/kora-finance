@@ -72,6 +72,9 @@ export default async function EntriesPage({
     return `?${search.toString()}`;
   };
   const { from, to, lastPage } = tableRange(entries.total, entries.offset, entries.items.length, size);
+  // Les contrôles non contrôlés doivent être recréés quand les critères de l'URL
+  // changent, notamment lors d'une réinitialisation par navigation Next.
+  const filterKey = pageHref(1);
 
   return (
     <>
@@ -87,7 +90,7 @@ export default async function EntriesPage({
         }
       />
 
-      <form method="get" className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4" role="search" aria-label={t.entries.title}>
+      <form key={filterKey} method="get" className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4" role="search" aria-label={t.entries.title}>
         <div className="flex w-full min-w-0 flex-col gap-1.5 sm:flex-1 sm:basis-48">
           <label htmlFor="recherche-ecriture" className="text-sm font-medium">
             {t.common.search}
@@ -134,7 +137,9 @@ export default async function EntriesPage({
         <Button type="submit" className="min-h-11">
           {t.common.filter}
         </Button>
-        <Button asChild variant="ghost" className="min-h-11"><Link href={base}>{t.table.reset}</Link></Button>
+        {/* Navigation complète : réinitialise aussi les modifications non soumises
+            lorsque l'URL est déjà celle par défaut. */}
+        <Button asChild variant="ghost" className="min-h-11"><a href={base}>{t.table.reset}</a></Button>
       </form>
 
       {exportYear ? (
