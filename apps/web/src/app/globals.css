@@ -151,3 +151,27 @@
     }
   }
 }
+
+/* Le contenu reste disponible sur desktop même si le menu mobile est fermé. */
+@media (width < 48rem) {
+  .company-navigation[data-mobile-open="false"] .company-navigation-content {
+    display: none;
+  }
+}
+
+@media (width >= 48rem) {
+  .company-sidebar:has(.company-navigation[data-compact="true"]) {
+    width: 4.5rem;
+    padding: 0.75rem;
+  }
+  .company-navigation[data-compact="true"] :is(.company-navigation-search, .company-navigation-group) {
+    display: none;
+  }
+  .company-navigation[data-compact="true"] :is(.company-navigation-label, .company-navigation-header) {
+    @apply sr-only;
+  }
+  .company-navigation[data-compact="true"] a {
+    justify-content: center;
+    min-height: 2.75rem;
+  }
+}

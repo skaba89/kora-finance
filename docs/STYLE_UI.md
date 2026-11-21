@@ -183,3 +183,14 @@ Raccourci Ctrl/Cmd+K pour focaliser la recherche, Échap pour effacer. Navigatio
 restant disponible sur mobile par défilement horizontal et filtrage. La recherche
 de transactions et documents, le sélecteur d'exercice et la sidebar rétractable
 sont hors de ce lot ; aucune interface simulée.
+
+### Lot 2B — navigation responsive repliable
+
+La navigation du dossier peut être compactée sur desktop (72 px, icônes et
+libellés accessibles) et masquée sur mobile via un bouton à état annoncé.
+Les deux états sont distincts : le passage d'un breakpoint à l'autre ne masque
+pas accidentellement les liens desktop. Le raccourci Ctrl/Cmd+K réouvre la
+navigation et focalise la recherche ; le repli efface le filtre. Par défaut les
+liens restent visibles, y compris sur mobile. Aucun stockage de données ni
+changement des permissions. Le nom du dossier et le rôle restent accessibles
+en mode compact. Captures des deux états dans le rapport Playwright desktop/mobile.

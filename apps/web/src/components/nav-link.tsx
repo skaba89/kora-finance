@@ -13,7 +13,7 @@ const subscribe = () => () => {};
  * lu côté navigateur après hydratation (l'URL visible diffère du chemin réécrit par
  * le proxy de langue).
  */
-export function NavLink({ href, exact, children, onNavigate }: { href: string; exact?: boolean; children: React.ReactNode; onNavigate?: () => void }) {
+export function NavLink({ href, exact, children, onNavigate, title }: { href: string; exact?: boolean; children: React.ReactNode; onNavigate?: () => void; title?: string }) {
   const routedPath = usePathname();
   const pathname = useSyncExternalStore(
     subscribe,
@@ -24,6 +24,7 @@ export function NavLink({ href, exact, children, onNavigate }: { href: string; e
   return (
     <Link
       href={href}
+      title={title}
       onNavigate={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
