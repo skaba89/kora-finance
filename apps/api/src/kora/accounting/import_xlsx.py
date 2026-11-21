@@ -5,7 +5,7 @@ import zipfile
 from collections.abc import Iterator
 from io import BytesIO
 from typing import Self
-from xml.parsers import expat  # noqa: S407
+from xml.parsers import expat
 
 import openpyxl
 from openpyxl.worksheet._read_only import ReadOnlyWorksheet
@@ -23,7 +23,7 @@ MAX_EXPANDED_BYTES = 64 * 1024 * 1024
 MAX_MEMBERS = 128
 
 
-class _Rejected(ValueError):
+class _RejectedError(ValueError):
     def __init__(self, code: str, row: int = 1) -> None:
         super().__init__(code)
         self.code = code
@@ -34,7 +34,7 @@ def _check_xml(content: bytes) -> None:
     # UTF-8 uniquement : aucune DTD (même interne), ni expansion d'entité.
     decoded = content.decode("utf-8-sig")
     if "\x00" in decoded or "<!DOCTYPE" in decoded or "<!ENTITY" in decoded:
-        raise _Rejected("unsafe_xml")
+        raise _RejectedError("unsafe_xml")
     row = 0
     column = ""
     worksheet = False
@@ -45,29 +45,29 @@ def _check_xml(content: bytes) -> None:
         if local == "worksheet":
             worksheet = True
         if local == "Relationship" and attrs.get("TargetMode") == "External":
-            raise _Rejected("external_link")
+            raise _RejectedError("external_link")
         if not worksheet:
             return
         if local == "row":
             number = attrs.get("r", "")
             if not re.fullmatch(r"[0-9]{1,6}", number):
-                raise _Rejected("row_limit")
+                raise _RejectedError("row_limit")
             next_row = int(number)
             if not row < next_row <= MAX_IMPORT_ROWS + 2:
-                raise _Rejected("row_limit", next_row)
+                raise _RejectedError("row_limit", next_row)
             row = next_row
             column = ""
         elif local == "c":
             reference = attrs.get("r", "")
             if not re.fullmatch(rf"[A-G]{row}", reference) or reference[0] <= column:
-                raise _Rejected("column_count", row)
+                raise _RejectedError("column_count", row)
             column = reference[0]
             if attrs.get("t") in ("e", "b"):
-                raise _Rejected("invalid_cell_type", row)
+                raise _RejectedError("invalid_cell_type", row)
         elif local == "f":
-            raise _Rejected("formula_not_allowed", row)
+            raise _RejectedError("formula_not_allowed", row)
         elif local == "mergeCell":
-            raise _Rejected("merged_cells", row)
+            raise _RejectedError("merged_cells", row)
 
     parser = expat.ParserCreate(namespace_separator="}")
     parser.StartElementHandler = start
@@ -79,16 +79,16 @@ def _check_archive(content: bytes) -> None:
         members = archive.infolist()
         expanded = sum(item.file_size for item in members)
         if len(members) > MAX_MEMBERS or expanded > MAX_EXPANDED_BYTES:
-            raise _Rejected("expanded_size_limit")
+            raise _RejectedError("expanded_size_limit")
         names = {item.filename for item in members}
         if len(names) != len(members) or "xl/workbook.xml" not in names:
-            raise _Rejected("invalid_xlsx")
+            raise _RejectedError("invalid_xlsx")
         for item in members:
             name = item.filename
             if item.flag_bits & 1 or not name.endswith((".xml", ".rels")):
-                raise _Rejected("unsupported_xlsx_part")
+                raise _RejectedError("unsupported_xlsx_part")
             if name.startswith(("xl/externalLinks/", "xl/macrosheets/", "xl/embeddings/")):
-                raise _Rejected("unsupported_xlsx_part")
+                raise _RejectedError("unsupported_xlsx_part")
             _check_xml(archive.read(item))
 
 
@@ -127,16 +127,16 @@ def validate_xlsx(content: bytes) -> ImportReport:
         workbook = openpyxl.load_workbook(BytesIO(content), read_only=True, data_only=False)
         try:
             if len(workbook.sheetnames) != 1 or len(workbook.worksheets) != 1:
-                raise _Rejected("sheet_count")
+                raise _RejectedError("sheet_count")
             sheet = workbook.worksheets[0]
             if not isinstance(sheet, ReadOnlyWorksheet):
-                raise _Rejected("invalid_xlsx")
+                raise _RejectedError("invalid_xlsx")
             sheet.reset_dimensions()
             rows = _Rows(sheet.iter_rows(max_col=len(COLUMNS), values_only=True))
             return validate_rows(rows, COLUMNS, lambda row: row)
         finally:
             workbook.close()
-    except _Rejected as exc:
+    except _RejectedError as exc:
         return ImportReport(issues=[ImportIssue(exc.row, exc.code)])
     except Exception:
         # Les parseurs ZIP/XML/Excel lèvent des exceptions hétérogènes sur les
