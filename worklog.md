@@ -3,6 +3,13 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-21 — Phase 5D1 : contrôle métier commun
+
+PR #137 fusionnée (`2a2488e`), CI #318 verte. Contrôles purs CSV/FEC/XLSX
+sur catalogue : comptes, journaux, imputabilité, exercice et période verrouillée.
+16 tests ciblés réussis. Pas d'accès base ni d'écriture ; chargement tenant,
+staging et réexécution des contrôles transactionnels restent à livrer.
+
 ## 2026-11-21 — Phase 5C : précontrôle Excel normalisé
 
 PR #136 fusionnée (`7a84471`), CI #315 verte. Adaptateur XLSX en lecture seule,

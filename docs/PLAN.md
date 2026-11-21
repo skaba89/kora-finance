@@ -307,6 +307,16 @@ hors bornes et des colonnes supplémentaires. Réutilisation du contrôle 5A.
 Ce lot n'expose aucune route et ne persiste aucune donnée ; le staging,
 les droits, les contrôles métier et l'assistant d'import restent nécessaires.
 
+**5D1 — Contrôle métier commun.** Le moteur structurel peut transmettre une
+ligne normalisée à un contrôle pur (jamais une écriture en base). Un catalogue
+en mémoire des journaux, comptes et exercices distingue codes inconnus,
+désactivés, comptes de regroupement, exercices absents ou clôturés et périodes
+verrouillées. Le rapport reste sans valeurs source ; les totaux restent ceux
+du contrôle structurel. Le CSV en octets bénéficie aussi du plafond 32 Mio.
+Le futur service doit charger le catalogue dans le contexte tenant autorisé,
+contrôler les doublons persistants, la devise et revalider sous transaction
+avant import. Aucun endpoint ni stockage ajouté dans ce lot.
+
 ## Phase 6 — Dossier de financement
 Pack généré en un clic, lien signé, révocable et expirable, journal des consultations.
 - Un lien révoqué renvoie 410 et ne donne plus accès à aucun document.
