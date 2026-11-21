@@ -250,3 +250,14 @@ Le grand livre propose 25/50/100 lignes (100 par défaut) ; le lettrage conserve
 ses pages de 200 et une sélection unique, avec cibles tactiles et état sélectionné.
 Les totaux, soldes, exports, droits et actions métier existants sont conservés.
 Les scénarios Playwright couvrent les montants et le lettrage, avec captures.
+
+### Lot 5B — achats et fournisseurs
+
+Raccourcis vers les documents, décaissements et échéancier ; création accessible
+depuis le PageHeader pour les rôles autorisés uniquement. Table des documents
+avec nom fournisseur si disponible, référence, statut, densité et pagination
+serveur 25/50/100 (défaut 50). Une seule instance des actions : les lignes
+deviennent des fiches sur téléphone. Les sélecteurs de règlements restent liés
+à la page de documents, avec périmètre annoncé en FR/EN. DataTable pour les
+décaissements et les tranches d'ancienneté, KpiCard pour le total des dettes
+fourni par l'API. Aucune modification de calcul, de permission ni de mutation.

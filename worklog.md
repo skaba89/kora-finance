@@ -3,6 +3,17 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-21 — Kora Premium, lot 5B : achats et fournisseurs
+
+Base `0969103` (PR #118 et #119 intégrées). Navigation par ancres,
+création accessible depuis le titre, liste fournisseurs responsive, filtres
+et pagination serveur 25/50/100, solde total des dettes en KpiCard et
+décaissements/échéancier en DataTable. Actions et contrat API inchangés.
+Scénario E2E de création fournisseur/brouillon, montant, filtre, reset,
+échéancier et capture desktop/mobile ajouté.
+Validation locale : ESLint, typecheck, Vitest 90/90 et build Next 115/115 OK.
+Backend et Playwright intégrés à valider en CI (Docker indisponible localement).
+
 ## 2026-11-21 — Kora Premium, lot 4B : balance, grand livre, lettrage
 
 Base `597e173` (PR #117 intégrée). DataTable avec en-tête fixe complet,

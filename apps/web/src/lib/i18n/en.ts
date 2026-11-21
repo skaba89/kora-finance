@@ -849,6 +849,8 @@ export const en: typeof fr = {
     filterAll: "All documents",
     listTitle: "Purchase documents",
     empty: "No document yet: record your first supplier invoice.",
+    noMatchingDocuments: "No purchase documents to display.",
+    paymentPageHint: "The available invoices correspond to the current documents page. Change filters or page to access other invoices.",
     numberLabel: "Number",
     kindLabel: "Type",
     statusLabel: "Status",

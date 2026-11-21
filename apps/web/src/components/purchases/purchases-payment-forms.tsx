@@ -34,6 +34,7 @@ export function PurchasesPaymentFormCard({
     <Card className="mt-6">
       <CardHeader>
         <CardTitle>{t.purchases.paymentFormTitle}</CardTitle>
+        <p className="text-muted-foreground text-sm">{t.purchases.paymentPageHint}</p>
       </CardHeader>
       <CardContent>
         <ActionForm
