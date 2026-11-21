@@ -297,6 +297,16 @@ conformité d'un FEC ; correspondances SYSCOHADA, devises, métadonnées et
 conservation des pièces nécessitent un contrôle métier avant tout import.
 Excel, staging et exécution restent à livrer.
 
+**5C — Précontrôle Excel normalisé.** Classeur `.xlsx` à une seule feuille,
+sept colonnes comme le CSV, identifiants et dates ISO en texte, montants en
+unités mineures entières (cellules entières ou texte). Pas de conversion
+flottante, formule, cellule fusionnée, macro ni lien externe. Plafonds de
+16 Mio compressés, 64 Mio décompressés, 128 parties ZIP et 100 000 lignes.
+Contrôle XML UTF-8 sans DTD ni entités avant lecture seule ; rejet des lignes
+hors bornes et des colonnes supplémentaires. Réutilisation du contrôle 5A.
+Ce lot n'expose aucune route et ne persiste aucune donnée ; le staging,
+les droits, les contrôles métier et l'assistant d'import restent nécessaires.
+
 ## Phase 6 — Dossier de financement
 Pack généré en un clic, lien signé, révocable et expirable, journal des consultations.
 - Un lien révoqué renvoie 410 et ne donne plus accès à aucun document.
