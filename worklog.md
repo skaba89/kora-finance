@@ -2271,3 +2271,9 @@ changement de l'API, du service worker ou du stockage chiffré.
 Lien d'évitement, repères main et focus clavier, cibles tactiles et recette
 Playwright sur six largeurs. Aucun changement des appels API ou des permissions.
 Audit WCAG exhaustif et mesures de performance terrain restent à effectuer.
+
+## UX Premium — lot 11B : baseline axe et performance
+
+Rapports axe-core et laboratoire sous réseau/CPU ralentis, export CI également
+en cas de succès ; préchargement des liens du menu désactivé. Les mesures
+terrain et la correction des violations restent conditionnées aux résultats.

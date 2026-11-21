@@ -325,3 +325,20 @@ global aux six largeurs 360, 390, 768, 1024, 1440 et 1920 (connexion FR/EN et
 tableau de bord), avec captures synthétiques 390/1440. Ce contrôle ciblé ne vaut
 pas certification WCAG 2.2 AA ; audit axe, contraste, lecteurs d'écran et mesures
 Core Web Vitals en conditions mobiles représentatives restent à réaliser.
+
+### Lot 11B — baseline qualité et performance
+
+La recette Playwright produit des rapports axe-core (WCAG 2.0/2.1 A/AA et
+2.2 AA) pour la connexion FR/EN et le tableau de bord, sans contenu métier
+dans les pièces JSON. La première baseline est informative : les violations
+et les vérifications manuelles doivent être traitées avant une certification.
+Le rapport CI est conservé même lorsque les tests passent.
+
+Le profil laboratoire mesure LCP et CLS sur le tableau de bord, cache froid
+et service worker contourné, 150 ms de latence, 1,6 Mbit/s descendant,
+750 kbit/s montant, CPU ralenti de facteur 4. La plus longue interaction
+observée lors de la recherche de module est un indicateur de laboratoire,
+et non l'INP terrain au 75e percentile. Les objectifs restent 2500 ms,
+0,1 et 200 ms ; aucune valeur non mesurée n'est présentée comme acquise.
+Le préchargement automatique des liens du menu est désactivé pour réduire
+les requêtes concurrentes sur réseau faible. Navigation et droits inchangés.
