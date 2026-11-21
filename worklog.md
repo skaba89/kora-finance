@@ -2351,3 +2351,11 @@ de la base, limites communes avec le journal, contrôle des groupes et rapport
 sans valeurs source. Quatre tests purs exécutés en local, dont 100 000 lignes
 et dépassement de plafond ; CI backend complète encore requise. Aucun import
 persistant, API ni migration : les étapes suivantes sont décrites dans le plan.
+
+## Phase 5D2b2 — stockage temporaire chiffré
+
+PR #140 (schéma staging) fusionnée, CI #326 verte. Service interne de dépôt
+et lecture, chiffrement AES-GCM, contrôle SHA-256, idempotence par dossier,
+autorisation à chaque accès et expiration à 24 h. Tests de service ajoutés
+pour la CI PostgreSQL ; 16 tests purs d'import toujours passants en local.
+Purge et réconciliation S3 à livrer avant toute route publique.
