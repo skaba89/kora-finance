@@ -38,7 +38,7 @@ async function CompanyList({ searchParams }: { searchParams: PageProps<"/[lang]/
     <ul className="grid gap-3 sm:grid-cols-2">
       {companies.map(({ company, role }) => (
         <li key={company.id}>
-          <Link href={`/dossiers/${company.id}`} className="block focus-visible:outline-none">
+          <Link href={`/dossiers/${company.id}`} className="block rounded-xl">
             <Card className="hover:border-teal-600 transition-colors">
               <CardHeader>
                 <CardTitle className="text-base">{company.legal_name}</CardTitle>
@@ -58,7 +58,7 @@ async function CompanyList({ searchParams }: { searchParams: PageProps<"/[lang]/
 export default async function CompaniesPage({ searchParams }: PageProps<"/[lang]/dossiers">) {
   const { t } = await getDictionary();
   return (
-    <>
+    <main id="main-content" tabIndex={-1}>
       <PageHeader
         title={t.companies.listTitle}
         actions={
@@ -70,6 +70,6 @@ export default async function CompaniesPage({ searchParams }: PageProps<"/[lang]
       <Suspense fallback={<PageSkeleton />}>
         <CompanyList searchParams={searchParams} />
       </Suspense>
-    </>
+    </main>
   );
 }

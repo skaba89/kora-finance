@@ -16,7 +16,7 @@ export function Field({ label, name, hint, id, ...input }: Props) {
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={inputId}>{label}</Label>
-      <Input id={inputId} name={name} aria-describedby={hintId} {...input} />
+      <Input id={inputId} name={name} aria-describedby={hintId} {...input} className={input.className ?? "min-h-11"} />
       {hint ? (
         <p id={hintId} className="text-muted-foreground text-xs">
           {hint}
@@ -46,7 +46,7 @@ export function SelectField({ label, name, options, id, className, hint, ...sele
         aria-describedby={hintId}
         className={
           className ??
-          "border-input bg-background h-9 rounded-md border px-3 text-sm shadow-xs focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+          "border-input bg-background min-h-11 w-full min-w-0 rounded-md border px-3 text-sm shadow-xs focus-visible:ring-[3px] focus-visible:ring-ring/50"
         }
         {...select}
       >

@@ -102,8 +102,10 @@ async function SecurityContent() {
 
 export default function SecurityPage() {
   return (
-    <Suspense fallback={<PageSkeleton />}>
-      <SecurityContent />
-    </Suspense>
+    <main id="main-content" tabIndex={-1}>
+      <Suspense fallback={<PageSkeleton />}>
+        <SecurityContent />
+      </Suspense>
+    </main>
   );
 }

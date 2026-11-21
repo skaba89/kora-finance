@@ -22,7 +22,7 @@ export function LocaleSwitcher({ current, label }: { current: Locale; label: str
       <input type="hidden" name="retour" value="/dossiers" />
       <button
         type="submit"
-        className="text-muted-foreground hover:text-foreground text-sm underline-offset-4 hover:underline"
+        className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center rounded-md px-2 text-sm underline-offset-4 hover:underline"
         aria-label={`${label} : ${LABELS[other]}`}
         lang={other}
       >

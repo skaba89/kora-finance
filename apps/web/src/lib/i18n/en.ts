@@ -28,6 +28,7 @@ export const en: typeof fr = {
     backHome: "Back to my companies",
     expertNotice: "To be validated by a Guinean chartered accountant.",
     close: "Dismiss",
+    skipToContent: "Skip to main content",
   },
   table: {
     pageSize: "Page size",

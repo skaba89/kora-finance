@@ -44,14 +44,14 @@ export default function CompanyLayout({ children, params }: LayoutProps<"/[lang]
           <CompanyNav params={params} />
         </Suspense>
       </aside>
-      <section className="min-w-0 flex-1">
+      <main id="main-content" tabIndex={-1} className="min-w-0 flex-1">
         <div className="mb-4 min-w-0">
           <Suspense fallback={<div className="bg-muted h-11 w-full max-w-96 animate-pulse rounded-lg" />}>
             <CompanySwitcherSlot params={params} />
           </Suspense>
         </div>
         <Suspense fallback={<PageSkeleton />}>{children}</Suspense>
-      </section>
+      </main>
     </div>
   );
 }
