@@ -24,6 +24,7 @@ export function NavLink({ href, exact, children, onNavigate, title }: { href: st
   return (
     <Link
       href={href}
+      prefetch={false}
       title={title}
       onNavigate={onNavigate}
       aria-current={active ? "page" : undefined}
