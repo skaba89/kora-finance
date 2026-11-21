@@ -17,7 +17,7 @@ test("saisie d'une écriture équilibrée, validation numérotée puis contre-pa
   await page.getByRole("combobox", { name: "Journal" }).selectOption({ label: "VT — Ventes" });
   await page.getByLabel("Date").fill("2026-03-15");
   await page.getByLabel("Libellé", { exact: true }).fill("Ventes comptant du jour");
-  await page.getByLabel("Pièce").fill("Z-0315");
+  await page.getByRole("textbox", { name: "Pièce", exact: true }).fill("Z-0315");
   await fillLine(page, 1, "571", "Débit", "1 500 000");
   await fillLine(page, 2, "701", "Crédit", "1 400 000");
   await expect(page.getByTestId("ecart")).toHaveText("100 000 GNF");
