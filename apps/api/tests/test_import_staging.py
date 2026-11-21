@@ -47,8 +47,8 @@ def test_staging_metadata_isolated_by_tenant(db: Session, make_company: MakeComp
     db.commit()
     bind_tenant(db, None)
     assert db.scalar(select(ImportBatch.id).where(ImportBatch.id == batch_id)) is None
+    db.add(_batch(mine, sha256="b" * 64))
     with pytest.raises(DBAPIError):
-        db.add(_batch(mine, sha256="b" * 64))
         db.flush()
     db.rollback()
 
@@ -58,8 +58,8 @@ def test_staging_prevents_duplicate_file_options(db: Session, make_company: Make
     bind_tenant(db, company.id)
     db.add(_batch(company))
     db.commit()
+    db.add(_batch(company))
     with pytest.raises(IntegrityError):
-        db.add(_batch(company))
         db.flush()
     db.rollback()
 
@@ -82,7 +82,7 @@ def test_staging_constraints(
 ) -> None:
     company = make_company()
     bind_tenant(db, company.id)
+    db.add(_batch(company, **overrides))
     with pytest.raises(IntegrityError):
-        db.add(_batch(company, **overrides))
         db.flush()
     db.rollback()
