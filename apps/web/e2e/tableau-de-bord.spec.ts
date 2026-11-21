@@ -36,7 +36,9 @@ test("tableau de bord : raccourcis, indicateurs après une vente et une dépense
   await expect(tiles.getByText("Chiffre d'affaires — Ce mois-ci").locator("..")).toContainText(/1\s000\s000 GNF/);
   await expect(tiles.getByText("Charges — Ce mois-ci").locator("..")).toContainText(/0 GNF/);
   await expect(page.getByRole("status").filter({ hasText: "1 brouillon(s) à relire et valider." })).toBeVisible();
-  await expect(page.getByRole("img", { name: "Chiffre d'affaires et charges par mois" })).toBeVisible();
+  const chart = page.getByRole("group", { name: "Chiffre d'affaires et charges par mois" });
+  await expect(chart).toBeVisible();
+  await expect(chart.getByRole("button").first()).toBeVisible();
   await page.getByText("Voir les chiffres").click();
   await expect(page.getByRole("row").filter({ hasText: "1 000 000" }).first()).toBeVisible();
   await expect(page.getByRole("listitem").filter({ hasText: "Caisse siège social" })).toContainText(/1\s180\s000 GNF/);

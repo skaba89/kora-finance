@@ -61,7 +61,7 @@ export function MonthlyChart({
           viewBox={`0 0 ${width} ${HEIGHT + TOP + 24}`}
           width={width}
           height={HEIGHT + TOP + 24}
-          role="img"
+          role="group"
           aria-label={labels.title}
           className="max-w-none"
         >
@@ -77,7 +77,7 @@ export function MonthlyChart({
                 key={p.month}
                 tabIndex={0}
                 role="button"
-                aria-label={`${monthName(p.month, "long")} : ${labels.revenue} ${money(p.revenue)}, ${labels.expenses} ${money(p.expenses)}`}
+                aria-label={`${monthName(p.month, "short")} — ${monthName(p.month, "long")} : ${labels.revenue} ${money(p.revenue)}, ${labels.expenses} ${money(p.expenses)}`}
                 onMouseEnter={() => setActive(i)}
                 onMouseLeave={() => setActive(null)}
                 onFocus={() => setActive(i)}

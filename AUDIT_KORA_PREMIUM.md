@@ -89,3 +89,24 @@ Les phases 5–8 ne sont pas des améliorations graphiques ; elles nécessitent
 des incréments métier et des tests d'isolation dédiés. Le score final 99/100 ne
 sera envisagé qu'avec preuves vérifiables. Le programme ne modifie pas les
 calculs comptables, permissions, RLS ou schéma de base pour l'esthétique.
+
+## 5. Résultats mesurés après #128 et #129 (21 novembre 2026)
+
+Les CI #295 et #296 sont vertes et les deux PR sont fusionnées (`f79f4aa`).
+Le rapport Playwright du run 44905553856, artefact 14707623753, contient les
+mesures suivantes (profil simulé : 150 ms, 1,6 Mbit/s descendant, 750 kbit/s
+montant, CPU x4, cache froid, service worker contourné).
+
+| Profil | LCP | CLS | Interaction max observée |
+|---|---:|---:|---:|
+| Desktop 1280 × 720 | 948 ms | 0,00047 | 64 ms (30 événements) |
+| Mobile 393 × 727 | 860 ms | 0,00325 | 88 ms (26 événements) |
+
+Ces deux mesures respectent les seuils indicatifs de laboratoire ; elles ne
+constituent pas un INP terrain ni un p75. Axe 4.14.0 : connexion FR et EN sans
+violation sur les deux profils ; tableau de bord : `label-content-name-mismatch`
+(7 desktop, 4 mobile), `nested-interactive` (1 sur chaque profil), revue manuelle
+du contraste (11 desktop, 26 mobile). Le correctif du graphique mensuel utilise
+un groupe accessible et inclut le libellé visible dans le nom de chaque mois.
+Les deux règles deviennent bloquantes dans la CI, avec audit supplémentaire du
+thème sombre. La validation de ce correctif et la revue manuelle restent à faire.
