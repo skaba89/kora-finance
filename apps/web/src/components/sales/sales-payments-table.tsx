@@ -2,8 +2,8 @@ import { ActionForm } from "@/components/forms/action-form";
 import { Field, SelectField } from "@/components/forms/field";
 import { InlineAction } from "@/components/forms/inline-action";
 import { Badge } from "@/components/ui/badge";
+import { DataTable } from "@/components/data-table";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -40,13 +40,13 @@ export function SalesPaymentsTable({
   canPost: boolean;
 }) {
   return (
-    <Table>
+    <DataTable label={t.sales.paymentsTitle}>
       <TableHeader>
         <TableRow>
           <TableHead>{t.sales.paymentDate}</TableHead>
           <TableHead>{t.sales.paymentMethod}</TableHead>
-          <TableHead>{t.sales.totalLabel}</TableHead>
-          <TableHead>{t.sales.unallocatedBadge}</TableHead>
+          <TableHead className="text-right">{t.sales.totalLabel}</TableHead>
+          <TableHead className="text-right">{t.sales.unallocatedBadge}</TableHead>
           <TableHead>{t.sales.paymentsAllocations}</TableHead>
           <TableHead>{t.sales.paymentReference}</TableHead>
           <TableHead>{t.sales.postedColumn}</TableHead>
@@ -61,8 +61,8 @@ export function SalesPaymentsTable({
               {(t.sales.methods as Record<string, string>)[payment.method] ??
                 payment.method}
             </TableCell>
-            <TableCell>{formatMoney(payment.amount, payment.currency)}</TableCell>
-            <TableCell>
+            <TableCell className="text-right font-medium tabular-nums">{formatMoney(payment.amount, payment.currency)}</TableCell>
+            <TableCell className="text-right">
               {payment.unallocated > 0 ? (
                 <Badge variant="secondary">
                   {t.sales.unallocatedBadge} {formatMoney(payment.unallocated, payment.currency)}
@@ -203,6 +203,6 @@ export function SalesPaymentsTable({
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+    </DataTable>
   );
 }

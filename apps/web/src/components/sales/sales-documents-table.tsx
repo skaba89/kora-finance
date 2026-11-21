@@ -21,6 +21,8 @@ import {
   sendQuoteAction,
 } from "@/lib/actions/sales";
 import { formatMoney } from "@/lib/format";
+import type { TableDensity } from "@/lib/table-preferences";
+import { cn } from "@/lib/utils";
 import { salesDocPrefix, salesKindLabel, salesStatusTone, salesStatusLabel } from "./labels";
 import type { Dictionary, SalesDocumentsPage } from "./types";
 
@@ -34,6 +36,7 @@ export function SalesDocumentsTable({
   t,
   manage,
   canPost,
+  density,
 }: {
   companyId: string;
   documents: SalesDocumentsPage;
@@ -41,10 +44,11 @@ export function SalesDocumentsTable({
   t: Dictionary;
   manage: boolean;
   canPost: boolean;
+  density: TableDensity;
 }) {
   return (
-    <Table className="max-md:block">
-      <TableHeader className="max-md:sr-only">
+    <Table aria-label={t.sales.listTitle} containerProps={{ role: "region", "aria-label": t.sales.listTitle, tabIndex: 0, className: "rounded-xl border bg-card md:max-h-[65vh] md:overflow-auto" }} className={cn("max-md:block [&_td]:px-3", density === "compact" ? "[&_td]:py-1.5" : "[&_td]:py-3")}>
+      <TableHeader className="max-md:sr-only md:sticky md:top-0 md:z-10 [&_th]:bg-muted">
         <TableRow>
           <TableHead>{t.sales.partnerLabel}</TableHead>
           <TableHead>{t.sales.statusLabel}</TableHead>
@@ -71,11 +75,11 @@ export function SalesDocumentsTable({
               <Badge variant={salesStatusTone(document.status)}>{salesStatusLabel(t.sales, document.status)}</Badge>
               {document.entry_id != null && <Badge variant="outline">{t.sales.postedBadge}</Badge>}
             </TableCell>
-            <TableCell className="text-right whitespace-normal max-md:text-left">
+            <TableCell className="text-right whitespace-normal font-medium tabular-nums max-md:text-left">
               <span className="text-muted-foreground block text-xs md:hidden">{t.sales.totalLabel}</span>
               {formatMoney(document.total_ttc, document.currency)}
             </TableCell>
-            <TableCell className="text-right whitespace-normal">
+            <TableCell className="text-right whitespace-normal font-medium tabular-nums">
               <span className="text-muted-foreground block text-xs md:hidden">{t.sales.outstandingLabel}</span>
               {document.outstanding_ttc == null ? "—" : formatMoney(document.outstanding_ttc, document.currency)}
               {document.payment_status && <span className="text-muted-foreground block text-xs">

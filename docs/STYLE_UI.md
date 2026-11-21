@@ -213,6 +213,16 @@ validée et dépense brouillon, puis le débordement global aux six résolutions
 de devise, de calcul, de rôle ou d'exercice. Le lot 2C est détaillé dans
 `docs/UX_TOPBAR.md`.
 
+### Lot 5A — ventes et recouvrement
+
+Navigation par vues conservée (Documents, Encaissements, Recouvrement).
+Filtres serveur existants et pagination 25/50/100 (défaut 100), densité
+dans l'URL et réinitialisation réelle. Les documents gardent leur présentation
+mobile, leurs actions et leur statut comptable. Le formulaire d'envoi email
+porte sur les documents de la page courante. Les encaissements et top débiteurs
+utilisent DataTable ; les quatre KPI de recouvrement réutilisent KpiCard avec
+les valeurs et les ratios existants. Aucune nouvelle règle de gestion.
+
 ### Lot 4A — DataTable comptable (écritures)
 
 `DataTable` conserve le balisage HTML natif et expose une zone de défilement

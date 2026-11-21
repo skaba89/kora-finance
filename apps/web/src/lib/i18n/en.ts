@@ -763,6 +763,7 @@ export const en: typeof fr = {
     reminderLevel: "Level",
     reminderTo: "Recipient (frozen at send time)",
     emailTitle: "Email a numbered document",
+    emailPageHint: "Select a numbered document from the current page. Change the filters or page to access other documents.",
     emailDoc: "Numbered document",
     emailDocPlaceholder: "Pick a numbered document (invoice, credit note, sent quote)",
     emailTo: "Recipient (optional)",

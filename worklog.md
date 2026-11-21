@@ -30,6 +30,17 @@ Clé de formulaire dérivée des critères et lien de réinitialisation en navig
 complète ; assertions renforcées pour recherche, statut, exercice et densité,
 y compris le reset d'une modification non soumise. Aucun test supprimé.
 
+## 2026-11-21 — Kora Premium, lot 5A : ventes et recouvrement
+
+Base `597e173` (PR #118 encore en cours à l'ouverture du lot indépendant).
+Documents : pagination serveur 25/50/100, densité, reset, en-têtes fixes
+desktop et présentation mobile préservée. Navigation par vues, encaissements
+et indicateurs de recouvrement harmonisés. Actions, permissions, API et calculs
+inchangés. Le scénario Playwright valide création, montant, filtres, reset,
+navigation et droits lecture seule ; captures prévues en CI.
+Validation locale : ESLint, typecheck, Vitest 90/90 et build Next 115/115 OK.
+Backend et Playwright à valider en CI (Docker indisponible localement).
+
 ## 2026-11-21 — Kora Premium, lot 3A : tableau de bord financier
 
 Base `8d65f57` (PR #114 et #115 intégrées dans main, CI des deux verte).

@@ -20,6 +20,7 @@ export function SalesEmailFormCard({
     <Card className="mt-6">
       <CardHeader>
         <CardTitle>{t.sales.emailTitle}</CardTitle>
+        <p className="text-muted-foreground text-sm">{t.sales.emailPageHint}</p>
       </CardHeader>
       <CardContent>
         <ActionForm
