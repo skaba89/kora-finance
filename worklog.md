@@ -2284,3 +2284,9 @@ PR #130 fusionnée, CI #300 verte. Extension de la recette Playwright à douze
 écrans financiers, six largeurs, captures et rapport de débordement global.
 Baseline informative pour identifier les corrections suivantes ; la présence
 des pages est bloquante. Aucun changement du métier, des API ou des permissions.
+
+## UX Premium — lot 13B : garde responsive et administration
+
+CI #302 verte : 72/72 mesures financières sans débordement global. Garde
+bloquante sur ces cas et extension à neuf écrans administratifs (baseline).
+Rapport CI et limites consignés dans AUDIT_KORA_PREMIUM.md.

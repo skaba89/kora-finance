@@ -128,3 +128,25 @@ reste informatif pour cette première baseline. Les états détaillés, peuplés
 les autres routes, la recette anglaise et les corrections éventuelles restent
 à traiter. Aucun résultat ni point de maturité supplémentaire n'est acquis
 avant lecture du rapport CI.
+
+## 7. Lot 13B — résultats et garde de non-régression responsive
+
+PR #131 fusionnée (`8cc937c`), CI #302 verte (run 44911384186,
+artefact Playwright 14710620442). Les deux rapports `reflow-finance`
+contiennent 36 mesures chacun : largeur effective égale à la largeur demandée,
+débordement global de **0 px dans les 72 cas**, aucun écart. Les rapports axe
+du tableau de bord sombre ne signalent aucune violation automatique sur les
+deux profils, mais 11 et 26 éléments de contraste nécessitent une revue manuelle.
+
+Le lot 13B rend les 72 cas financiers bloquants (tolérance 1 px), vérifie
+le nombre de mesures et les largeurs réelles. Il étend la baseline à neuf
+écrans : six paramètres du dossier, seuils d'alerte, audit et hors connexion.
+La nouvelle matrice prévoit 126 mesures et 42 captures au total ; les nouveaux
+écarts sont informatifs jusqu'à lecture des rapports. Cette mesure sur dossier
+neuf ne prouve pas la qualité des tableaux remplis ni celle du parcours anglais.
+
+Revue visuelle ciblée des captures #302 : ventes et nouvelle écriture à 390 px,
+états financiers à 1440 px. Aucun débordement visible sur ces trois captures.
+La hauteur cumulée de l'en-tête mobile, de l'alerte de vérification email et
+de la navigation repousse toutefois le contenu métier : compacter ces zones
+sans masquer les actions ni les alertes importantes est le prochain chantier.
