@@ -2251,3 +2251,11 @@ totaux proviennent de l'API et les exports, contrôles et droits sont conservés
 Tables harmonisées, pagination et densité du plan comptable, fiche entreprise
 responsive, exercices et contraste de l'alerte fiscale. Le parcours E2E
 existant vérifie la pagination et les restrictions du comptable invité.
+
+## UX Premium — lot 9 : audit et sécurité
+
+Journal d'audit DataTable, densité et pagination, détails déjà autorisés
+dépliables, état de vérification accessible. Sécurité du compte harmonisée,
+identifiants MFA distincts et codes de secours adaptés au thème sombre.
+Les tests E2E couvrent les nouveaux contrôles sans exposer de secrets dans
+des captures supplémentaires. Aucun changement des actions ni des droits.

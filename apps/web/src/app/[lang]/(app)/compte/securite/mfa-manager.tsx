@@ -36,10 +36,10 @@ function RecoveryCodes({ state, labels }: { state: ActionState; labels: Labels }
   const codes = state.data?.recovery_codes;
   if (state.status !== "success" || !Array.isArray(codes)) return null;
   return (
-    <div className="rounded-md border border-amber-300 bg-amber-50 p-4 text-amber-950">
+    <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
       <p className="font-medium">{labels.recoveryTitle}</p>
       <p className="mt-1 text-sm">{labels.recoveryNotice}</p>
-      <ul className="mt-3 grid grid-cols-2 gap-2 font-mono text-sm">
+      <ul className="mt-3 grid grid-cols-1 gap-2 font-mono text-sm sm:grid-cols-2">
         {codes.map((code) => (
           <li key={String(code)}>{String(code)}</li>
         ))}
@@ -48,13 +48,13 @@ function RecoveryCodes({ state, labels }: { state: ActionState; labels: Labels }
   );
 }
 
-function ReauthFields({ labels }: { labels: Labels }) {
+function ReauthFields({ labels, prefix }: { labels: Labels; prefix: string }) {
   return (
     <>
       <p className="text-muted-foreground text-sm">{labels.reauth}</p>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={labels.password} name="password" type="password" autoComplete="current-password" required />
-        <Field label={labels.code} name="code" autoComplete="one-time-code" required />
+        <Field id={`${prefix}-password`} label={labels.password} name="password" type="password" autoComplete="current-password" required />
+        <Field id={`${prefix}-code`} label={labels.code} name="code" autoComplete="one-time-code" required />
       </div>
     </>
   );
@@ -73,11 +73,13 @@ export function MfaManager({ enabled, labels }: { enabled: boolean; labels: Labe
           variant="outline"
           renderResult={(state) => <RecoveryCodes state={state} labels={labels} />}
         >
-          <ReauthFields labels={labels} />
+          <ReauthFields labels={labels} prefix="mfa-regenerate" />
         </ActionForm>
-        <ActionForm action={disableMfaAction} submitLabel={labels.disable} pendingLabel={labels.pending} variant="destructive">
-          <ReauthFields labels={labels} />
-        </ActionForm>
+        <div className="border-t pt-4">
+          <ActionForm action={disableMfaAction} submitLabel={labels.disable} pendingLabel={labels.pending} variant="destructive">
+            <ReauthFields labels={labels} prefix="mfa-disable" />
+          </ActionForm>
+        </div>
       </div>
     );
   }

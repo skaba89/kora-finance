@@ -134,6 +134,12 @@ test("double authentification : activation puis connexion en deux étapes", asyn
   await expect(page).toHaveURL(/\/dossiers$/);
 
   // Un code de secours permet aussi de se connecter.
+  await page.goto("/compte/securite");
+  const regenerate = page.locator("form").filter({ has: page.getByRole("button", { name: "Nouveaux codes de secours" }) });
+  const disable = page.locator("form").filter({ has: page.getByRole("button", { name: "Désactiver", exact: true }) });
+  await expect(regenerate.getByLabel("Mot de passe", { exact: true })).toHaveAttribute("id", "mfa-regenerate-password");
+  await expect(disable.getByLabel("Mot de passe", { exact: true })).toHaveAttribute("id", "mfa-disable-password");
+  await expect(disable.getByLabel("Code de vérification")).toHaveAttribute("id", "mfa-disable-code");
   await page.getByRole("button", { name: "Se déconnecter" }).click();
   await expect(page).toHaveURL(/\/connexion\?deconnecte=1/);
   await login(page, email);

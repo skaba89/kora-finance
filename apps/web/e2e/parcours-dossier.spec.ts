@@ -56,6 +56,13 @@ test("inscription, création d'un dossier et paramétrage comptable", async ({ p
   await page.getByRole("link", { name: "Journal d'audit" }).click();
   await expect(page.getByRole("cell", { name: "Création d'un compte" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "Confirmation d'un taux de taxe" })).toBeVisible();
+  await page.getByRole("combobox", { name: "Densité du tableau" }).selectOption("compact");
+  await page.getByRole("button", { name: "Afficher", exact: true }).click();
+  await expect(page).toHaveURL(/densite=compact/);
+  const auditRow = page.getByRole("row").filter({ has: page.getByRole("cell", { name: "Création d'un compte", exact: true }) });
+  await auditRow.locator("summary").click();
+  await expect(auditRow.locator("pre")).toBeVisible();
+  await auditRow.locator("summary").click();
   await page.getByRole("button", { name: "Vérifier l'intégrité" }).click();
   await expect(page.getByRole("status")).toContainText("Chaîne intègre");
 
