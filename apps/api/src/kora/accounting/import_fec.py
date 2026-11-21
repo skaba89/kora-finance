@@ -43,10 +43,7 @@ def _minor_units(raw: str, scale: Literal[0, 2]) -> str:
 
 def _normalize(row: list[str], scale: Literal[0, 2]) -> list[str]:
     day = row[3]
-    if re.fullmatch(r"[0-9]{8}", day):
-        day = f"{day[:4]}-{day[4:6]}-{day[6:]}"
-    else:
-        day = ""
+    day = f"{day[:4]}-{day[4:6]}-{day[6:]}" if re.fullmatch(r"[0-9]{8}", day) else ""
     return [
         row[0],
         row[2],
