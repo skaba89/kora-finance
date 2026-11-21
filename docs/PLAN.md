@@ -345,6 +345,14 @@ chiffré avant dépôt S3, puis authentifié et contrôlé en taille et SHA-256
 références expirées et des objets orphelins reste indispensable avant
 l'exposition de ce service par une API. Aucune écriture comptable créée.
 
+**5D2b3a — Purge des références expirées.** Service interne borné à 100
+imports par appel et dossier, sous RLS. Suppression S3 avant suppression
+de la référence, avec verrou de dossier commun au dépôt et verrou de ligne
+commun à la lecture. En cas d'échec S3, les métadonnées persistent pour
+réessai. Le même fichier peut être redéposé après purge. Le balayage des
+objets orphelins et la planification du worker restent à intégrer avant
+l'ouverture du service aux utilisateurs.
+
 ## Phase 6 — Dossier de financement
 Pack généré en un clic, lien signé, révocable et expirable, journal des consultations.
 - Un lien révoqué renvoie 410 et ne donne plus accès à aucun document.

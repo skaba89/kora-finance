@@ -2359,3 +2359,10 @@ et lecture, chiffrement AES-GCM, contrôle SHA-256, idempotence par dossier,
 autorisation à chaque accès et expiration à 24 h. Tests de service ajoutés
 pour la CI PostgreSQL ; 16 tests purs d'import toujours passants en local.
 Purge et réconciliation S3 à livrer avant toute route publique.
+
+## Phase 5D2b3a — purge des imports expirés
+
+PR #141 fusionnée, CI #329 verte. Purge interne bornée avec verrouillage,
+isolation tenant, reprise sur panne S3 et protection des imports actifs.
+Tests PostgreSQL ajoutés ; 16 tests purs d'import réussis en local.
+Réconciliation des objets orphelins et planification à livrer séparément.

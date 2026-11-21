@@ -119,9 +119,9 @@ def read_staged_import(user: User, company_id: uuid.UUID, batch_id: uuid.UUID) -
     with get_sessionmaker()() as session, session.begin():
         _authorize(session, user, company_id, lock=False)
         batch = session.scalar(
-            select(ImportBatch).where(
-                ImportBatch.tenant_id == company_id, ImportBatch.id == batch_id
-            )
+            select(ImportBatch)
+            .where(ImportBatch.tenant_id == company_id, ImportBatch.id == batch_id)
+            .with_for_update()
         )
         if batch is None or batch.expires_at <= utcnow():
             raise NotFoundError("Import introuvable ou expiré.")

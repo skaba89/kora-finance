@@ -5,6 +5,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from kora.accounting.import_purge import purge_expired_imports
 from kora.accounting.import_storage import read_staged_import, stage_import
 from kora.core.errors import ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError
 from kora.db.tenant import bind_tenant
@@ -35,6 +36,7 @@ def storage(monkeypatch: pytest.MonkeyPatch) -> dict[str, bytes]:
 
     monkeypatch.setattr(objects, "put", put)
     monkeypatch.setattr(objects, "get", get)
+    monkeypatch.setattr(objects, "delete", lambda key: blobs.pop(key, None))
     return blobs
 
 
@@ -95,3 +97,55 @@ def test_failed_upload_rolls_back(
         stage_import(user, company.id, b"data", file_format="csv", source_currency="GNF")
     bind_tenant(db, company.id)
     assert db.scalar(select(ImportBatch.id)) is None
+
+
+def test_purge_expired_preserves_active_and_other_tenants(
+    db: Session, make_company: MakeCompany, storage: dict[str, bytes]
+) -> None:
+    mine, other = make_company(), make_company()
+    user = db.get_one(User, mine.owner.id)
+    other_user = db.get_one(User, other.owner.id)
+    expired = stage_import(user, mine.id, b"expired", file_format="csv", source_currency="GNF")
+    active = stage_import(user, mine.id, b"active", file_format="csv", source_currency="GNF")
+    unrelated = stage_import(
+        other_user, other.id, b"expired", file_format="csv", source_currency="GNF"
+    )
+    for company_id, batch_id in ((mine.id, expired.id), (other.id, unrelated.id)):
+        bind_tenant(db, company_id)
+        batch = db.get_one(ImportBatch, batch_id)
+        batch.created_at = utcnow() - timedelta(days=2)
+        batch.expires_at = utcnow() - timedelta(days=1)
+        db.commit()
+    assert purge_expired_imports(mine.id) == 1
+    assert purge_expired_imports(mine.id) == 0
+    assert f"imports/{mine.id}/{expired.id}" not in storage
+    assert f"imports/{other.id}/{unrelated.id}" in storage
+    assert read_staged_import(user, mine.id, active.id) == b"active"
+    replacement = stage_import(user, mine.id, b"expired", file_format="csv", source_currency="GNF")
+    assert replacement.id != expired.id
+
+
+def test_purge_storage_failure_is_retryable(
+    db: Session,
+    make_company: MakeCompany,
+    storage: dict[str, bytes],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    company = make_company()
+    user = db.get_one(User, company.owner.id)
+    staged = stage_import(user, company.id, b"expired", file_format="csv", source_currency="GNF")
+    bind_tenant(db, company.id)
+    batch = db.get_one(ImportBatch, staged.id)
+    batch.created_at = utcnow() - timedelta(days=2)
+    batch.expires_at = utcnow() - timedelta(days=1)
+    db.commit()
+
+    def fail(key: str) -> None:
+        raise ServiceUnavailableError("Stockage indisponible.")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(objects, "delete", fail)
+        with pytest.raises(ServiceUnavailableError):
+            purge_expired_imports(company.id)
+    assert f"imports/{company.id}/{staged.id}" in storage
+    assert purge_expired_imports(company.id) == 1
