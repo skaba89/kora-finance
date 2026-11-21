@@ -55,8 +55,8 @@ export default async function FiscalYearsPage({
           const period = `${formatDate(year.start_date, locale)} – ${formatDate(year.end_date, locale)}`;
           return (
             <Card key={year.id} role="region" aria-label={period}>
-              <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-                <CardTitle className="text-base">{period}</CardTitle>
+              <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 border-b pb-4">
+                <CardTitle className="text-base tabular-nums">{period}</CardTitle>
                 <Badge variant={year.status === "OPEN" ? "secondary" : "outline"}>
                   {year.status === "OPEN" ? f.OPEN : f.CLOSED}
                 </Badge>

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { ActionForm } from "@/components/forms/action-form";
 import { Field, SelectField } from "@/components/forms/field";
 import { PageHeader } from "@/components/page-header";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateCompanyAction } from "@/lib/actions/companies";
 import { can, getCompany } from "@/lib/dal";
 import { getDictionary } from "@/lib/i18n/server";
@@ -34,12 +35,15 @@ export default async function CompanySettingsPage({
   return (
     <>
       <PageHeader title={t.companies.identity} />
+      <Card className="max-w-3xl">
+        <CardHeader><CardTitle>{company.legal_name}</CardTitle></CardHeader>
+        <CardContent>
       {editable ? (
         <ActionForm
           action={updateCompanyAction.bind(null, companyId)}
           submitLabel={t.common.save}
           pendingLabel={t.common.pending}
-          className="max-w-xl"
+          className="min-w-0"
         >
           <Field label={t.companies.legalName} name="legal_name" defaultValue={company.legal_name} required maxLength={200} />
           <SelectField
@@ -63,15 +67,17 @@ export default async function CompanySettingsPage({
           </p>
         </ActionForm>
       ) : (
-        <dl className="grid max-w-xl grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+        <dl className="divide-y text-sm">
           {rows.map(([label, value]) => (
-            <div key={label} className="contents">
+            <div key={label} className="grid gap-1 py-3 sm:grid-cols-2 sm:gap-4">
               <dt className="text-muted-foreground">{label}</dt>
-              <dd>{value ?? "—"}</dd>
+              <dd className="min-w-0 wrap-anywhere font-medium">{value ?? "—"}</dd>
             </div>
           ))}
         </dl>
       )}
+        </CardContent>
+      </Card>
     </>
   );
 }

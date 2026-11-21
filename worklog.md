@@ -2245,3 +2245,9 @@ du scénario et de l'horizon. Aucun changement des calculs ni de l'API.
 Navigation, cartes de synthèse, densité persistante, DataTable et fiches mobiles
 N/N-1. Recette Playwright étendue au TFT et aux captures des trois états. Les
 totaux proviennent de l'API et les exports, contrôles et droits sont conservés.
+
+## UX Premium — lot 8 : administration et paramètres
+
+Tables harmonisées, pagination et densité du plan comptable, fiche entreprise
+responsive, exercices et contraste de l'alerte fiscale. Le parcours E2E
+existant vérifie la pagination et les restrictions du comptable invité.

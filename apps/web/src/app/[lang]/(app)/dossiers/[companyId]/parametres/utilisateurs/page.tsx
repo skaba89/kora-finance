@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { DataTable } from "@/components/data-table";
 
 import { ActionForm } from "@/components/forms/action-form";
 import { Field, SelectField } from "@/components/forms/field";
 import { InlineAction } from "@/components/forms/inline-action";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
   addMemberAction,
@@ -43,7 +44,7 @@ export default async function MembersPage({
   return (
     <>
       <PageHeader title={t.members.title} subtitle={t.members.subtitle} />
-      <Table>
+      <DataTable label={t.members.title}>
         <TableHeader>
           <TableRow>
             <TableHead>{t.members.name}</TableHead>
@@ -67,7 +68,7 @@ export default async function MembersPage({
                     submitLabel={t.members.changeRole}
                     pendingLabel={t.common.pending}
                     variant="outline"
-                    className="flex-row items-end gap-2"
+                    className="flex-row flex-wrap items-end gap-2"
                   >
                     <SelectField
                       label={t.members.role}
@@ -95,7 +96,7 @@ export default async function MembersPage({
             </TableRow>
           ))}
         </TableBody>
-      </Table>
+      </DataTable>
 
       <section className="mt-8" aria-labelledby="invitations-titre">
         <h2 id="invitations-titre" className="mb-2 text-base font-semibold">
@@ -104,7 +105,7 @@ export default async function MembersPage({
         {invitations.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t.members.invitationsEmpty}</p>
         ) : (
-          <Table>
+          <DataTable label={`${t.members.invitationsTitle} — ${t.members.email}`}>
             <TableHeader>
               <TableRow>
                 <TableHead>{t.members.email}</TableHead>
@@ -154,7 +155,7 @@ export default async function MembersPage({
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </DataTable>
         )}
       </section>
 
