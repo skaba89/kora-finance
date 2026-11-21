@@ -19,10 +19,10 @@ import { getDictionary } from "@/lib/i18n/server";
 async function UserMenu() {
   const [{ t }, user] = await Promise.all([getDictionary(), getCurrentUser()]);
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
-      <Link href="/compte/securite" className="hover:bg-accent flex min-h-11 min-w-0 max-w-full items-center gap-2 rounded-lg px-2 text-sm" title={t.nav.security}>
+    <div className="flex min-w-0 items-center gap-1 sm:gap-3">
+      <Link href="/compte/securite" className="hover:bg-accent flex min-h-11 min-w-11 max-w-full items-center justify-center gap-2 rounded-lg px-2 text-sm" title={t.nav.security}>
         <UserRound aria-hidden className="text-primary size-5 shrink-0" />
-        <span className="max-w-36 truncate">{user.full_name}</span>
+        <span className="sr-only sm:not-sr-only sm:max-w-36 sm:truncate">{user.full_name}</span>
       </Link>
       <LogoutButton action={logoutAction} userId={user.id} label={t.nav.logout} confirmTemplate={t.offline.logoutConfirm} />
     </div>
@@ -81,7 +81,7 @@ export default async function AppLayout({ children }: LayoutProps<"/[lang]">) {
       <Suspense>
         <OfflineSyncSlot />
       </Suspense>
-      <div className="mx-auto flex w-full min-w-0 max-w-[1536px] flex-1 flex-col px-4 py-6 lg:px-8">
+      <div className="mx-auto flex w-full min-w-0 max-w-[1536px] flex-1 flex-col px-4 py-4 md:py-6 lg:px-8">
         <FlashProvider closeLabel={t.common.close}>{children}</FlashProvider>
       </div>
     </div>

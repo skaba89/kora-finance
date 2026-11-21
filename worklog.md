@@ -2290,3 +2290,10 @@ des pages est bloquante. Aucun changement du métier, des API ou des permissions
 CI #302 verte : 72/72 mesures financières sans débordement global. Garde
 bloquante sur ces cas et extension à neuf écrans administratifs (baseline).
 Rapport CI et limites consignés dans AUDIT_KORA_PREMIUM.md.
+
+## UX Premium — lot 14 : en-tête mobile compact
+
+PR #132 fusionnée, CI #304 verte et 126 mesures sans écart. Garde étendue
+à tous les écrans de la recette. En-tête mobile compact, accès compte et
+déconnexion tactiles et nommés, espacement du dossier réduit. Contrôle de
+hauteur et disponibilité des commandes dans Playwright ; alertes conservées.
