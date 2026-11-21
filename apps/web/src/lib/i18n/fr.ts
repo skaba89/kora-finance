@@ -33,6 +33,7 @@ export const fr = {
     pageSize: "Taille de page",
     rowsPerPage: "{count} lignes par page",
     density: "Densité du tableau",
+    optionalColumns: "Colonnes facultatives",
     comfortable: "Confortable",
     compact: "Compacte",
     reset: "Réinitialiser les filtres",

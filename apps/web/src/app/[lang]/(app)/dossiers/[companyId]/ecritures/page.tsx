@@ -14,7 +14,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { getDictionary } from "@/lib/i18n/server";
 import { pickFiscalYear } from "@/lib/periods";
-import { PAGE_SIZES, tablePreferences, tableRange } from "@/lib/table-preferences";
+import { optionalColumns, PAGE_SIZES, tablePreferences, tableRange } from "@/lib/table-preferences";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getDictionary();
@@ -22,6 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const STATUSES = ["DRAFT", "POSTED"] as const;
+const OPTIONAL_COLUMNS = ["reference", "statut"] as const;
 
 function one(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -39,6 +40,9 @@ export default async function EntriesPage({
   const statusParam = one(query.statut);
   const status = STATUSES.find((s) => s === statusParam);
   const { page, size, density, offset } = tablePreferences(query);
+  const columns = optionalColumns(query, OPTIONAL_COLUMNS);
+  const showReference = columns.includes("reference");
+  const showStatus = columns.includes("statut");
 
   const [{ t, locale }, company, journals, years] = await Promise.all([
     getDictionary(),
@@ -68,6 +72,8 @@ export default async function EntriesPage({
     if (status) search.set("statut", status);
     search.set("taille", String(size));
     search.set("densite", density);
+    search.set("colonnes", "1");
+    columns.forEach(column => search.append("colonne", column));
     search.set("page", String(target));
     return `?${search.toString()}`;
   };
@@ -134,6 +140,14 @@ export default async function EntriesPage({
           <option value="comfortable">{t.table.comfortable}</option>
           <option value="compact">{t.table.compact}</option>
         </select>
+        <fieldset className="border-border w-full min-w-0 rounded-lg border px-3 sm:w-auto">
+          <legend className="text-muted-foreground px-1 text-xs font-medium">{t.table.optionalColumns}</legend>
+          <input type="hidden" name="colonnes" value="1" />
+          <div className="flex flex-wrap gap-x-4">
+            <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="colonne" value="reference" defaultChecked={showReference} className="accent-primary size-4" />{t.entries.reference}</label>
+            <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="colonne" value="statut" defaultChecked={showStatus} className="accent-primary size-4" />{t.common.status}</label>
+          </div>
+        </fieldset>
         <Button type="submit" className="min-h-11">
           {t.common.filter}
         </Button>
@@ -165,10 +179,10 @@ export default async function EntriesPage({
             <TableRow>
               <TableHead aria-sort="descending">{t.entries.date}</TableHead>
               <TableHead>{t.entries.journal}</TableHead>
-              <TableHead className="hidden sm:table-cell">{t.entries.reference}</TableHead>
+              {showReference && <TableHead className="hidden sm:table-cell">{t.entries.reference}</TableHead>}
               <TableHead>{t.entries.label}</TableHead>
               <TableHead className="text-right">{t.entries.amount}</TableHead>
-              <TableHead className="hidden sm:table-cell">{t.common.status}</TableHead>
+              {showStatus && <TableHead className="hidden sm:table-cell">{t.common.status}</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -179,24 +193,24 @@ export default async function EntriesPage({
                   {entry.journal_code}
                   {entry.number !== null ? <span className="text-muted-foreground"> {entry.number}</span> : null}
                 </TableCell>
-                <TableCell className="hidden sm:table-cell">{entry.reference}</TableCell>
+                {showReference && <TableCell className="hidden sm:table-cell">{entry.reference}</TableCell>}
                 <TableCell className="whitespace-normal">
                   <Link href={`${base}/${entry.id}`} className="underline-offset-4 hover:underline">
                     {entry.label}
                   </Link>
-                  <div className="mt-1 flex flex-wrap items-center gap-1 sm:hidden">
-                    <Badge variant={entry.status === "POSTED" ? "secondary" : "outline"}>{t.entries.statuses[entry.status]}</Badge>
-                    {entry.reference && <span className="text-muted-foreground wrap-anywhere text-xs">{entry.reference}</span>}
-                  </div>
+                  {(showStatus || (showReference && entry.reference)) && <div className="mt-1 flex flex-wrap items-center gap-1 sm:hidden">
+                    {showStatus && <Badge variant={entry.status === "POSTED" ? "secondary" : "outline"}>{t.entries.statuses[entry.status]}</Badge>}
+                    {showReference && entry.reference && <span className="text-muted-foreground wrap-anywhere text-xs">{entry.reference}</span>}
+                  </div>}
                 </TableCell>
                 <TableCell className="text-right whitespace-nowrap tabular-nums">
                   {formatMoney(BigInt(entry.total_debit), currency, locale)}
                 </TableCell>
-                <TableCell className="hidden sm:table-cell">
+                {showStatus && <TableCell className="hidden sm:table-cell">
                   <Badge variant={entry.status === "POSTED" ? "secondary" : "outline"}>
                     {t.entries.statuses[entry.status]}
                   </Badge>
-                </TableCell>
+                </TableCell>}
               </TableRow>
             ))}
           </TableBody>

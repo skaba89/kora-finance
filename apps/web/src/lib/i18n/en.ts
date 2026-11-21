@@ -35,6 +35,7 @@ export const en: typeof fr = {
     pageSize: "Page size",
     rowsPerPage: "{count} rows per page",
     density: "Table density",
+    optionalColumns: "Optional columns",
     comfortable: "Comfortable",
     compact: "Compact",
     reset: "Reset filters",
