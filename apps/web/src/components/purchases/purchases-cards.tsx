@@ -114,6 +114,7 @@ export function PurchasesCreateDocumentCard({
             <SelectField
               label={t.purchases.partnerLabel}
               name="partner_id"
+              id="achat-document-fournisseur"
               required
               options={[
                 { value: "", label: t.purchases.partnerPlaceholder },
@@ -123,7 +124,7 @@ export function PurchasesCreateDocumentCard({
                 })),
               ]}
             />
-            <Field label={t.purchases.reference} name="reference" />
+            <Field label={t.purchases.reference} name="reference" id="achat-document-reference" />
           </div>
           {[1, 2, 3].map((slot) => (
             <fieldset key={slot} className="grid gap-3 rounded-md border p-3 sm:grid-cols-6">

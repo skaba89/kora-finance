@@ -11,8 +11,13 @@ test("achats : brouillon fournisseur, préférences du tableau et accès à l'é
   await expect(page.getByRole("row").filter({ hasText: "Fournisseur de Madina" })).toBeVisible();
   await page.goto(`/dossiers/${id}/achats`);
   await page.getByRole("link", { name: "Nouvelle facture d'achat (brouillon)" }).click();
-  await page.getByRole("combobox", { name: "Fournisseur", exact: true }).selectOption({ label: "Fournisseur de Madina" });
-  const line = page.getByRole("group", { name: "Ligne 1", exact: true });
+  const create = page.locator("#nouvel-achat");
+  const supplier = create.getByRole("combobox", { name: "Fournisseur", exact: true });
+  await expect(supplier).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Tier fournisseur", exact: true })).toBeVisible();
+  await expect(page.locator("#achat-document-fournisseur")).toHaveCount(1);
+  await supplier.selectOption({ label: "Fournisseur de Madina" });
+  const line = create.getByRole("group", { name: "Ligne 1", exact: true });
   await line.getByLabel("Désignation").fill("Marchandises");
   await line.getByLabel("Quantité").fill("1");
   await line.getByLabel("Prix unitaire HT (unités)").fill("850000");

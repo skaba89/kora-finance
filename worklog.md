@@ -14,6 +14,13 @@ Scénario E2E de création fournisseur/brouillon, montant, filtre, reset,
 Validation locale : ESLint, typecheck, Vitest 90/90 et build Next 115/115 OK.
 Backend et Playwright intégrés à valider en CI (Docker indisponible localement).
 
+Correctif PR #120 : CI Playwright 72/74 ; le sélecteur Fournisseur du
+brouillon n'avait pas de nom accessible propre car `champ-partner_id` était
+dupliqué avec le formulaire d'avance. Identifiants uniques explicites pour
+les champs partagés des documents, règlements, avances et actions de ligne ;
+noms de champs transmis aux Server Actions inchangés. Scénario renforcé avec
+vérification des deux sélecteurs accessibles avant saisie, sans retirer de test.
+
 ## 2026-11-21 — Kora Premium, lot 4B : balance, grand livre, lettrage
 
 Base `597e173` (PR #117 intégrée). DataTable avec en-tête fixe complet,

@@ -114,6 +114,7 @@ export function PurchasesPaymentsTable({
                     <SelectField
                       label={t.purchases.paymentDoc}
                       name="document_id"
+                      id={`achat-affectation-facture-${payment.id}`}
                       required
                       options={documents.items
                         .filter(
@@ -130,6 +131,7 @@ export function PurchasesPaymentsTable({
                     <Field
                       label={t.purchases.allocateTarget}
                       name="target"
+                      id={`achat-affectation-cible-${payment.id}`}
                       type="number"
                       min="1"
                       step="1"
@@ -153,6 +155,7 @@ export function PurchasesPaymentsTable({
                     <Field
                       label={t.purchases.refundAmount}
                       name="amount"
+                      id={`achat-remboursement-montant-${payment.id}`}
                       type="number"
                       min="1"
                       step="1"
@@ -161,6 +164,7 @@ export function PurchasesPaymentsTable({
                     <Field
                       label={t.purchases.paymentDate}
                       name="refunded_on"
+                      id={`achat-remboursement-date-${payment.id}`}
                       type="date"
                       required
                     />
