@@ -2239,3 +2239,9 @@ avec valeurs précises accessibles et avertissement sur les échelles distinctes
 DataTable et montants journaliers formatés dans la devise du dossier. Vitest
 vérifie les montants au-delà de MAX_SAFE_INTEGER et Playwright couvre le choix
 du scénario et de l'horizon. Aucun changement des calculs ni de l'API.
+
+## UX Premium — lot 7 : états financiers SYSCOHADA
+
+Navigation, cartes de synthèse, densité persistante, DataTable et fiches mobiles
+N/N-1. Recette Playwright étendue au TFT et aux captures des trois états. Les
+totaux proviennent de l'API et les exports, contrôles et droits sont conservés.

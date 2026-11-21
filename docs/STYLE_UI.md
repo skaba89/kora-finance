@@ -280,3 +280,12 @@ hebdomadaire distingue ses deux échelles et expose les trois montants exacts
 par semaine via un sélecteur accessible. Les tables par compte, journalière et
 des instantanés utilisent DataTable ; le détail journalier formate les montants
 en BigInt. Les requêtes, droits, exports et hypothèses métier restent inchangés.
+
+### Lot 7 — états financiers
+
+Navigation Bilan / Résultat / Flux avec état courant manifeste et cibles tactiles.
+KpiCard reprend sans recalcul les totaux BZ, DZ, XB et le résultat, ainsi que les
+soldes du TFT. DataTable apporte en-têtes fixes et densité conservée dans l'URL ;
+les fiches mobiles distinguent explicitement N et N-1. Les avertissements de
+cohérence et la validation expert-comptable, les exports officiels, les calculs
+et la précision BigInt sont inchangés.
