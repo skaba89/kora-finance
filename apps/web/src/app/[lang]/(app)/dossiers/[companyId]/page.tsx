@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowDownLeft, ArrowUpRight, Banknote, ClipboardPlus, FilePlus2, ReceiptText, Wallet, WifiOff, ChartNoAxesCombined, CircleCheck, CircleDashed, type LucideIcon } from "lucide-react";
 
 import { MonthlyChart } from "@/components/dashboard/monthly-chart";
+import { KpiCard } from "@/components/kpi-card";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -25,44 +27,18 @@ import { cn } from "@/lib/utils";
 
 type Operation = components["schemas"]["Operation"];
 
-const QUICK: Operation[] = ["VENTE_COMPTANT", "ACHAT_COMPTANT", "FACTURE_CLIENT", "ENCAISSEMENT_CLIENT", "FACTURE_FOURNISSEUR", "PAIEMENT_FOURNISSEUR"];
+const QUICK: { operation: Operation; icon: LucideIcon }[] = [
+  { operation: "VENTE_COMPTANT", icon: ArrowDownLeft },
+  { operation: "ACHAT_COMPTANT", icon: ArrowUpRight },
+  { operation: "FACTURE_CLIENT", icon: FilePlus2 },
+  { operation: "ENCAISSEMENT_CLIENT", icon: Banknote },
+  { operation: "FACTURE_FOURNISSEUR", icon: ReceiptText },
+  { operation: "PAIEMENT_FOURNISSEUR", icon: Wallet },
+];
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getDictionary();
   return { title: t.dashboard.title };
-}
-
-function Tile({
-  label,
-  value,
-  hint,
-  href,
-  tone = "default",
-  primary = false,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  href?: string;
-  tone?: "default" | "negative";
-  primary?: boolean;
-}) {
-  const body = (
-    <Card className={cn("h-full", primary && "border-primary/30 bg-primary/5", href && "hover:bg-muted/50 transition-colors")}>
-      <CardHeader className="gap-1">
-        <p className="text-muted-foreground text-sm">{label}</p>
-        <p className={cn("text-2xl font-semibold tracking-tight tabular-nums", primary && "text-primary text-3xl", tone === "negative" && "text-destructive")}>{value}</p>
-        {hint ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
-      </CardHeader>
-    </Card>
-  );
-  return href ? (
-    <Link href={href} className="block h-full">
-      {body}
-    </Link>
-  ) : (
-    body
-  );
 }
 
 export default async function DashboardPage({ params }: PageProps<"/[lang]/dossiers/[companyId]">) {
@@ -144,56 +120,63 @@ export default async function DashboardPage({ params }: PageProps<"/[lang]/dossi
         ) : null}
 
         {dashboard && fy ? (
-          <section aria-label={d.title} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Tile
+          <section aria-label={d.title} className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <KpiCard
               primary
+              icon={Wallet}
               href={can(company, "treasury:read") ? `${base}/tresorerie` : undefined}
               label={d.treasury}
               value={money(dashboard.treasury_total)}
               hint={d.treasuryHint}
-              tone={BigInt(dashboard.treasury_total) < 0n ? "negative" : "default"}
+              negative={BigInt(dashboard.treasury_total) < 0n}
             />
-            <Tile
+            <KpiCard
+              icon={ArrowDownLeft}
               label={`${d.revenue} — ${d.thisMonth}`}
               value={money(dashboard.month.revenue)}
               hint={interpolate(d.yearToDate, { amount: money(dashboard.year_to_date.revenue) })}
             />
-            <Tile
+            <KpiCard
+              icon={ArrowUpRight}
               label={`${d.expenses} — ${d.thisMonth}`}
               value={money(dashboard.month.expenses)}
               hint={interpolate(d.yearToDate, { amount: money(dashboard.year_to_date.expenses) })}
             />
-            <Tile
+            <KpiCard
+              icon={ChartNoAxesCombined}
               label={d.result}
               value={money(dashboard.year_to_date.result)}
               hint={d.resultHint}
-              tone={BigInt(dashboard.year_to_date.result) < 0n ? "negative" : "default"}
+              negative={BigInt(dashboard.year_to_date.result) < 0n}
               href={`${base}/etats-financiers`}
             />
-            <Tile label={d.receivables} value={money(dashboard.receivables)} href={`${base}/lettrage`} />
-            <Tile label={d.payables} value={money(dashboard.payables)} href={`${base}/lettrage`} />
+            <KpiCard icon={Banknote} label={d.receivables} value={money(dashboard.receivables)} href={`${base}/lettrage`} />
+            <KpiCard icon={ReceiptText} label={d.payables} value={money(dashboard.payables)} href={`${base}/lettrage`} />
           </section>
         ) : null}
 
         {canWrite ? (
-          <section aria-labelledby="actions-rapides" className="flex flex-col gap-2">
-            <h2 id="actions-rapides" className="font-medium">
+          <section aria-labelledby="actions-rapides" className="flex flex-col gap-3">
+            <h2 id="actions-rapides" className="text-base font-semibold tracking-tight">
               {d.quickTitle}
             </h2>
-            <div className="flex flex-wrap gap-2">
-              {QUICK.map((op) => (
-                <Link
-                  key={op}
-                  href={`${base}/saisie-guidee?operation=${op}`}
-                  className="border-input hover:bg-muted rounded-md border px-3 py-2 text-sm"
-                >
-                  {t.guided.operations[op].title}
-                </Link>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {QUICK.map(({ operation: op, icon: Icon }) => (
+                  <Link
+                    key={op}
+                    href={`${base}/saisie-guidee?operation=${op}`}
+                    className="border-border bg-card hover:bg-accent flex min-h-12 min-w-0 items-center gap-3 rounded-lg border px-3 py-2 text-sm font-medium"
+                  >
+                    <Icon aria-hidden className="text-primary size-4 shrink-0" />
+                    {t.guided.operations[op].title}
+                  </Link>
               ))}
-              <Link href={`${base}/ecritures/nouvelle`} className="text-muted-foreground hover:bg-muted rounded-md px-3 py-2 text-sm">
+              <Link href={`${base}/ecritures/nouvelle`} className="text-muted-foreground hover:bg-accent flex min-h-12 items-center gap-3 rounded-lg px-3 py-2 text-sm">
+                <ClipboardPlus aria-hidden className="size-4 shrink-0" />
                 {d.newEntry}
               </Link>
-              <Link href={`${base}/hors-connexion`} className="text-muted-foreground hover:bg-muted rounded-md px-3 py-2 text-sm">
+              <Link href={`${base}/hors-connexion`} className="text-muted-foreground hover:bg-accent flex min-h-12 items-center gap-3 rounded-lg px-3 py-2 text-sm">
+                <WifiOff aria-hidden className="size-4 shrink-0" />
                 {d.offline}
               </Link>
             </div>
@@ -201,7 +184,7 @@ export default async function DashboardPage({ params }: PageProps<"/[lang]/dossi
         ) : null}
 
         {dashboard && fy ? (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">{d.chartTitle}</CardTitle>
@@ -225,11 +208,11 @@ export default async function DashboardPage({ params }: PageProps<"/[lang]/dossi
                 ) : (
                   <ul className="flex flex-col gap-2 text-sm">
                     {dashboard.treasury.map((a) => (
-                      <li key={a.account_id} className="flex items-baseline justify-between gap-3">
-                        <span>
+                      <li key={a.account_id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b pb-2 last:border-b-0 last:pb-0">
+                        <span className="min-w-0 wrap-anywhere">
                           <span className="font-mono">{a.number}</span> {a.label}
                         </span>
-                        <span className={cn("tabular-nums whitespace-nowrap", BigInt(a.balance) < 0n && "text-destructive")}>
+                        <span className={cn("ml-auto min-w-0 wrap-anywhere text-right font-medium tabular-nums", BigInt(a.balance) < 0n && "text-destructive")}>
                           {money(a.balance)}
                         </span>
                       </li>
@@ -241,7 +224,7 @@ export default async function DashboardPage({ params }: PageProps<"/[lang]/dossi
           </div>
         ) : null}
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid min-w-0 gap-4 xl:grid-cols-2">
           {recent ? (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-2">
@@ -256,14 +239,14 @@ export default async function DashboardPage({ params }: PageProps<"/[lang]/dossi
                 ) : (
                   <ul className="flex flex-col gap-2 text-sm">
                     {recent.items.map((e) => (
-                      <li key={e.id} className="flex items-baseline justify-between gap-3">
-                        <Link href={`${base}/ecritures/${e.id}`} className="min-w-0 truncate underline-offset-4 hover:underline">
+                      <li key={e.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b pb-2 last:border-b-0 last:pb-0">
+                        <Link href={`${base}/ecritures/${e.id}`} className="min-w-0 wrap-anywhere underline-offset-4 hover:underline">
                           {formatDate(e.entry_date, locale)} · {e.journal_code}
                           {e.number ? ` n° ${e.number}` : ""} — {e.label}
                         </Link>
-                        <span className="flex shrink-0 items-center gap-2">
+                        <span className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
                           {e.status === "DRAFT" ? <Badge variant="outline">{d.draft}</Badge> : null}
-                          <span className="tabular-nums">{money(e.total_debit)}</span>
+                          <span className="wrap-anywhere text-right font-medium tabular-nums">{money(e.total_debit)}</span>
                         </span>
                       </li>
                     ))}
@@ -281,8 +264,9 @@ export default async function DashboardPage({ params }: PageProps<"/[lang]/dossi
               <CardContent>
                 <ul className="flex flex-col gap-3">
                   {steps.map((step) => (
-                    <li key={step.href} className="flex items-start justify-between gap-3">
-                      <Link href={step.href} className="text-sm underline-offset-4 hover:underline">
+                    <li key={step.href} className="flex items-start justify-between gap-3 border-b pb-3 last:border-b-0 last:pb-0">
+                      <Link href={step.href} className="flex min-w-0 items-start gap-2 text-sm underline-offset-4 hover:underline">
+                        {step.done ? <CircleCheck aria-hidden className="text-success mt-0.5 size-4 shrink-0" /> : <CircleDashed aria-hidden className="text-muted-foreground mt-0.5 size-4 shrink-0" />}
                         {step.label}
                       </Link>
                       <Badge variant={step.done ? "secondary" : "outline"}>{step.done ? d.done : d.todo}</Badge>

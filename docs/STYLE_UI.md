@@ -194,3 +194,21 @@ navigation et focalise la recherche ; le repli efface le filtre. Par défaut les
 liens restent visibles, y compris sur mobile. Aucun stockage de données ni
 changement des permissions. Le nom du dossier et le rôle restent accessibles
 en mode compact. Captures des deux états dans le rapport Playwright desktop/mobile.
+
+### Lot 3A — tableau de bord financier
+
+`KpiCard` reçoit une valeur déjà formatée (aucun calcul ni arrondi), un libellé,
+une icône décorative, un contexte et éventuellement un lien autorisé. Les six
+indicateurs existants sont conservés : trésorerie, CA, charges, résultat, créances,
+dettes. Grille 1/2/3 colonnes, montants tabulaires et retours à la ligne si nécessaire.
+La trésorerie se distingue visuellement ; les montants négatifs conservent leur
+signe et leur teinte sémantique. Les raccourcis métier ont des cibles tactiles
+de 48 px ; comptes et écritures restent lisibles sans troncature des montants.
+Le graphique conserve ses séries et l'échelle BigInt ; grille de lecture,
+activation au clavier/toucher et tableau défilant localement.
+
+Le scénario E2E comptable existant vérifie toujours les valeurs après vente
+validée et dépense brouillon, puis le débordement global aux six résolutions
+360, 390, 768, 1024, 1440 et 1920 px, avec captures. Aucun changement d'API,
+de devise, de calcul, de rôle ou d'exercice. Le lot 2C est détaillé dans
+`docs/UX_TOPBAR.md`.
