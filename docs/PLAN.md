@@ -285,6 +285,18 @@ Les adaptateurs FEC/Excel, limites de taille en octets et décodage des fichiers
 staging isolé, exécution asynchrone, idempotence et validation humaine sont
 les incréments suivants ; aucun endpoint d'import ni écriture n'est ajouté en 5A.
 
+**5B — Précontrôle FEC textuel.** Profil limité à 18 colonnes dans l'ordre
+documenté par `FEC_COLUMNS`, UTF-8 avec BOM facultatif, tabulation ou barre
+verticale choisie explicitement, sans échappement de séparateur. Limite de
+32 Mio et de 100 000 lignes. Dates `AAAAMMJJ`, montants positifs ou nuls,
+virgule ou point décimal, conversion exacte en unités mineures selon l'échelle
+choisie (0 ou 2), sans arrondi. Les sept champs normalisés réutilisent le
+contrôle 5A, dont le libellé identique par écriture. Les onze autres champs
+ne sont pas validés et ne sont pas importés. Ce profil ne certifie pas la
+conformité d'un FEC ; correspondances SYSCOHADA, devises, métadonnées et
+conservation des pièces nécessitent un contrôle métier avant tout import.
+Excel, staging et exécution restent à livrer.
+
 ## Phase 6 — Dossier de financement
 Pack généré en un clic, lien signé, révocable et expirable, journal des consultations.
 - Un lien révoqué renvoie 410 et ne donne plus accès à aucun document.

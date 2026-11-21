@@ -3,6 +3,15 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-21 — Phase 5B : précontrôle FEC textuel
+
+PR #135 fusionnée (`86ff070`). Adaptateur FEC strict avec taille maximale,
+encodage et séparateur explicites, conversion entière sans arrondi, réutilisation
+du contrôle CSV et erreurs sans données source. Huit tests purs exécutés,
+dont les quatre tests de non-régression CSV. Aucune API, migration, écriture
+ou certification réglementaire. Ruff, mypy et suites intégrées à valider en CI.
+Suite : Excel puis staging et contrôles métier isolés par tenant.
+
 ## 2026-11-21 — Kora Premium, lot 5B : achats et fournisseurs
 
 Base `0969103` (PR #118 et #119 intégrées). Navigation par ancres,
