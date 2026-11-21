@@ -25,9 +25,7 @@ def _catalog(session: Session, company_id: uuid.UUID) -> ImportCatalog:
     accounts = session.execute(
         select(Account.number, Account.is_active).where(Account.tenant_id == company_id)
     ).all()
-    years = session.execute(
-        select(FiscalYear).where(FiscalYear.tenant_id == company_id)
-    ).scalars()
+    years = session.execute(select(FiscalYear).where(FiscalYear.tenant_id == company_id)).scalars()
     return ImportCatalog(
         journals={code: active for code, active in journals},
         accounts={number: active for number, active in accounts},
