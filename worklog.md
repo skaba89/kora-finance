@@ -3,6 +3,13 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-21 — Phase 5C : précontrôle Excel normalisé
+
+PR #136 fusionnée (`7a84471`), CI #315 verte. Adaptateur XLSX en lecture seule,
+contrôle ZIP/XML borné, refus des formules et des types ambigus, aucune
+conversion flottante. Douze tests purs exécutés (CSV, FEC, XLSX). La CI
+intégrée reste obligatoire ; aucun endpoint ni changement de persistance.
+
 ## 2026-11-21 — Phase 5B : précontrôle FEC textuel
 
 PR #135 fusionnée (`86ff070`). Adaptateur FEC strict avec taille maximale,
