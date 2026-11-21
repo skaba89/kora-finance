@@ -10,6 +10,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import type { Locale } from "@/lib/i18n/config";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { cn } from "@/lib/utils";
+import type { TableDensity } from "@/lib/table-preferences";
 
 export type OpenLine = {
   line_id: string;
@@ -32,6 +33,7 @@ export function LetteringForm({
   currency,
   locale,
   canManage,
+  density = "comfortable",
   labels,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
@@ -39,6 +41,7 @@ export function LetteringForm({
   currency: string;
   locale: Locale;
   canManage: boolean;
+  density?: TableDensity;
   labels: {
     selection: string;
     selected: string;
@@ -76,7 +79,7 @@ export function LetteringForm({
       }}
       className="flex flex-col gap-4"
     >
-      <ul className="divide-y rounded-md border">
+      <ul className="divide-y rounded-xl border bg-card">
         {lines.map((line) => {
           const debit = BigInt(line.debit);
           const amount = debit > 0n ? debit : BigInt(line.credit);
@@ -86,7 +89,7 @@ export function LetteringForm({
           });
           return (
             <li key={line.line_id}>
-              <label className={cn("flex items-start gap-3 p-3 text-sm", canManage && "cursor-pointer")}>
+              <label className={cn("flex min-w-0 flex-wrap items-start gap-3 px-3 text-sm", density === "compact" ? "py-2" : "py-3", canManage && "hover:bg-accent cursor-pointer", selected.has(line.line_id) && "bg-accent")}>
                 {canManage ? (
                   <input
                     type="checkbox"
@@ -95,7 +98,7 @@ export function LetteringForm({
                     checked={selected.has(line.line_id)}
                     onChange={() => toggle(line.line_id)}
                     aria-label={description}
-                    className="mt-1 size-4"
+                    className="mt-1 size-5 shrink-0 accent-primary"
                   />
                 ) : null}
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -108,7 +111,7 @@ export function LetteringForm({
                   </span>
                   <span className="break-words">{line.label}</span>
                 </span>
-                <span className="text-right whitespace-nowrap tabular-nums">
+                <span className="ml-auto max-w-full wrap-anywhere text-right font-medium tabular-nums">
                   {formatMoney(amount, currency, locale)} {debit > 0n ? labels.debitSide : labels.creditSide}
                 </span>
               </label>
@@ -118,7 +121,7 @@ export function LetteringForm({
       </ul>
 
       {canManage ? (
-        <div className="bg-muted/50 flex flex-wrap items-center justify-between gap-3 rounded-md p-3 text-sm">
+        <div className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 text-sm">
           <div aria-live="polite">
             <p className="font-medium">{interpolate(labels.selected, { count: selected.size })}</p>
             <p className={cn("tabular-nums", selected.size > 0 && net !== 0n ? "text-destructive" : "text-muted-foreground")}>
@@ -129,7 +132,7 @@ export function LetteringForm({
                   : `${labels.difference} : ${money(net)} ${net > 0n ? labels.debitSide : labels.creditSide}`}
             </p>
           </div>
-          <Button type="submit" disabled={!ready || pending}>
+          <Button type="submit" className="min-h-11" disabled={!ready || pending}>
             {pending ? labels.pending : labels.letter}
           </Button>
         </div>

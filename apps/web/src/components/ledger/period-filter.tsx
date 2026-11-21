@@ -30,14 +30,14 @@ export function PeriodFilter({
   children?: ReactNode;
 }) {
   return (
-    <form method="get" className="mb-6 flex flex-wrap items-end gap-3">
-      <div className="flex flex-col gap-1.5">
+    <form method="get" className="mb-6 flex min-w-0 flex-wrap items-end gap-3 rounded-xl border bg-card p-4">
+      <div className="flex min-w-0 max-w-full flex-col gap-1.5">
         <Label htmlFor="periode-exercice">{labels.fiscalYear}</Label>
         <select
           id="periode-exercice"
           name="exercice"
           defaultValue={yearId}
-          className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+          className="border-input bg-background min-h-11 min-w-0 max-w-full rounded-lg border px-3 text-sm"
         >
           {years.map((year) => (
             <option key={year.id} value={year.id}>
@@ -49,15 +49,15 @@ export function PeriodFilter({
       {dateFrom != null ? (
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="periode-du">{labels.from}</Label>
-          <Input id="periode-du" name="du" type="date" defaultValue={dateFrom} className="w-auto" />
+          <Input id="periode-du" name="du" type="date" defaultValue={dateFrom} className="min-h-11 w-auto max-w-full" />
         </div>
       ) : null}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="periode-au">{labels.to}</Label>
-        <Input id="periode-au" name="au" type="date" defaultValue={dateTo} className="w-auto" />
+        <Input id="periode-au" name="au" type="date" defaultValue={dateTo} className="min-h-11 w-auto max-w-full" />
       </div>
       {children}
-      <Button type="submit" variant="secondary">
+      <Button type="submit" className="min-h-11">
         {labels.show}
       </Button>
     </form>

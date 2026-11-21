@@ -4,6 +4,7 @@ import { tablePreferences, tableRange } from "./table-preferences";
 describe("préférences de tableau", () => {
   it("conserve le défaut historique", () => {
     expect(tablePreferences({})).toEqual({ size: 50, page: 1, density: "comfortable", offset: 0 });
+    expect(tablePreferences({}, 100)).toEqual({ size: 100, page: 1, density: "comfortable", offset: 0 });
   });
   it("calcule le décalage serveur selon la taille choisie", () => {
     expect(tablePreferences({ taille: "25", page: "3", densite: "compact" })).toEqual({ size: 25, page: 3, density: "compact", offset: 50 });

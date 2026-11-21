@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { createCompany, postEntry, registerAndLogin } from "./helpers";
 
-test("lettrage d'une facture client et de son règlement, puis délettrage", async ({ page }) => {
+test("lettrage d'une facture client et de son règlement, puis délettrage", async ({ page }, testInfo) => {
   await registerAndLogin(page);
   const companyId = await createCompany(page, "Imprimerie de Kaloum SARL");
   await postEntry(page, companyId, {
@@ -23,6 +23,9 @@ test("lettrage d'une facture client et de son règlement, puis délettrage", asy
   });
 
   await page.goto(`/dossiers/${companyId}/lettrage?compte=411`);
+  await page.getByRole("combobox", { name: "Densité du tableau" }).selectOption("compact");
+  await page.getByRole("button", { name: "Afficher", exact: true }).click();
+  await expect(page).toHaveURL(/densite=compact/);
   await expect(page.getByText("Solde non lettré : 0 GNF")).toBeVisible();
   const letter = page.getByRole("button", { name: "Lettrer la sélection" });
   await expect(letter).toBeDisabled();
@@ -31,6 +34,7 @@ test("lettrage d'une facture client et de son règlement, puis délettrage", asy
   await expect(letter).toBeDisabled();
   await page.getByRole("checkbox", { name: /Règlement F-12/ }).check();
   await expect(letter).toBeEnabled();
+  await testInfo.attach("lettrage-premium", { body: await page.screenshot(), contentType: "image/png" });
   await letter.click();
 
   await expect(page.getByRole("checkbox")).toHaveCount(0);

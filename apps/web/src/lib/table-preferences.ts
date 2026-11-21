@@ -1,9 +1,9 @@
 export const PAGE_SIZES = [25, 50, 100] as const;
 export type TableDensity = "comfortable" | "compact";
 
-export function tablePreferences(query: Record<string, string | string[] | undefined>) {
+export function tablePreferences(query: Record<string, string | string[] | undefined>, defaultSize: (typeof PAGE_SIZES)[number] = 50) {
   const one = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
-  const size = PAGE_SIZES.find(value => String(value) === one(query.taille)) ?? 50;
+  const size = PAGE_SIZES.find(value => String(value) === one(query.taille)) ?? defaultSize;
   const rawPage = one(query.page) ?? "1";
   const candidate = /^\d+$/.test(rawPage) ? Number(rawPage) : 1;
   const page = candidate >= 1 && Number.isSafeInteger(candidate) && Number.isSafeInteger((candidate - 1) * size) ? candidate : 1;
