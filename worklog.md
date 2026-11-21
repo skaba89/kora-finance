@@ -2265,3 +2265,9 @@ des captures supplémentaires. Aucun changement des actions ni des droits.
 Indicateur réseau, synthèse des statuts locaux, cartes de file et contrôles
 tactiles. Recette E2E étendue aux compteurs et à la perte de réseau. Aucun
 changement de l'API, du service worker ou du stockage chiffré.
+
+## UX Premium — lot 11A : accessibilité et reflow
+
+Lien d'évitement, repères main et focus clavier, cibles tactiles et recette
+Playwright sur six largeurs. Aucun changement des appels API ou des permissions.
+Audit WCAG exhaustif et mesures de performance terrain restent à effectuer.

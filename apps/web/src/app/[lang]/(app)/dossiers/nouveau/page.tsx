@@ -59,11 +59,11 @@ async function CreateCompanyForm() {
 export default async function NewCompanyPage() {
   const { t } = await getDictionary();
   return (
-    <>
+    <main id="main-content" tabIndex={-1}>
       <PageHeader title={t.companies.createTitle} subtitle={t.companies.createSubtitle} />
       <Suspense fallback={<PageSkeleton />}>
         <CreateCompanyForm />
       </Suspense>
-    </>
+    </main>
   );
 }

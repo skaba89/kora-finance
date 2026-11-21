@@ -26,6 +26,7 @@ export const fr = {
     backHome: "Retour à mes dossiers",
     expertNotice: "À valider par un expert-comptable guinéen.",
     close: "Fermer",
+    skipToContent: "Aller au contenu principal",
   },
   table: {
     pageSize: "Taille de page",

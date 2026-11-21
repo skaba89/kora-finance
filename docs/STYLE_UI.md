@@ -314,3 +314,14 @@ Indicateur réseau FR/EN, cartes d'état de la file par statut, badges sémantiq
 état vide et cibles tactiles. Le lien de saisie conserve le dossier sélectionné.
 Les montants restent tabulaires et le protocole de synchronisation, le stockage
 chiffré, l'expiration et les permissions sont inchangés.
+
+### Lot 11A — navigation accessible et recette responsive
+
+Lien d'évitement FR/EN en première position clavier et repère principal unique
+sur les parcours publics et les pages connectées habituelles. Le focus est
+restauré sur les cartes de dossiers et les champs standards gagnent une hauteur
+tactile minimale. Playwright contrôle la navigation clavier et le débordement
+global aux six largeurs 360, 390, 768, 1024, 1440 et 1920 (connexion FR/EN et
+tableau de bord), avec captures synthétiques 390/1440. Ce contrôle ciblé ne vaut
+pas certification WCAG 2.2 AA ; audit axe, contraste, lecteurs d'écran et mesures
+Core Web Vitals en conditions mobiles représentatives restent à réaliser.
