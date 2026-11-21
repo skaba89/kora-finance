@@ -1,6 +1,13 @@
 export const PAGE_SIZES = [25, 50, 100] as const;
 export type TableDensity = "comfortable" | "compact";
 
+/** Seules les colonnes facultatives déclarées peuvent être masquées. */
+export function optionalColumns<T extends string>(query: Record<string, string | string[] | undefined>, allowed: readonly T[]): T[] {
+  if (query.colonnes !== "1") return [...allowed];
+  const selected = Array.isArray(query.colonne) ? query.colonne : [query.colonne];
+  return allowed.filter(column => selected.includes(column));
+}
+
 export function tablePreferences(query: Record<string, string | string[] | undefined>, defaultSize: (typeof PAGE_SIZES)[number] = 50) {
   const one = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
   const size = PAGE_SIZES.find(value => String(value) === one(query.taille)) ?? defaultSize;

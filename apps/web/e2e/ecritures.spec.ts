@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { createCompany, fillLine, registerAndLogin } from "./helpers";
 
 test("saisie d'une écriture équilibrée, validation numérotée puis contre-passation", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
   await registerAndLogin(page);
   const companyId = await createCompany(page, "Pharmacie de Matam SARL");
 
@@ -48,6 +49,18 @@ test("saisie d'une écriture équilibrée, validation numérotée puis contre-pa
   await expect(page.getByRole("link", { name: /Ventes comptant du jour/ })).toHaveCount(2);
   await expect(page.getByRole("table", { name: "Écritures" }).getByRole("columnheader", { name: "Date" })).toHaveAttribute("aria-sort", "descending");
   await expect(page.getByRole("navigation", { name: "Pagination" })).toContainText("1–2 sur 2");
+  const columns = filters.getByRole("group", { name: "Colonnes facultatives" });
+  await columns.getByRole("checkbox", { name: "Pièce" }).uncheck();
+  await columns.getByRole("checkbox", { name: "Statut" }).uncheck();
+  await filters.getByRole("button", { name: "Filtrer" }).click();
+  const table = page.getByRole("table", { name: "Écritures" });
+  await expect(table.getByText("Z-0315", { exact: true })).toHaveCount(0);
+  await expect(table.getByText("Validée", { exact: true })).toHaveCount(0);
+  await expect(table.getByRole("columnheader", { name: "Montant" })).toBeVisible();
+  await expect(table.getByRole("row").filter({ hasText: "Ventes comptant du jour" }).last()).toContainText("1 500 000 GNF");
+  await page.reload();
+  await expect(columns.getByRole("checkbox", { name: "Pièce" })).not.toBeChecked();
+  await expect(columns.getByRole("checkbox", { name: "Statut" })).not.toBeChecked();
   await testInfo.attach("ecritures-premium", { body: await page.screenshot(), contentType: "image/png" });
   await filters.getByRole("link", { name: "Réinitialiser les filtres" }).click();
   await expect(page).toHaveURL(new RegExp(`/dossiers/${companyId}/ecritures$`));
@@ -55,6 +68,8 @@ test("saisie d'une écriture équilibrée, validation numérotée puis contre-pa
   await expect(filters.getByRole("combobox", { name: "Densité du tableau" })).toHaveValue("comfortable");
   await expect(filters.getByRole("combobox", { name: "Exercices" })).toHaveValue("");
   await expect(filters.getByRole("combobox", { name: "Statut" })).toHaveValue("");
+  await expect(columns.getByRole("checkbox", { name: "Pièce" })).toBeChecked();
+  await expect(columns.getByRole("checkbox", { name: "Statut" })).toBeChecked();
   await expect(filters.getByRole("textbox", { name: "Rechercher", exact: true })).toHaveValue("");
   await filters.getByRole("combobox", { name: "Taille de page" }).selectOption("100");
   await filters.getByRole("link", { name: "Réinitialiser les filtres" }).click();
