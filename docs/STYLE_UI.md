@@ -298,3 +298,12 @@ serveur 25/50/100, avec conservation des filtres dans l'URL. La fiche entreprise
 est une carte responsive, y compris en lecture seule. Les exercices conservent
 leurs actions de clôture et verrouillage ; l'alerte DGI s'adapte au thème sombre.
 Les permissions et mutations demeurent inchangées.
+
+### Lot 9 — audit et sécurité du compte
+
+Le journal propose une pagination serveur et une densité conservée dans l'URL.
+Les détails existants sont dépliables au clavier et sur mobile. Le résultat de
+vérification de chaîne reste annoncé et utilise les tokens sémantiques. Les
+formulaires MFA ont des identifiants distincts, et les codes de secours restent
+lisibles en thème sombre et sur petit écran. Aucun changement du protocole
+d'authentification, de la réauthentification ou des permissions.

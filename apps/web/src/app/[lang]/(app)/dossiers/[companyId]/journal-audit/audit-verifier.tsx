@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { ShieldCheck, ShieldAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { ActionState } from "@/lib/actions/state";
@@ -18,15 +19,17 @@ export function AuditVerifier({
   const [state, formAction, pending] = useActionState(action, { status: "idle" } as ActionState);
   const result = state.data as Verification | undefined;
   return (
-    <form action={formAction} className="flex flex-col items-start gap-2 sm:items-end">
-      <Button type="submit" variant="outline" disabled={pending}>
+    <form action={formAction} aria-busy={pending} className="flex flex-col items-start gap-2 sm:items-end">
+      <Button type="submit" variant="outline" disabled={pending} className="min-h-11">
+        <ShieldCheck aria-hidden className="size-4" />
         {pending ? labels.pending : labels.verify}
       </Button>
       {result ? (
         <p
           role="status"
-          className={result.ok ? "text-sm text-emerald-700" : "text-destructive text-sm font-medium"}
+          className={`flex items-center gap-2 rounded-lg border bg-card p-3 text-sm font-medium ${result.ok ? "text-success" : "text-destructive"}`}
         >
+          {result.ok ? <ShieldCheck aria-hidden className="size-4 shrink-0" /> : <ShieldAlert aria-hidden className="size-4 shrink-0" />}
           {result.ok
             ? interpolate(labels.ok, { count: result.events_checked })
             : interpolate(labels.broken, { seq: result.broken_at_seq ?? "?", reason: result.reason ?? "" })}
