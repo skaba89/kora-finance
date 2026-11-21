@@ -17,14 +17,26 @@ const routes = [
   ["etats-financiers", "États financiers"],
 ] as const;
 
-test("recette responsive : douze écrans financiers", async ({ page }, testInfo) => {
-  test.setTimeout(180_000);
+const administrativeRoutes = [
+  ["parametres/entreprise", "Identité de l'entreprise"],
+  ["parametres/exercices", "Exercices comptables"],
+  ["parametres/plan-comptable", "Plan comptable"],
+  ["parametres/journaux", "Journaux"],
+  ["parametres/taxes", "Taux de taxes"],
+  ["parametres/utilisateurs", "Utilisateurs du dossier"],
+  ["tresorerie/previsions/reglages", "Seuils d'alerte"],
+  ["journal-audit", "Journal d'audit"],
+  ["hors-connexion", "Saisie hors connexion"],
+] as const;
+
+test("recette responsive : finance et administration", async ({ page }, testInfo) => {
+  test.setTimeout(240_000);
   await registerAndLogin(page);
   const company = await createCompany(page, "Recette responsive SARL");
   const widths = testInfo.project.name === "mobile" ? [360, 390, 768] : [1024, 1440, 1920];
   const measurements: { route: string; width: number; viewport: number; overflow: number }[] = [];
 
-  for (const [route, title] of routes) {
+  for (const [route, title] of [...routes, ...administrativeRoutes]) {
     await test.step(route, async () => {
       await page.goto(`/dossiers/${company}/${route}`);
       const heading = page.getByRole("heading", { level: 1, name: title, exact: true });
@@ -47,7 +59,11 @@ test("recette responsive : douze écrans financiers", async ({ page }, testInfo)
     });
   }
 
-  // Première baseline : publier tous les écarts avant de rendre le reflow bloquant.
-  // Les titres et la navigation réelle sont déjà vérifiés de façon bloquante.
-  await testInfo.attach("reflow-finance", { body: JSON.stringify({ measurements, outliers: measurements.filter(({ overflow }) => overflow > 1) }, null, 2), contentType: "application/json" });
+  const outliers = measurements.filter(({ overflow }) => overflow > 1);
+  // Les 72 mesures financières de la CI #302 sont sans débordement : non-régression
+  // bloquante. Les nouveaux écrans administratifs constituent une première baseline.
+  await testInfo.attach("reflow-finance", { body: JSON.stringify({ measurements, outliers }, null, 2), contentType: "application/json" });
+  expect(measurements).toHaveLength((routes.length + administrativeRoutes.length) * widths.length);
+  expect(measurements.filter(({ width, viewport }) => width !== viewport), "Largeurs réellement testées").toEqual([]);
+  expect(outliers.filter(({ route }) => routes.some(([financialRoute]) => financialRoute === route)), "Régression de débordement financier").toEqual([]);
 });
