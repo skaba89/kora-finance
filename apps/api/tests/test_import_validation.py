@@ -8,8 +8,7 @@ HEADER = "journal;ecriture;date;compte;libelle;debit;credit\n"
 def test_balanced_noncontiguous_entries() -> None:
     report = validate_normalized_csv(
         StringIO(
-            HEADER
-            + "VT;1;2026-01-02;571;Vente;1500000;0\n"
+            HEADER + "VT;1;2026-01-02;571;Vente;1500000;0\n"
             "AC;1;2026-01-03;601;Achat;20;0\n"
             "VT;1;2026-01-02;701;Vente;0;1500000\n"
             "AC;1;2026-01-03;401;Achat;0;20\n"
@@ -22,8 +21,7 @@ def test_balanced_noncontiguous_entries() -> None:
 def test_reports_group_and_line_errors_without_source_values() -> None:
     report = validate_normalized_csv(
         StringIO(
-            HEADER
-            + "VT;1;2026-01-02;571;Vente;10;0\n"
+            HEADER + "VT;1;2026-01-02;571;Vente;10;0\n"
             "VT;1;2026-01-03;701;Autre;0;9\n"
             "VT;2;2026-02-30;571;Vente;10;0\n"
             "VT;3;2026-01-02;571;Vente;1.5;0\n"
