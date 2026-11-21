@@ -3,6 +3,21 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-21 — Kora Premium, lot 1 : fondations visuelles
+
+Base `ce89b41` (PR #110, parcours Ventes conservé). Aucune PR ouverte au début ;
+CI du dernier merge en cours, précédentes exécutions vertes. 37 pages recensées.
+Inter variable via Next Font, palette claire émeraude/ardoise et tokens sémantiques
+dans les deux thèmes, focus visible et mouvement réduit, hiérarchie des titres,
+conteneur connecté jusqu'à 1536 px et panneau de navigation desktop. Aucun
+changement d'API, de permissions, de montants, de migrations ou de session.
+
+Validation locale : ESLint, typecheck, Vitest 81/81 et build Next (115 pages) OK ;
+audit numérique des 16 paires de contraste OK (seuil 4,5:1). Docker absent et
+démarrage local Next bloqué par `uv_interface_addresses` : pas de capture
+avant/après ni de recette E2E locale déclarée. CI et recette visuelle à confirmer
+avant fusion. Suite priorisée dans `docs/STYLE_UI.md` §10.
+
 ## 2026-11-13 — Phase 3D : architecture Mobile Money documentée (PR #80)
 
 **Objet** — `docs/PHASE_3D_MOMO.md` : conditions officielles des API

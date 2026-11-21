@@ -79,7 +79,7 @@ async function CompanyNav({ params }: { params: Params }) {
 export default function CompanyLayout({ children, params }: LayoutProps<"/[lang]/dossiers/[companyId]">) {
   return (
     <div className="flex flex-1 flex-col gap-6 md:flex-row">
-      <aside className="md:w-56 md:shrink-0">
+      <aside className="min-w-0 md:w-60 md:shrink-0 md:self-start md:rounded-xl md:border md:bg-sidebar md:p-3">
         <Suspense fallback={<div className="bg-muted h-64 animate-pulse rounded" />}>
           <CompanyNav params={params} />
         </Suspense>

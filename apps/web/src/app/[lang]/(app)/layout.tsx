@@ -62,9 +62,9 @@ export default async function AppLayout({ children }: LayoutProps<"/[lang]">) {
   const { t, locale } = await getDictionary();
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <Link href="/dossiers" className="font-semibold tracking-tight text-teal-700">
+      <header className="border-b bg-card">
+        <div className="mx-auto flex w-full max-w-[1536px] flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-8">
+          <Link href="/dossiers" className="font-semibold tracking-tight text-primary">
             {t.common.appName}
           </Link>
           <div className="flex items-center gap-4">
@@ -81,7 +81,7 @@ export default async function AppLayout({ children }: LayoutProps<"/[lang]">) {
       <Suspense>
         <OfflineSyncSlot />
       </Suspense>
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-6">
+      <div className="mx-auto flex w-full min-w-0 max-w-[1536px] flex-1 flex-col px-4 py-6 lg:px-8">
         <FlashProvider closeLabel={t.common.close}>{children}</FlashProvider>
       </div>
     </div>
