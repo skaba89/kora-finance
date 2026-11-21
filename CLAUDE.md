@@ -8,7 +8,7 @@ bancaire, états financiers prêts pour un dossier de crédit, assistance IA.
 Le parcours Ventes est organisé en Documents, Encaissements et Recouvrement. Le lien de création du tableau de bord ouvre le formulaire de brouillon pour les rôles autorisés.
 
 Le chantier Kora Premium est documenté dans `docs/STYLE_UI.md` §10 : Inter,
-tokens sémantiques, titres et conteneur élargi. Continuer par petits lots UX,
+tokens sémantiques, titres, conteneur élargi et navigation repliable. Continuer par petits lots UX,
 avec validation de la CI et recette visuelle avant fusion.
 
 Journal daté des sessions : `worklog.md`. Le lire en début de session.

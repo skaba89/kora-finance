@@ -3,6 +3,17 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-21 — Kora Premium, lot 2B : navigation repliable
+
+Base `b77c53b` (PR #113 réintégrant le lot 2A dans main, CI verte).
+Sidebar compacte à 72 px sur desktop, menu repliable sur mobile, contrôle clavier
+Ctrl/Cmd+K avec réouverture et focus, libellés FR/EN et noms accessibles en mode
+compact. Les liens, permissions et routes existants restent inchangés.
+Validation locale : ESLint, typecheck, Vitest 84/84, build Next 115/115 et diff check OK.
+Scénario Playwright enrichi pour les deux états et captures jointes au rapport ;
+recette intégrée et tests backend à exécuter en CI (Docker indisponible ici).
+Suite : sélecteur de dossier et barre supérieure, puis dashboard et KpiCard.
+
 ## 2026-11-21 — Kora Premium, lot 2A : navigation métier et recherche
 
 Branche dépendante du lot 1 (PR #111). Organisation des 21 destinations existantes
