@@ -212,3 +212,20 @@ validée et dépense brouillon, puis le débordement global aux six résolutions
 360, 390, 768, 1024, 1440 et 1920 px, avec captures. Aucun changement d'API,
 de devise, de calcul, de rôle ou d'exercice. Le lot 2C est détaillé dans
 `docs/UX_TOPBAR.md`.
+
+### Lot 4A — DataTable comptable (écritures)
+
+`DataTable` conserve le balisage HTML natif et expose une zone de défilement
+clavier avec en-têtes fixes, montants tabulaires à droite et deux densités.
+La liste des écritures conserve les liens directs et RBAC ; recherche, journal,
+statut et exercice sont évalués par l'API existante sur l'ensemble des données.
+La taille de page (25/50/100, défaut 50) et la densité sont dans l'URL ; les
+liens de pagination préservent les critères. Un état vide et le retour aux
+filtres par défaut sont explicites. Statut et référence restent visibles sur mobile.
+Le tri serveur par date décroissante est annoncé via `aria-sort` ; aucun tri
+partiel trompeur côté client. Les exports PDF/Excel couvrent l'exercice complet
+sélectionné (ou courant), indépendamment des filtres de la page.
+
+Le tri configurable global, les colonnes personnalisables et la migration
+progressive des autres tableaux restent à livrer. Aucun changement de route
+API, de schéma, de permissions ni de précision des montants.

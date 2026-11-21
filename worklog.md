@@ -3,6 +3,17 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-21 — Kora Premium, lot 4A : DataTable et liste des écritures
+
+Base `eeb7a42` (PR #116 intégrée, CI verte). DataTable sémantique, en-têtes
+fixes, densité et taille de page dans l'URL, filtre exercice via contrat API
+existant, état vide, réinitialisation, pagination et exports explicitement
+sur l'exercice complet. Aucune mutation des montants, droits ou schéma.
+Quatre tests unitaires de préférences et scénario E2E de contre-passation
+enrichi (filtres combinés, densité, pagination, retour aux défauts, capture).
+Backend et E2E à exécuter en CI (Docker indisponible localement).
+Validation locale : ESLint, typecheck, Vitest 90/90, build Next 115/115 et diff check OK.
+
 ## 2026-11-21 — Kora Premium, lot 3A : tableau de bord financier
 
 Base `8d65f57` (PR #114 et #115 intégrées dans main, CI des deux verte).

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { createCompany, fillLine, registerAndLogin } from "./helpers";
 
-test("saisie d'une écriture équilibrée, validation numérotée puis contre-passation", async ({ page }) => {
+test("saisie d'une écriture équilibrée, validation numérotée puis contre-passation", async ({ page }, testInfo) => {
   await registerAndLogin(page);
   const companyId = await createCompany(page, "Pharmacie de Matam SARL");
 
@@ -36,6 +36,22 @@ test("saisie d'une écriture équilibrée, validation numérotée puis contre-pa
 
   await page.getByRole("link", { name: "Retour aux écritures" }).click();
   await expect(page.getByRole("link", { name: /Ventes comptant du jour/ })).toHaveCount(2);
+
+  const filters = page.getByRole("search", { name: "Écritures" });
+  await filters.getByRole("textbox", { name: "Rechercher", exact: true }).fill("Ventes comptant du jour");
+  await filters.getByRole("combobox", { name: "Statut" }).selectOption("POSTED");
+  await filters.getByRole("combobox", { name: "Exercices" }).selectOption({ index: 1 });
+  await filters.getByRole("combobox", { name: "Taille de page" }).selectOption("25");
+  await filters.getByRole("combobox", { name: "Densité du tableau" }).selectOption("compact");
+  await filters.getByRole("button", { name: "Filtrer" }).click();
+  await expect(page).toHaveURL(/densite=compact/);
+  await expect(page.getByRole("link", { name: /Ventes comptant du jour/ })).toHaveCount(2);
+  await expect(page.getByRole("table", { name: "Écritures" }).getByRole("columnheader", { name: "Date" })).toHaveAttribute("aria-sort", "descending");
+  await expect(page.getByRole("navigation", { name: "Pagination" })).toContainText("1–2 sur 2");
+  await testInfo.attach("ecritures-premium", { body: await page.screenshot(), contentType: "image/png" });
+  await filters.getByRole("link", { name: "Réinitialiser les filtres" }).click();
+  await expect(page).toHaveURL(new RegExp(`/dossiers/${companyId}/ecritures$`));
+  await expect(filters.getByRole("combobox", { name: "Taille de page" })).toHaveValue("50");
 });
 
 test("un brouillon déséquilibré s'enregistre mais ne se valide pas", async ({ page }) => {

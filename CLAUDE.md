@@ -217,6 +217,9 @@ d'écrire du code Next.** Points déjà rencontrés :
   `parseAmount`, sommes en BigInt (`lib/amounts.ts`), affichage par `formatMoney`.
 - `KpiCard` est une primitive visuelle : reçoit un montant déjà formaté et ne
   réalise aucun calcul ; ne pas y ajouter de conversions financières.
+- `DataTable` reste une table sémantique ; conserver pagination et filtres
+  globaux côté serveur, ne jamais trier uniquement une page en prétendant trier
+  le jeu complet. Préférences URL validées par `table-preferences.ts`.
 
 ## Décisions d'architecture
 
