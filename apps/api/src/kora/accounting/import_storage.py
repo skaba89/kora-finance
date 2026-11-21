@@ -88,9 +88,7 @@ def stage_import(
         )
         if existing is not None:
             if existing.expires_at <= utcnow():
-                raise ConflictError(
-                    "Cet import a expiré et doit être purgé avant un nouvel envoi."
-                )
+                raise ConflictError("Cet import a expiré et doit être purgé avant un nouvel envoi.")
             return StagedImport(existing.id, existing.expires_at)
         batch_id = uuid.uuid4()
         key = f"imports/{company_id}/{batch_id}"
