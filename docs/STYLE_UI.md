@@ -229,3 +229,14 @@ sélectionné (ou courant), indépendamment des filtres de la page.
 Le tri configurable global, les colonnes personnalisables et la migration
 progressive des autres tableaux restent à livrer. Aucun changement de route
 API, de schéma, de permissions ni de précision des montants.
+
+### Lot 4B — balance, grand livre et lettrage
+
+La balance et le grand livre réutilisent `DataTable`, y compris l'en-tête
+complet fixe à deux lignes de la balance. Les fiches mobiles restent disponibles
+sans duplication visible du tableau. `TableDensitySelect` permet de régler
+la densité dans les filtres de période ; les critères restent dans l'URL.
+Le grand livre propose 25/50/100 lignes (100 par défaut) ; le lettrage conserve
+ses pages de 200 et une sélection unique, avec cibles tactiles et état sélectionné.
+Les totaux, soldes, exports, droits et actions métier existants sont conservés.
+Les scénarios Playwright couvrent les montants et le lettrage, avec captures.

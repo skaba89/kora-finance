@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Fragment } from "react";
+import { DataTable } from "@/components/data-table";
+import { TableDensitySelect } from "@/components/table-density-select";
 
 import { ExportLinks } from "@/components/ledger/export-links";
 import { PeriodFilter } from "@/components/ledger/period-filter";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getCompany, getFiscalYears, getTrialBalance } from "@/lib/dal";
 import { formatMoney } from "@/lib/format";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { getDictionary } from "@/lib/i18n/server";
 import { dateWithin, pickFiscalYear } from "@/lib/periods";
+import { tablePreferences } from "@/lib/table-preferences";
+import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getDictionary();
@@ -43,6 +47,7 @@ function addRows(rows: Amounts[]): Record<Column, bigint> {
 export default async function BalancePage({ params, searchParams }: PageProps<"/[lang]/dossiers/[companyId]/balance">) {
   const { companyId } = await params;
   const query = await searchParams;
+  const { density } = tablePreferences(query);
   const [{ t, locale }, company, years] = await Promise.all([
     getDictionary(),
     getCompany(companyId),
@@ -94,6 +99,7 @@ export default async function BalancePage({ params, searchParams }: PageProps<"/
     <>
       <PageHeader title={r.balanceTitle} subtitle={r.balanceSubtitle} />
       <PeriodFilter
+        key={JSON.stringify([year.id, dateFrom, dateTo, accountClass, includeZero, density])}
         years={years}
         yearId={year.id}
         dateFrom={dateFrom}
@@ -118,6 +124,7 @@ export default async function BalancePage({ params, searchParams }: PageProps<"/
           <input type="checkbox" name="tous" value="1" defaultChecked={includeZero} />
           {r.includeZero}
         </label>
+        <TableDensitySelect density={density} labels={t.table} />
       </PeriodFilter>
 
       <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
@@ -148,7 +155,7 @@ export default async function BalancePage({ params, searchParams }: PageProps<"/
       ) : null}
       {/* Téléphone : une fiche par compte, solde de clôture en évidence. */}
       {balance.rows.length > 0 ? (
-        <ul className="divide-y rounded-md border sm:hidden">
+        <ul className={cn("divide-y rounded-xl border bg-card sm:hidden", density === "compact" && "[&_li]:py-2")}>
           {balance.rows.map((row) => (
             <li key={row.account_id} className="flex flex-col gap-1 p-3 text-sm">
               <Link
@@ -188,7 +195,7 @@ export default async function BalancePage({ params, searchParams }: PageProps<"/
         </ul>
       ) : null}
       {balance.rows.length === 0 ? null : (
-        <Table className="hidden text-sm sm:table">
+        <DataTable label={r.balanceTitle} density={density} desktopOnly>
           <TableHeader>
             <TableRow>
               <TableHead rowSpan={2} className="align-bottom">
@@ -257,7 +264,7 @@ export default async function BalancePage({ params, searchParams }: PageProps<"/
               ))}
             </TableRow>
           </TableFooter>
-        </Table>
+        </DataTable>
       )}
       <p className="text-muted-foreground mt-4 text-xs">{r.draftsExcluded}</p>
     </>

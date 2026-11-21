@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DataTable } from "@/components/data-table";
+import { TableDensitySelect } from "@/components/table-density-select";
 
 import { ExportLinks } from "@/components/ledger/export-links";
 import { PeriodFilter } from "@/components/ledger/period-filter";
@@ -7,19 +9,19 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getAccounts, getCompany, getFiscalYears, getLedger } from "@/lib/dal";
 import { formatDate, formatMoney } from "@/lib/format";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { getDictionary } from "@/lib/i18n/server";
 import { dateWithin, pickFiscalYear } from "@/lib/periods";
+import { PAGE_SIZES, tablePreferences, tableRange } from "@/lib/table-preferences";
+import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getDictionary();
   return { title: t.reports.ledgerTitle };
 }
-
-const PAGE_SIZE = 100;
 
 function one(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -46,7 +48,7 @@ export default async function LedgerPage({ params, searchParams }: PageProps<"/[
   const dateFrom = dateWithin(one(query.du), year) ?? year.start_date;
   const dateTo = dateWithin(one(query.au), year) ?? year.end_date;
   const number = /^[1-9][0-9]{0,11}$/.test(one(query.compte) ?? "") ? one(query.compte) : undefined;
-  const page = Math.max(1, Number.parseInt(one(query.page) ?? "1", 10) || 1);
+  const { page, size, offset, density } = tablePreferences(query, 100);
 
   const account = number
     ? (await getAccounts(companyId, { q: number, limit: 50, offset: 0 })).items.find((a) => a.number === number)
@@ -57,8 +59,8 @@ export default async function LedgerPage({ params, searchParams }: PageProps<"/[
         fiscal_year_id: year.id,
         date_from: dateFrom,
         date_to: dateTo,
-        limit: PAGE_SIZE,
-        offset: (page - 1) * PAGE_SIZE,
+        limit: size,
+        offset,
       })
     : null;
 
@@ -70,12 +72,14 @@ export default async function LedgerPage({ params, searchParams }: PageProps<"/[
     return `${formatMoney(amount < 0n ? -amount : amount, currency, locale)} ${amount < 0n ? r.creditSide : r.debitSide}`;
   };
   const pageHref = (target: number) =>
-    `?compte=${number}&exercice=${year.id}&du=${dateFrom}&au=${dateTo}&page=${target}`;
+    `?compte=${number}&exercice=${year.id}&du=${dateFrom}&au=${dateTo}&taille=${size}&densite=${density}&page=${target}`;
+  const range = ledger ? tableRange(ledger.total, ledger.offset, ledger.items.length, size) : null;
 
   return (
     <>
       <PageHeader title={r.ledgerTitle} subtitle={r.ledgerSubtitle} />
       <PeriodFilter
+        key={pageHref(1)}
         years={years}
         yearId={year.id}
         dateFrom={dateFrom}
@@ -96,6 +100,10 @@ export default async function LedgerPage({ params, searchParams }: PageProps<"/[
             required
           />
         </div>
+        <select name="taille" defaultValue={String(size)} aria-label={t.table.pageSize} className="border-input bg-background min-h-11 rounded-lg border px-3 text-sm">
+          {PAGE_SIZES.map(value => <option key={value} value={value}>{interpolate(t.table.rowsPerPage, { count: value })}</option>)}
+        </select>
+        <TableDensitySelect density={density} labels={t.table} />
       </PeriodFilter>
 
       <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
@@ -139,7 +147,7 @@ export default async function LedgerPage({ params, searchParams }: PageProps<"/[
             <span className="font-mono">{ledger.account.number}</span> {ledger.account.label}
           </h2>
           {/* Téléphone : une fiche par mouvement, solde progressif en évidence. */}
-          <ul className="divide-y rounded-md border sm:hidden">
+          <ul className={cn("divide-y rounded-xl border bg-card sm:hidden", density === "compact" && "[&_li]:py-2")}>
             <li className="bg-muted/40 flex justify-between gap-2 p-3 text-sm font-medium">
               <span>{r.openingRow}</span>
               <span className="tabular-nums">{signed(ledger.opening)}</span>
@@ -170,7 +178,7 @@ export default async function LedgerPage({ params, searchParams }: PageProps<"/[
               <span className="tabular-nums">{signed(ledger.closing)}</span>
             </li>
           </ul>
-          <Table className="hidden text-sm sm:table">
+          <DataTable label={r.ledgerTitle} density={density} desktopOnly>
             <TableHeader>
               <TableRow>
                 <TableHead>{t.entries.date}</TableHead>
@@ -235,23 +243,23 @@ export default async function LedgerPage({ params, searchParams }: PageProps<"/[
                 </TableCell>
               </TableRow>
             </TableFooter>
-          </Table>
-          {ledger.total > PAGE_SIZE ? (
-            <nav className="mt-4 flex items-center justify-between text-sm" aria-label="pagination">
+          </DataTable>
+          {range ? (
+            <nav className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm" aria-label={t.table.pagination}>
               <span className="text-muted-foreground">
                 {interpolate(t.common.pageRange, {
-                  from: ledger.offset + 1,
-                  to: ledger.offset + ledger.items.length,
+                  from: range.from,
+                  to: range.to,
                   total: ledger.total,
                 })}
               </span>
               <div className="flex gap-2">
                 {page > 1 ? (
                   <Button asChild variant="outline" size="sm">
-                    <Link href={pageHref(page - 1)}>{t.common.previous}</Link>
+                    <Link href={pageHref(Math.min(page - 1, range.lastPage))}>{t.common.previous}</Link>
                   </Button>
                 ) : null}
-                {ledger.offset + ledger.items.length < ledger.total ? (
+                {page < range.lastPage ? (
                   <Button asChild variant="outline" size="sm">
                     <Link href={pageHref(page + 1)}>{t.common.next}</Link>
                   </Button>

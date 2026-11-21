@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { InlineAction } from "@/components/forms/inline-action";
 import { LetteringForm } from "@/components/ledger/lettering-form";
+import { TableDensitySelect } from "@/components/table-density-select";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,8 @@ import { can, getAccounts, getCompany, getLetterableLines } from "@/lib/dal";
 import { formatDate, formatMoney } from "@/lib/format";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { getDictionary } from "@/lib/i18n/server";
+import { tablePreferences, tableRange } from "@/lib/table-preferences";
+import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getDictionary();
@@ -29,12 +32,14 @@ function one(value: string | string[] | undefined): string | undefined {
 export default async function LetteringPage({ params, searchParams }: PageProps<"/[lang]/dossiers/[companyId]/lettrage">) {
   const { companyId } = await params;
   const query = await searchParams;
+  const { density } = tablePreferences(query);
   const [{ t, locale }, company] = await Promise.all([getDictionary(), getCompany(companyId)]);
   const l = t.lettering;
   const number = /^4[0-9]{1,11}$/.test(one(query.compte) ?? "") ? one(query.compte) : undefined;
   const rawNumber = one(query.compte);
   const status = STATUSES.find((s) => s === one(query.statut)) ?? "open";
-  const page = Math.max(1, Number.parseInt(one(query.page) ?? "1", 10) || 1);
+  const candidatePage = Number(one(query.page) ?? "1");
+  const page = candidatePage >= 1 && Number.isSafeInteger(candidatePage) && Number.isSafeInteger((candidatePage - 1) * PAGE_SIZE) ? candidatePage : 1;
   const account = number
     ? (await getAccounts(companyId, { q: number, limit: 50, offset: 0 })).items.find((a) => a.number === number)
     : undefined;
@@ -54,6 +59,7 @@ export default async function LetteringPage({ params, searchParams }: PageProps<
     return `${formatMoney(amount < 0n ? -amount : amount, currency, locale)} ${amount < 0n ? t.reports.creditSide : t.reports.debitSide}`;
   };
   const openLines = data?.items.filter((line) => line.lettering_id === null) ?? [];
+  const range = data ? tableRange(data.total, data.offset, data.items.length, PAGE_SIZE) : null;
   const letteredGroups = new Map<string, { code: string; lines: NonNullable<typeof data>["items"] }>();
   for (const line of data?.items ?? []) {
     if (line.lettering_id && line.lettering_code) {
@@ -68,7 +74,7 @@ export default async function LetteringPage({ params, searchParams }: PageProps<
       <PageHeader title={l.title} subtitle={l.subtitle} />
       <p className="text-muted-foreground -mt-4 mb-4 text-xs">{t.common.expertNotice}</p>
 
-      <form method="get" className="mb-6 flex flex-wrap items-end gap-3">
+      <form key={JSON.stringify([rawNumber, status, density])} method="get" className="mb-6 flex min-w-0 flex-wrap items-end gap-3 rounded-xl border bg-card p-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="lettrage-compte">{l.account}</Label>
           <Input
@@ -77,7 +83,7 @@ export default async function LetteringPage({ params, searchParams }: PageProps<
             defaultValue={rawNumber}
             inputMode="numeric"
             placeholder="411"
-            className="w-32"
+            className="min-h-11 w-32"
             aria-describedby="lettrage-compte-aide"
             required
           />
@@ -89,7 +95,7 @@ export default async function LetteringPage({ params, searchParams }: PageProps<
           name="statut"
           defaultValue={status}
           aria-label={t.common.status}
-          className="border-input bg-background mb-5 h-9 rounded-md border px-3 text-sm"
+          className="border-input bg-background min-h-11 max-w-full rounded-lg border px-3 text-sm"
         >
           {STATUSES.map((s) => (
             <option key={s} value={s}>
@@ -97,7 +103,8 @@ export default async function LetteringPage({ params, searchParams }: PageProps<
             </option>
           ))}
         </select>
-        <Button type="submit" variant="secondary" className="mb-5">
+        <TableDensitySelect density={density} labels={t.table} />
+        <Button type="submit" className="min-h-11">
           {t.reports.show}
         </Button>
       </form>
@@ -143,11 +150,13 @@ export default async function LetteringPage({ params, searchParams }: PageProps<
 
           {openLines.length > 0 ? (
             <LetteringForm
+              key={JSON.stringify([data.account_id, status, page, density])}
               action={letterAction.bind(null, companyId, data.account_id)}
               lines={openLines}
               currency={currency}
               locale={locale}
               canManage={manage}
+              density={density}
               labels={{
                 selection: l.selection,
                 selected: l.selected,
@@ -163,24 +172,24 @@ export default async function LetteringPage({ params, searchParams }: PageProps<
             />
           ) : null}
 
-          {data.total > PAGE_SIZE ? (
-            <nav className="flex items-center justify-between text-sm" aria-label="pagination">
+          {range ? (
+            <nav className="flex flex-wrap items-center justify-between gap-3 text-sm" aria-label={t.table.pagination}>
               <span className="text-muted-foreground">
                 {interpolate(t.common.pageRange, {
-                  from: data.offset + 1,
-                  to: data.offset + data.items.length,
+                  from: range.from,
+                  to: range.to,
                   total: data.total,
                 })}
               </span>
               <div className="flex gap-2">
                 {page > 1 ? (
                   <Button asChild variant="outline" size="sm">
-                    <Link href={`?compte=${number}&statut=${status}&page=${page - 1}`}>{t.common.previous}</Link>
+                    <Link href={`?compte=${number}&statut=${status}&densite=${density}&page=${Math.min(page - 1, range.lastPage)}`}>{t.common.previous}</Link>
                   </Button>
                 ) : null}
-                {data.offset + data.items.length < data.total ? (
+                {page < range.lastPage ? (
                   <Button asChild variant="outline" size="sm">
-                    <Link href={`?compte=${number}&statut=${status}&page=${page + 1}`}>{t.common.next}</Link>
+                    <Link href={`?compte=${number}&statut=${status}&densite=${density}&page=${page + 1}`}>{t.common.next}</Link>
                   </Button>
                 ) : null}
               </div>
@@ -188,7 +197,7 @@ export default async function LetteringPage({ params, searchParams }: PageProps<
           ) : null}
 
           {[...letteredGroups.entries()].map(([letteringId, group]) => (
-            <section key={letteringId} className="rounded-md border" aria-label={`${l.code} ${group.code}`}>
+            <section key={letteringId} className="rounded-xl border bg-card" aria-label={`${l.code} ${group.code}`}>
               <div className="bg-muted/40 flex items-center justify-between gap-3 p-3">
                 <Badge variant="secondary">
                   {l.code} {group.code}
@@ -206,7 +215,7 @@ export default async function LetteringPage({ params, searchParams }: PageProps<
                 {group.lines.map((line) => {
                   const debit = BigInt(line.debit);
                   return (
-                    <li key={line.line_id} className="flex items-start justify-between gap-3 p-3 text-sm">
+                    <li key={line.line_id} className={cn("flex flex-wrap items-start justify-between gap-3 px-3 text-sm", density === "compact" ? "py-2" : "py-3")}>
                       <span className="flex min-w-0 flex-col">
                         <span className="text-muted-foreground tabular-nums">
                           {formatDate(line.entry_date, locale)} · {line.journal_code} {line.number}
@@ -214,7 +223,7 @@ export default async function LetteringPage({ params, searchParams }: PageProps<
                         </span>
                         <span className="break-words">{line.label}</span>
                       </span>
-                      <span className="whitespace-nowrap tabular-nums">
+                      <span className="ml-auto max-w-full wrap-anywhere text-right tabular-nums">
                         {formatMoney(debit > 0n ? debit : BigInt(line.credit), currency, locale)}{" "}
                         {debit > 0n ? t.reports.debitSide : t.reports.creditSide}
                       </span>

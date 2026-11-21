@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { createCompany, postEntry, registerAndLogin } from "./helpers";
 
-test("balance générale et grand livre après deux écritures", async ({ page, isMobile }) => {
+test("balance générale et grand livre après deux écritures", async ({ page, isMobile }, testInfo) => {
   // Tableau sur grand écran, une fiche par compte ou mouvement sur téléphone.
   const item = isMobile ? "listitem" : "row";
   await registerAndLogin(page);
@@ -26,6 +26,10 @@ test("balance générale et grand livre après deux écritures", async ({ page, 
 
   await page.getByRole("link", { name: "Balance", exact: true }).click();
   await expect(page.getByText("Balance équilibrée")).toBeVisible();
+  await page.getByRole("combobox", { name: "Densité du tableau" }).selectOption("compact");
+  await page.getByRole("button", { name: "Afficher", exact: true }).click();
+  await expect(page).toHaveURL(/densite=compact/);
+  await expect(page.getByText("Balance équilibrée")).toBeVisible();
   const bank = page.getByRole(item).filter({ hasText: "521" }).first();
   await expect(bank).toContainText("5 000 000 GNF");
   await expect(bank).toContainText("4 250 000 GNF");
@@ -38,10 +42,17 @@ test("balance générale et grand livre après deux écritures", async ({ page, 
       /^Total général(5\s000\s000\sGNF){2}(750\s000\sGNF){2}(5\s000\s000\sGNF){2}$/,
     );
   }
+  await testInfo.attach("balance-premium", { body: await page.screenshot(), contentType: "image/png" });
 
   await bank.getByRole("link", { name: /521/ }).click();
   await expect(page).toHaveURL(/grand-livre\?compte=521/);
+  await expect(page.getByRole("combobox", { name: "Taille de page" })).toHaveValue("100");
+  await page.getByRole("combobox", { name: "Taille de page" }).selectOption("25");
+  await page.getByRole("combobox", { name: "Densité du tableau" }).selectOption("compact");
+  await page.getByRole("button", { name: "Afficher", exact: true }).click();
+  await expect(page).toHaveURL(/taille=25/);
   await expect(page.getByRole(item).filter({ hasText: "Solde d'ouverture" })).toContainText("5 000 000 GNF D");
   await expect(page.getByRole(item).filter({ hasText: "Achat de marchandises" })).toContainText("4 250 000 GNF D");
   await expect(page.getByRole(item).filter({ hasText: "Solde de clôture" })).toContainText("4 250 000 GNF D");
+  await testInfo.attach("grand-livre-premium", { body: await page.screenshot(), contentType: "image/png" });
 });

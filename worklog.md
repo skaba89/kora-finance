@@ -3,6 +3,16 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-21 — Kora Premium, lot 4B : balance, grand livre, lettrage
+
+Base `597e173` (PR #117 intégrée). DataTable avec en-tête fixe complet,
+densité réglable et fiches mobiles conservées ; pagination du grand livre
+25/50/100 (100 par défaut), lettrage 200 par page et sélection unique.
+Filtres de période et cibles tactiles harmonisés, aucun changement API,
+permissions, arithmétique ou schéma. Scénarios E2E enrichis et captures prévues.
+Validation locale : lint, typecheck, Vitest 90/90 et build Next 115/115 OK.
+Backend et Playwright intégrés à valider en CI (Docker indisponible localement).
+
 ## 2026-11-21 — Kora Premium, lot 4A : DataTable et liste des écritures
 
 Base `eeb7a42` (PR #116 intégrée, CI verte). DataTable sémantique, en-têtes

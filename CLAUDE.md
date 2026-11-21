@@ -220,6 +220,8 @@ d'écrire du code Next.** Points déjà rencontrés :
 - `DataTable` reste une table sémantique ; conserver pagination et filtres
   globaux côté serveur, ne jamais trier uniquement une page en prétendant trier
   le jeu complet. Préférences URL validées par `table-preferences.ts`.
+  Fixer le `thead` entier pour les en-têtes à plusieurs lignes ; `desktopOnly`
+  masque aussi la zone de défilement lorsque des fiches mobiles existent.
 
 ## Décisions d'architecture
 
