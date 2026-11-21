@@ -2,9 +2,10 @@
 
 import csv
 import re
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from datetime import date
-from typing import TextIO
+from typing import Protocol, TextIO
 
 from kora.accounting.limits import MAX_LINE_AMOUNT, MAX_LINES_PER_ENTRY
 
@@ -98,11 +99,28 @@ def validate_normalized_csv(stream: TextIO) -> ImportReport:
     les lignes structurellement valides. Rien ne garantit encore l'imputabilité
     des comptes ou l'ouverture des exercices : contrôle métier ultérieur obligatoire.
     """
+    reader = csv.reader(stream, delimiter=";", strict=True)
+    return validate_rows(reader, COLUMNS, lambda row: row)
+
+
+class RowReader(Protocol):
+    @property
+    def line_num(self) -> int: ...
+
+    def __iter__(self) -> Iterator[list[str]]: ...
+
+    def __next__(self) -> list[str]: ...
+
+
+def validate_rows(
+    reader: RowReader,
+    columns: tuple[str, ...],
+    normalize: Callable[[list[str]], list[str]],
+) -> ImportReport:
     report = ImportReport()
     groups: dict[tuple[str, str], _Group] = {}
-    reader = csv.reader(stream, delimiter=";", strict=True)
     try:
-        if next(reader, None) != list(COLUMNS):
+        if next(reader, None) != list(columns):
             report.issues.append(ImportIssue(1, "invalid_header"))
             return report
         for row in reader:
@@ -110,7 +128,10 @@ def validate_normalized_csv(stream: TextIO) -> ImportReport:
                 report.issues.append(ImportIssue(reader.line_num, "row_limit"))
                 break
             report.rows += 1
-            _validate_row(row, reader.line_num, report, groups)
+            if len(row) != len(columns):
+                report.issues.append(ImportIssue(reader.line_num, "column_count"))
+                continue
+            _validate_row(normalize(row), reader.line_num, report, groups)
     except (csv.Error, UnicodeError):
         report.issues.append(ImportIssue(reader.line_num, "invalid_csv"))
     report.entries = len(groups)

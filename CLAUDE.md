@@ -22,7 +22,7 @@ Journal daté des sessions : `worklog.md`. Le lire en début de session.
 | 2 | Comptabilité générale + états financiers | ✅ livrée — 2a saisie, 2b balance/grand livre, 2c lettrage, 2d clôture, 2e bilan et CR, 2f exports, 2g1 pièces, 2g2 saisie guidée, 2g3a hors connexion, 2h tableau de bord (2026-10-27) ; 2e-bis TFT en méthode directe ✅ (2026-11-11) ; reste 2g3b photos de pièces hors connexion (`docs/PLAN.md`) |
 | 3 | Trésorerie, Mobile Money, rapprochement | ✅ livrée — 3A comptes financiers ✅ (2026-11-11), 3B import relevés OFX/CSV ✅ (2026-11-11), 3E prévisionnel 30/60/90 ✅ (2026-11-12), 3C rapprochement assisté ✅ (2026-11-12), 3D import Mobile Money étiqueté ✅ (2026-11-13) |
 | 4 | Ventes et achats | ✅ livrée — 4A référentiel tiers ✅ (2026-11-13), 4B devis/factures/avoirs sans trou ✅ (2026-11-14), 4B-bis PDF conforme ✅ (2026-11-15), 4C règlements/lettrage/balance âgée ✅ (2026-11-17), 4D relances ✅ (2026-11-17), 4E comptabilisation des ventes ✅ (2026-11-18), 4F achats/décaissements/échéancier/comptabilisation ✅ (2026-11-18), 4D-bis envoi email du document avec PDF ✅ (2026-11-18), B2 relances automatiques configurables ✅ (2026-11-19), B3 acomptes clients/avances fournisseurs/trop-perçus/remboursements/affectation ultérieure ✅ (2026-11-19), B4 échéanciers clients/export de la balance âgée/indicateurs de recouvrement et DSO ✅ (2026-11-20) ; reste imputation multi-comptes, WhatsApp (compte Business requis) (`docs/PLAN.md`) |
-| 5 | Import et migration | — |
+| 5 | Import et migration | En cours — 5A précontrôle CSV intégré ; 5B profil FEC textuel en validation CI |
 | 6 | Dossier de financement partageable | — |
 | 7 | Assistant IA | — |
 | 8 | Espace cabinet et abonnements | — |
