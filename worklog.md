@@ -3,6 +3,14 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-21 — Phase 5D2b1 : fondations du staging
+
+PR #139 fusionnée (`54d1140`), CI #323 verte. Migration additive 0026 et
+modèle ImportBatch : RLS forcée, empreinte et options uniques par tenant,
+référence objet canonique, clé enveloppée, taille et expiration. Dix cas
+PostgreSQL ajoutés, à valider en CI ; compilation et diff vérifiés localement.
+Pas d'upload actif, de purge ni d'écriture comptable dans ce lot.
+
 ## 2026-11-21 — Phase 5D2a : catalogue tenant réel
 
 PR #138 fusionnée (`9e1d415`), CI #320 verte. Service de précontrôle en
