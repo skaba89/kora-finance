@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { lang } from "next/root-params";
 
 import { ServiceWorkerRegistrar } from "@/components/service-worker";
+import { ThemePreference } from "@/components/theme-preference";
 import { LOCALES } from "@/lib/i18n/config";
 
 import "../globals.css";
@@ -31,6 +32,7 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
   return (
     <html lang={await lang()} className={`${interSans.variable} h-full antialiased`}>
       <body className="bg-background text-foreground flex min-h-full flex-col">
+        <ThemePreference />
         {children}
         <ServiceWorkerRegistrar />
       </body>

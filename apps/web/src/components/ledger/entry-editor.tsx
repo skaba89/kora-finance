@@ -327,7 +327,7 @@ export function EntryEditor({
           <dt className="text-muted-foreground">{labels.difference}</dt>
           <dd
             data-testid="ecart"
-            className={cn("font-medium tabular-nums", difference === 0n ? "text-emerald-700" : "text-destructive")}
+            className={cn("font-medium tabular-nums", difference === 0n ? "text-success" : "text-destructive")}
           >
             {difference === 0n && totalDebit > 0n ? labels.balanced : money(difference < 0n ? -difference : difference)}
           </dd>

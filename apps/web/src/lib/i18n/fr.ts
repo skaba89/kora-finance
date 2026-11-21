@@ -28,6 +28,7 @@ export const fr = {
     close: "Fermer",
     skipToContent: "Aller au contenu principal",
   },
+  theme: { label: "Thème d’affichage", system: "Système", light: "Clair", dark: "Sombre" },
   table: {
     pageSize: "Taille de page",
     rowsPerPage: "{count} lignes par page",

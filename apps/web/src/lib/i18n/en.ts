@@ -30,6 +30,7 @@ export const en: typeof fr = {
     close: "Dismiss",
     skipToContent: "Skip to main content",
   },
+  theme: { label: "Display theme", system: "System", light: "Light", dark: "Dark" },
   table: {
     pageSize: "Page size",
     rowsPerPage: "{count} rows per page",

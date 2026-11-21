@@ -9,6 +9,7 @@ import { LogoutButton } from "@/components/offline/logout-button";
 import { OfflineSync } from "@/components/offline/offline-sync";
 import { TopBar } from "@/components/top-bar";
 import { SkipLink } from "@/components/skip-link";
+import { ThemeSelector } from "@/components/theme-preference";
 import { logoutAction, resendVerificationAction } from "@/lib/actions/auth";
 import { getCurrentUser } from "@/lib/dal";
 import { emailsEnabled } from "@/lib/emails";
@@ -68,6 +69,7 @@ export default async function AppLayout({ children }: LayoutProps<"/[lang]">) {
     <div className="flex flex-1 flex-col">
       <SkipLink label={t.common.skipToContent} />
       <TopBar appName={t.common.appName} companiesLabel={t.nav.companies}>
+        <ThemeSelector labels={t.theme} />
         <LocaleSwitcher current={locale} label={t.nav.language} />
         <Suspense fallback={<div className="bg-muted h-11 w-28 animate-pulse rounded" />}>
           <UserMenu />
