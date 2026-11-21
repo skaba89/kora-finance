@@ -1241,6 +1241,7 @@ export const en: typeof fr = {
     chartOutflow: "Outflows",
     chartWeek: "Week",
     chartTable: "Weekly forecast of flows and projected balance",
+    independentScales: "Flow bars and the balance line use separate scales. See exact weekly amounts below.",
     dailyTable: "Daily detail",
     dailySummary: "{n} days — expand for detail",
     date: "Date",

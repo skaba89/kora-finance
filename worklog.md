@@ -2231,3 +2231,11 @@ montants tabulaires, compte sélectionné et libellés mobiles. Consultation des
 relevés sans droit d'écriture ; actions et précision BigInt inchangées. Correction
 des identifiants de champs et extension de la recette E2E avec captures avant et
 après confirmation du rapprochement. Prévisionnel : prochain lot.
+
+## UX Premium — lot 6B : prévisions
+
+Filtres horizon/scénario explicites, KPI, graphique hebdomadaire interactif
+avec valeurs précises accessibles et avertissement sur les échelles distinctes,
+DataTable et montants journaliers formatés dans la devise du dossier. Vitest
+vérifie les montants au-delà de MAX_SAFE_INTEGER et Playwright couvre le choix
+du scénario et de l'horizon. Aucun changement des calculs ni de l'API.
