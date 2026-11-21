@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { createCompany, registerAndLogin, uniqueEmail } from "./helpers";
 
-test("créer une facture depuis l'accueil et consulter le recouvrement", async ({ page }) => {
+test("créer une facture depuis l'accueil et consulter le recouvrement", async ({ page }, testInfo) => {
   await registerAndLogin(page);
   const companyId = await createCompany(page, "Commerce de Madina");
   const base = `/dossiers/${companyId}`;
@@ -30,9 +30,21 @@ test("créer une facture depuis l'accueil et consulter le recouvrement", async (
   const row = page.getByRole("row").filter({ hasText: "Atelier du Kaloum" });
   await expect(row).toContainText("Brouillon");
   await expect(row).toContainText(/850\s000 GNF/);
+  await expect(page.getByRole("combobox", { name: "Taille de page" })).toHaveValue("100");
+  await page.getByRole("combobox", { name: "Taille de page" }).selectOption("25");
+  await page.getByRole("combobox", { name: "Densité du tableau" }).selectOption("compact");
+  await page.getByRole("button", { name: "Filtrer", exact: true }).click();
+  await expect(page).toHaveURL(/taille=25/);
+  await expect(page).toHaveURL(/densite=compact/);
+  await expect(row).toContainText(/850\s000 GNF/);
+  await testInfo.attach("ventes-premium", { body: await page.screenshot(), contentType: "image/png" });
+  await page.getByRole("link", { name: "Réinitialiser les filtres" }).click();
+  await expect(page.getByRole("combobox", { name: "Taille de page" })).toHaveValue("100");
+  await expect(page.getByRole("combobox", { name: "Densité du tableau" })).toHaveValue("comfortable");
   await sections.getByRole("link", { name: "Recouvrement" }).click();
   await expect(page).toHaveURL(/vue=recouvrement$/);
   await expect(page.getByText("Relances de factures échues", { exact: true })).toBeVisible();
+  await testInfo.attach("recouvrement-premium", { body: await page.screenshot(), contentType: "image/png" });
   await page.reload();
   await expect(sections.getByRole("link", { name: "Recouvrement" })).toHaveAttribute("aria-current", "page");
   await sections.getByRole("link", { name: "Encaissements" }).click();

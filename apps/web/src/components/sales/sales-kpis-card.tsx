@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Banknote, CalendarClock, CircleAlert, Percent } from "lucide-react";
+import { KpiCard } from "@/components/kpi-card";
+import { DataTable } from "@/components/data-table";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -32,43 +34,17 @@ export function SalesKpisCard({
         <p className="text-muted-foreground text-sm">{t.sales.kpisSubtitle}</p>
       </CardHeader>
       <CardContent>
-        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <dt className="text-muted-foreground text-sm">{t.sales.kpisOutstanding}</dt>
-            <dd className="text-lg font-medium">{formatMoney(kpis.outstanding_ttc, currency)}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground text-sm">{t.sales.kpisOverdueShare}</dt>
-            <dd className="text-lg font-medium">
-              {formatMoney(kpis.overdue_ttc, currency)} ({(kpis.overdue_share_bp / 100).toFixed(1)} %)
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground text-sm">{t.sales.kpisDso}</dt>
-            <dd className="text-lg font-medium">
-              {kpis.dso_days} j
-              <span className="text-muted-foreground text-sm">
-                {" "}
-                ({kpis.lookback_days} {t.sales.kpisWindow})
-              </span>
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground text-sm">{t.sales.kpisRecovery}</dt>
-            <dd className="text-lg font-medium">
-              {(kpis.recovery_rate_bp / POURCENT).toFixed(1)} %
-              <span className="text-muted-foreground text-sm">
-                {" "}
-                ({formatMoney(kpis.collected_ttc, currency)} / {formatMoney(kpis.billed_ttc, currency)})
-              </span>
-            </dd>
-          </div>
-        </dl>
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <KpiCard primary icon={Banknote} label={t.sales.kpisOutstanding} value={formatMoney(kpis.outstanding_ttc, currency)} />
+          <KpiCard icon={CircleAlert} label={t.sales.kpisOverdueShare} value={formatMoney(kpis.overdue_ttc, currency)} hint={`${(kpis.overdue_share_bp / 100).toFixed(1)} %`} />
+          <KpiCard icon={CalendarClock} label={t.sales.kpisDso} value={`${kpis.dso_days} j`} hint={`${kpis.lookback_days} ${t.sales.kpisWindow}`} />
+          <KpiCard icon={Percent} label={t.sales.kpisRecovery} value={`${(kpis.recovery_rate_bp / POURCENT).toFixed(1)} %`} hint={`${formatMoney(kpis.collected_ttc, currency)} / ${formatMoney(kpis.billed_ttc, currency)}`} />
+        </div>
         <p className="text-muted-foreground mt-3 text-xs">{t.sales.kpisLateAverage}</p>
         {top.length > 0 && (
           <div className="mt-4">
             <p className="mb-2 text-sm font-medium">{t.sales.kpisTopDebtors}</p>
-            <Table>
+            <DataTable label={t.sales.kpisTopDebtors}>
               <TableHeader>
                 <TableRow>
                   <TableHead>{t.sales.reminderPartner}</TableHead>
@@ -87,7 +63,7 @@ export function SalesKpisCard({
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </DataTable>
           </div>
         )}
         <p className="text-muted-foreground mt-4 text-xs">{t.sales.kpisNotice}</p>

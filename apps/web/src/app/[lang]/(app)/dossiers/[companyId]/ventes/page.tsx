@@ -41,6 +41,8 @@ import {
   getTaxRates,
 } from "@/lib/dal";
 import { getDictionary } from "@/lib/i18n/server";
+import { interpolate } from "@/lib/i18n/interpolate";
+import { tablePreferences, tableRange } from "@/lib/table-preferences";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getDictionary();
@@ -56,26 +58,37 @@ async function DocumentsView({ companyId, t, manage, canPost, query }: ViewProps
   const { kind, statut } = query;
   const kindParam = SALES_KINDS.find((value) => value === kind);
   const statusParam = SALES_STATUSES.find((value) => value === statut);
+  const { size, page, offset, density } = tablePreferences({ taille: "100", ...query });
+  const base = `/dossiers/${companyId}/ventes`;
+  const pageHref = (target: number) => `${base}?${new URLSearchParams({ ...(kindParam ? { kind: kindParam } : {}), ...(statusParam ? { statut: statusParam } : {}), taille: String(size), densite: density, page: String(target) })}`;
   const [documents, partners] = await Promise.all([
-    getSalesDocuments(companyId, { kind: kindParam, status: statusParam, limit: 100, offset: 0 }),
+    getSalesDocuments(companyId, { kind: kindParam, status: statusParam, limit: size, offset }),
     getPartners(companyId, { limit: 200, offset: 0 }),
   ]);
   const partnerNames = new Map(partners.items.map((p) => [p.id, p.name]));
+  const range = tableRange(documents.total, offset, documents.items.length, size);
 
   return (
     <>
-      <SalesFilters t={t} kindParam={kindParam} statusParam={statusParam} />
+      <SalesFilters t={t} kindParam={kindParam} statusParam={statusParam} size={size} density={density} resetHref={base} />
       <Card>
         <CardHeader><CardTitle>{t.sales.listTitle}</CardTitle></CardHeader>
         <CardContent>
           {documents.items.length ? (
             <SalesDocumentsTable companyId={companyId} documents={documents} partnerNames={partnerNames}
-              manage={manage} canPost={canPost} t={t} />
+              manage={manage} canPost={canPost} t={t} density={density} />
           ) : (
             <p className="text-muted-foreground text-sm">
               {kindParam || statusParam || !manage ? t.sales.noMatchingDocuments : t.sales.empty}
             </p>
           )}
+          <nav aria-label={t.table.pagination} className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">{interpolate(t.common.pageRange, { from: range.from, to: range.to, total: documents.total })}</span>
+            <div className="flex gap-2">
+              {page > 1 && <Button asChild variant="outline"><Link href={pageHref(Math.min(page - 1, range.lastPage))}>{t.common.previous}</Link></Button>}
+              {page < range.lastPage && <Button asChild variant="outline"><Link href={pageHref(page + 1)}>{t.common.next}</Link></Button>}
+            </div>
+          </nav>
         </CardContent>
       </Card>
       {manage && <SalesEmailFormCard companyId={companyId} documents={documents} t={t} />}
@@ -166,10 +179,10 @@ export default async function SalesPage({ params, searchParams }: PageProps<"/[l
           <Link href={`${base}?vue=nouveau`}>{t.sales.createInvoice}</Link>
         </Button>
       ) : undefined} />
-      <nav aria-label={t.sales.title} className="mb-5 flex flex-wrap gap-x-3 border-b sm:gap-x-5">
+      <nav aria-label={t.sales.title} className="mb-5 flex flex-wrap gap-2 rounded-xl border bg-card p-2">
         {sections.map(({ id, href, label }) => (
           <Link key={id} href={href} aria-current={id === selected ? "page" : undefined}
-            className="text-muted-foreground hover:text-foreground aria-[current=page]:border-primary aria-[current=page]:text-primary inline-flex min-h-11 items-center border-b-2 border-transparent text-sm font-medium">
+            className="text-muted-foreground hover:bg-accent hover:text-foreground aria-[current=page]:bg-primary/10 aria-[current=page]:text-primary inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium">
             {label}
           </Link>
         ))}

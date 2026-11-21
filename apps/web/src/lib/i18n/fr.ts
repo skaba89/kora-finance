@@ -763,6 +763,7 @@ export const fr = {
     reminderLevel: "Niveau",
     reminderTo: "Destinataire (figé à l'envoi)",
     emailTitle: "Envoyer un document par email",
+    emailPageHint: "Sélectionnez un document numéroté de la page courante. Modifiez les filtres ou la page pour accéder aux autres documents.",
     emailDoc: "Document numéroté",
     emailDocPlaceholder: "Choisir un document numéroté (facture, avoir, devis envoyé)",
     emailTo: "Destinataire (facultatif)",
