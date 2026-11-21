@@ -326,6 +326,16 @@ profil tenant exige une devise source explicitement déclarée GNF, identique
 Ce service ne crée aucune écriture ni route publique ; staging, doublons,
 exécution et revalidation des droits restent à livrer.
 
+**5D2b1 — Schéma de staging.** Migration additive 0026 : table tenant
+`accounting_import_batches` sous RLS forcée, métadonnées de format, taille,
+devise, empreinte SHA-256, clé d'objet canonique `imports/<tenant>/<id>`,
+clé de chiffrement enveloppée et date d'expiration. Unicité du couple
+tenant/fichier/options ; les mêmes fichiers dans deux dossiers restent
+indépendants. Contraintes de taille et de format en base. Aucun fichier
+n'est encore déposé : le service suivant implémentera chiffrement S3,
+contrôle de droits, idempotence et purge des objets expirés/abandonnés.
+La migration ne modifie aucune table métier existante.
+
 ## Phase 6 — Dossier de financement
 Pack généré en un clic, lien signé, révocable et expirable, journal des consultations.
 - Un lien révoqué renvoie 410 et ne donne plus accès à aucun document.
