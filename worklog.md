@@ -2410,3 +2410,12 @@ CSV/Excel/FEC FR/EN, dépôt brut puis précontrôle par Server Action et rappor
 borné avec totaux exacts. Aucun changement de l'API ni création d'écriture.
 Recette Playwright ajoutée : fichier déséquilibré, fichier équilibré, journal
 inchangé. La génération des brouillons reste un chantier distinct.
+
+## Modularité — M3a (2026-11-22)
+
+PR #149 (catalogue) et #150 (persistance) fusionnées, CI de #150 verte (#349).
+Préparation du service d'administration plateforme : annuaire minimal paginé,
+vérification du droit courant, contexte RLS dédié et instantané du catalogue
+avec choix explicites et révisions. Tests d'autorisation et d'isolation ajoutés.
+Aucune route publique ni modification des autorisations métier ; M3b reste à
+livrer avec génération des contrats OpenAPI et TypeScript.

@@ -41,6 +41,8 @@ Le chantier de modularité par tenant (benchmark Tiime/Pennylane et adaptation
 africaine) est désormais cadré par `docs/MODULARITE.md`. Le catalogue pur M1
 et la persistance M2 versionnée et auditée ne modifient pas les droits effectifs ;
 les gardes serveur précèdent toute activation commerciale ou administrative.
+M3a prépare l'annuaire et le contexte d'administration sans droit comptable ;
+les routes HTTP et contrats générés restent à livrer en M3b.
 
 ## Architecture
 
