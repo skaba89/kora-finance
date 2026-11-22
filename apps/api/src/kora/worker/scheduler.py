@@ -21,7 +21,7 @@ import time
 from kora.core.config import get_settings
 from kora.core.logging import configure_logging
 from kora.worker import broker as _broker  # noqa: F401  (enregistre le broker)
-from kora.worker.tasks import scan_automatic_reminders
+from kora.worker.tasks import scan_automatic_reminders, scan_import_maintenance
 
 configure_logging(get_settings().log_level)
 logger = logging.getLogger(__name__)
@@ -36,6 +36,10 @@ def main() -> None:
             scan_automatic_reminders.send()
         except Exception:
             logger.exception("enfilage du balayage impossible (réessai au prochain tick)")
+        try:
+            scan_import_maintenance.send()
+        except Exception:
+            logger.exception("enfilage de la maintenance des imports impossible")
         time.sleep(interval)
 
 
