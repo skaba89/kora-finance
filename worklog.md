@@ -2484,3 +2484,10 @@ pytest et CI complète requis avant fusion. Persistance et audit restent M6b.
 PR #163 fusionnée, CI #380 verte. Migration additive 0028, modèle enregistré,
 contraintes et lecture seule du runtime. Tests de privilèges et de clé composée
 ajoutés ; validation PostgreSQL en CI requise. Aucun changement de droits.
+
+## Modularité — M6b2a : stockage des licences (2026-11-22)
+
+PR #164 fusionnée, CI #384 verte. Migration additive 0029, référence à une
+offre, périodes disjointes et RLS. Tests PostgreSQL de privilèges, périodes
+adjacentes, chevauchement et isolement ajoutés ; CI requise avant fusion.
+Aucun changement des droits métier ni création de licence initiale.

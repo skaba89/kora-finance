@@ -159,3 +159,11 @@ code/version, modules non vides et sans NULL. Lecture seule pour kora_app jusqu'
 service de publication audité ; aucune offre initiale ni licence attribuée.
 La validation catalogue reste indispensable à la publication. M6b2 ajoutera
 le service de publication et les contraintes de périodes de licence sous RLS.
+
+## M6b2a — stockage des périodes de licence
+
+Migration additive 0029, référence composée à une offre, isolation RLS forcée,
+contrainte GiST de non-chevauchement par dossier (fin exclue). Le runtime reste
+en lecture seule avant le service audité ; aucun abonnement initial. Le statut
+commercial ne modifie pas les permissions métier. Publication et attribution
+par service contrôlé restent à livrer.
