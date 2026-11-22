@@ -315,3 +315,6 @@ prix ni mutation de configuration ; voir `docs/MODULARITE.md`.
 
 M6a2 définit les périodes de licence et leurs états commerciaux, sans effet
 sur les permissions ; persistance et audit à livrer dans M6b.
+
+M6b1 prépare le stockage global des offres (0028), en lecture seule pour le
+runtime, sans attribution ni changement des permissions.

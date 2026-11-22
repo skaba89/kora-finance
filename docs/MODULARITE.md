@@ -151,3 +151,11 @@ explicites, début inclus et fin exclue ; états planifié, essai, actif, suspen
 et expiré. L'expiration prime sur la suspension hors période. Le renouvellement
 est représenté par une nouvelle période ; aucun paiement ni contrôle de droits.
 M6b devra garantir références, non-chevauchement, historique et audit en base.
+
+## M6b1 — stockage des offres
+
+Migration additive 0028 : table globale des versions commerciales, clé composée
+code/version, modules non vides et sans NULL. Lecture seule pour kora_app jusqu'au
+service de publication audité ; aucune offre initiale ni licence attribuée.
+La validation catalogue reste indispensable à la publication. M6b2 ajoutera
+le service de publication et les contraintes de périodes de licence sous RLS.
