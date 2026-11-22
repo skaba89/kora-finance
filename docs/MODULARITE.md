@@ -39,6 +39,13 @@ Le contrôle est effectué à chaque nouvelle requête, après le RBAC ; une op�
 déjà autorisée peut se terminer. Aucun worker ne produit ces prévisions.
 Les autres modules restent informatifs jusqu'à leurs lots M4 dédiés.
 
+M4c2 suspend les nouvelles relances automatiques lorsque Ventes est désactivé,
+y compris lors d'une exécution du worker déjà enfilée. La politique est conservée
+et reprend à la réactivation ; son activation explicite est refusée tant que le
+module est inactif, mais sa désactivation reste possible. L'historique et le
+recouvrement manuel des créances existantes restent accessibles selon le RBAC.
+Les emails de relances déjà enregistrées poursuivent leur traitement normal.
+
 ## Règles impératives
 
 - Séparer disponibilité produit, droit d'abonnement, choix administratif et RBAC.

@@ -43,6 +43,8 @@ from kora.models.sales import (
     SalesReminderPolicy,
 )
 from kora.sales import payments, reminders
+from kora.tenancy.module_config import effective_modules, require_enabled_module
+from kora.tenancy.modules import Module, ModuleStatus
 
 # Bornes de l'échéancier : 1 à 6 seuils, chaque seuil entre 1 et 365 jours de retard.
 OFFSETS_COUNT_MIN = 1
@@ -110,6 +112,8 @@ def upsert_policy(session: Session, actor: Actor, data: PolicyData) -> SalesRemi
     de ligne sérialise deux PUT concurrents) et journalise le réglage. L'acte
     est audité : activer ou retendre des relances automatiques n'est pas
     anodin, le journal d'audit le porte."""
+    if data.enabled:
+        require_enabled_module(session, actor.company_id, Module.SALES)
     offsets = validate_offsets(data.offsets_days)
     policy = session.execute(
         select(SalesReminderPolicy)
@@ -153,6 +157,8 @@ def run_policy(session: Session, company_id: uuid.UUID, as_of: date) -> PolicyRu
     le service reste sans dépendance au broker. Une seule transaction pour tout
     le run ; chaque création est protégée par un point de sauvegarde : une
     course perdue (doublon du jour) n'annule pas les autres relances."""
+    if effective_modules(session, company_id)[Module.SALES] != ModuleStatus.ENABLED:
+        return PolicyRun(enabled=False)
     policy = get_policy(session, company_id)
     if policy is None or not policy.enabled:
         return PolicyRun(enabled=False)

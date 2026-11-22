@@ -21,9 +21,11 @@ from collections.abc import Callable
 
 from fastapi.testclient import TestClient
 from httpx2 import Response
+from sqlalchemy.orm import Session
 
+from kora.models.identity import User
 from kora.worker.tasks import run_reminder_policy, scan_automatic_reminders
-from tests.conftest import CompanyFixture, Mailbox
+from tests.conftest import CompanyFixture, Mailbox, UserFixture
 from tests.test_sales import Sales, _dossier
 from tests.test_sales_reminders import (
     JOURS_RAPPEL,
@@ -201,6 +203,46 @@ def _facture_echue_auto(
     sales = Sales(client, company)
     tier = _tier_avec_email(client, company, email=email)
     return _facture_echue(sales, client, company, partner_id=tier)
+
+
+def test_module_ventes_suspend_les_relances_automatiques(
+    client: TestClient,
+    db: Session,
+    make_company: MakeCompany,
+    make_user: Callable[..., UserFixture],
+    mailbox: Mailbox,
+) -> None:
+    first, second = _dossier(make_company), _dossier(make_company)
+    first_policy = Policies(client, first)
+    _facture_echue_auto(client, first)
+    _facture_echue_auto(client, second)
+    _politique(first_policy, first)
+    _politique(Policies(client, second), second)
+    admin = make_user()
+    db.get_one(User, admin.id).is_platform_admin = True
+    db.commit()
+    config = f"/api/v1/platform/module-clients/{first.id}/modules/sales"
+    headers = admin.headers(client)
+    assert client.put(
+        config, headers=headers, json={"enabled": False, "expected_revision": 0}
+    ).status_code == 200
+    assert first_policy.get().json()["enabled"] is True
+    assert first_policy.put({"enabled": True, "offsets_days": [2]}).status_code == 403
+
+    def count(company: CompanyFixture) -> int:
+        response = client.get(f"/api/v1/companies/{company.id}/reminders", headers=company.headers)
+        assert response.status_code == 200
+        return int(response.json()["total"])
+
+    _execute(mailbox, first, _jour_iso(JOURS_RAPPEL))
+    assert count(first) == 0
+    _execute(mailbox, second, _jour_iso(JOURS_RAPPEL))
+    assert count(second) == 1
+    assert client.put(
+        config, headers=headers, json={"enabled": True, "expected_revision": 1}
+    ).status_code == 200
+    _execute(mailbox, first, _jour_iso(JOURS_RAPPEL))
+    assert count(first) == 1
 
 
 def test_run_cree_la_relance_due_niveau_1(

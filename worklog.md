@@ -2432,3 +2432,9 @@ doivent être régénérés avec le générateur épinglé avant fusion.
 Garde serveur prévisionnel après contrôle RBAC et tenant : calculs, exports,
 paramètres et nouveaux instantanés. Historique préservé ; tests HTTP sur la
 désactivation, la réactivation, les dépendances et l'isolation des entreprises.
+
+## Modularité — M4c2 : relances automatiques
+
+Garde Ventes à l'activation de politique et à chaque exécution du worker ;
+configuration et historique conservés, recouvrement manuel préservé.
+Test d'intégration de suspension, réactivation et isolation entre dossiers.
