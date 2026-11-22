@@ -43,6 +43,8 @@ from kora.models.treasury import (
     StatementLineStatus,
 )
 from kora.storage import objects
+from kora.tenancy.module_config import require_enabled_module
+from kora.tenancy.modules import Module
 from kora.treasury import parsing
 from kora.treasury.service import _account
 
@@ -111,6 +113,7 @@ def import_statement(
 ) -> BankStatement:
     """Importe un relevé OFX ou CSV sur un compte financier : lecture, déduplication,
     conservation du fichier original, lignes en attente de rapprochement."""
+    require_enabled_module(session, actor.company_id, Module.TREASURY)
     # Import tardif inutile : le service 3A ne connaît pas les relevés, l'inverse oui.
     settings = get_settings()
     if not content:
