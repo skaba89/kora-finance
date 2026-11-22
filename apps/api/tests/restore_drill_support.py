@@ -202,7 +202,6 @@ def archive() -> None:
 
 def recover() -> None:
     from cryptography.fernet import Fernet, InvalidToken  # noqa: PLC0415
-    from pydantic import SecretStr  # noqa: PLC0415
 
     from kora.core import crypto  # noqa: PLC0415
     from kora.scripts import backup  # noqa: PLC0415
@@ -219,10 +218,9 @@ def recover() -> None:
             )
         else:
             objects._client().put_object(Bucket=get_settings().s3_bucket, Key=item["key"], Body=raw)
-    settings = get_settings()
-    escrowed_key = settings.encryption_keys
+    escrowed_key = os.environ["KORA_ENCRYPTION_KEYS"]
     try:
-        settings.encryption_keys = SecretStr(Fernet.generate_key().decode())
+        os.environ["KORA_ENCRYPTION_KEYS"] = Fernet.generate_key().decode()
         crypto._cipher.cache_clear()
         try:
             backup.download_bytes(manifest["backup_key"])
@@ -231,7 +229,7 @@ def recover() -> None:
         else:
             raise AssertionError("La sauvegarde a été déchiffrée sans la clé séquestrée.")
     finally:
-        settings.encryption_keys = escrowed_key
+        os.environ["KORA_ENCRYPTION_KEYS"] = escrowed_key
         crypto._cipher.cache_clear()
     restored = backup.download_bytes(manifest["backup_key"])
     assert _digest(restored) == manifest["dump_sha256"]
