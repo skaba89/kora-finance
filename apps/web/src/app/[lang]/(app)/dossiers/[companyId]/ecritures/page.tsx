@@ -89,9 +89,12 @@ export default async function EntriesPage({
         subtitle={t.entries.subtitle}
         actions={
           can(company, "entries:write") ? (
-            <Button asChild>
-              <Link href={`${base}/nouvelle`}>{t.entries.newEntry}</Link>
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {currency === "GNF" && <Button asChild variant="outline"><Link href={`${base}/importer`}>{t.imports.title}</Link></Button>}
+              <Button asChild>
+                <Link href={`${base}/nouvelle`}>{t.entries.newEntry}</Link>
+              </Button>
+            </div>
           ) : null
         }
       />
