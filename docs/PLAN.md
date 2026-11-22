@@ -375,6 +375,14 @@ revérifie les droits ; aucune écriture produite. Le service interne ne
 permet pas de substituer des options au moment du contrôle. Les endpoints
 et leur contrat généré, les quotas et la restitution UX restent à livrer.
 
+**5D2c2 — Quotas avant exposition HTTP.** Au plus 10 fichiers et 128 Mio
+de contenu référencé par dossier, y compris les références expirées non
+purgées. Contrôle transactionnel sous le verrou de dépôt, après dédoublonnage.
+Pour chaque opération (dépôt ou lecture), 20 appels par utilisateur et 60
+par dossier par fenêtre horaire Redis ; le dépassement renvoie 429 avec
+Retry-After, une panne Redis bloque avec 503. Les nouveaux dépôts dépassant
+la capacité renvoient 409. Aucune route publique n'est encore ajoutée.
+
 ## Phase 6 — Dossier de financement
 Pack généré en un clic, lien signé, révocable et expirable, journal des consultations.
 - Un lien révoqué renvoie 410 et ne donne plus accès à aucun document.
