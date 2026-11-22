@@ -368,6 +368,13 @@ S3 sont traitées par messages distincts. Les échecs transitoires sont
 repris au prochain tick, sans multiplier les retries. Aucun préfixe de
 dossier supprimé n'est purgé automatiquement. Aucun endpoint ajouté.
 
+**5D2c1 — Précontrôle du fichier déposé.** Chargement authentifié sous
+verrou, vérification d'intégrité et utilisation des options persistées
+(format, devise, séparateur FEC). Le précontrôle recharge le catalogue et
+revérifie les droits ; aucune écriture produite. Le service interne ne
+permet pas de substituer des options au moment du contrôle. Les endpoints
+et leur contrat généré, les quotas et la restitution UX restent à livrer.
+
 ## Phase 6 — Dossier de financement
 Pack généré en un clic, lien signé, révocable et expirable, journal des consultations.
 - Un lien révoqué renvoie 410 et ne donne plus accès à aucun document.

@@ -4,7 +4,7 @@ import hashlib
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Literal
+from typing import Literal, cast
 
 from cryptography.fernet import InvalidToken
 from sqlalchemy import select
@@ -32,6 +32,14 @@ from kora.tenancy.permissions import Permission, permissions_for
 class StagedImport:
     id: uuid.UUID
     expires_at: datetime
+
+
+@dataclass(frozen=True)
+class StagedContent:
+    content: bytes
+    file_format: Literal["csv", "fec", "xlsx"]
+    currency: str
+    fec_delimiter: Literal["\t", "|"]
 
 
 def _authorize(session: Session, user: User, company_id: uuid.UUID, *, lock: bool) -> str:
@@ -115,6 +123,10 @@ def stage_import(
 
 
 def read_staged_import(user: User, company_id: uuid.UUID, batch_id: uuid.UUID) -> bytes:
+    return load_staged_content(user, company_id, batch_id).content
+
+
+def load_staged_content(user: User, company_id: uuid.UUID, batch_id: uuid.UUID) -> StagedContent:
     """Réautorise chaque lecture ; n'expose jamais de clé ni de lien de stockage."""
     with get_sessionmaker()() as session, session.begin():
         _authorize(session, user, company_id, lock=False)
@@ -133,4 +145,9 @@ def read_staged_import(user: User, company_id: uuid.UUID, batch_id: uuid.UUID) -
             raise ServiceUnavailableError("Le fichier d'import est illisible.") from exc
         if len(content) != batch.size_bytes or hashlib.sha256(content).hexdigest() != batch.sha256:
             raise ServiceUnavailableError("Le fichier d'import est illisible.")
-        return content
+        if batch.format not in ("csv", "fec", "xlsx"):
+            raise ServiceUnavailableError("Le format enregistré est inconnu.")
+        file_format = cast(Literal["csv", "fec", "xlsx"], batch.format)
+        return StagedContent(
+            content, file_format, batch.currency, "\t" if batch.delimiter == "TAB" else "|"
+        )
