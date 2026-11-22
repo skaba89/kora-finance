@@ -33,6 +33,8 @@ from kora.cashflow.service import ExcludedDraft
 from kora.core.errors import BusinessRuleError
 from kora.models.cashflow import CashflowSettings, CashflowSnapshot
 from kora.tenancy.deps import TreasuryManage, TreasuryRead
+from kora.tenancy.module_config import require_enabled_module
+from kora.tenancy.modules import Module
 
 router = APIRouter(prefix="/companies/{company_id}", tags=["trésorerie prévisionnelle"])
 
@@ -199,6 +201,7 @@ def forecast(
     ] = None,
 ) -> ForecastOut:
     """Prévision consolidée et par compte : soldes observés, flux engagés, flux estimés."""
+    require_enabled_module(db, tenant.company_id, Module.FORECAST)
     _validate_horizon(horizon)
     result, drafts = service.build_forecast(
         db, tenant.company_id, horizon_days=horizon, scenario=scenario, as_of=as_of
@@ -216,6 +219,7 @@ def forecast_export(
     scenario: ScenarioQuery = Scenario.NEUTRE,
 ) -> Response:
     """Export PDF ou Excel de la prévision (inscrit au journal d'audit)."""
+    require_enabled_module(db, tenant.company_id, Module.FORECAST)
     _validate_horizon(horizon)
     exported = cashflow_exports.render_forecast_export(
         db,
@@ -270,6 +274,7 @@ def _settings_out(row: CashflowSettings | None) -> SettingsOut:
 @router.get("/cashflow/settings", responses=_ERRORS)
 def get_settings(tenant: TreasuryRead, db: DbSession) -> SettingsOut:
     """Seuils d'alerte effectifs (valeurs par défaut si jamais paramétrés)."""
+    require_enabled_module(db, tenant.company_id, Module.FORECAST)
     row = service.load_settings_row(db, tenant.company_id)
     return _settings_out(row)
 
@@ -277,6 +282,7 @@ def get_settings(tenant: TreasuryRead, db: DbSession) -> SettingsOut:
 @router.put("/cashflow/settings", responses=_ERRORS)
 def put_settings(payload: SettingsIn, tenant: TreasuryManage, db: DbSession) -> SettingsOut:
     """Met à jour les seuils et défauts d'affichage de la prévision (audité)."""
+    require_enabled_module(db, tenant.company_id, Module.FORECAST)
     if (
         payload.warning_floor_minor is not None
         and payload.warning_floor_minor < payload.critical_floor_minor
@@ -375,6 +381,7 @@ def create_snapshot(
     tenant: TreasuryManage, db: DbSession, scenario: ScenarioQuery = Scenario.NEUTRE
 ) -> SnapshotOut:
     """Fige la prévision courante en un instantané (base du prévisionnel vs réalisé)."""
+    require_enabled_module(db, tenant.company_id, Module.FORECAST)
     snapshot = service.create_snapshot(
         db,
         tenant.company_id,

@@ -31,6 +31,14 @@ Les routes plateforme ne donnent aucun accès comptable. La mutation exige une
 révision attendue et une valeur booléenne stricte. Les états restent informatifs
 tant que M4 ne contrôle pas les autorisations métier.
 
+M4a applique la garde serveur au prévisionnel : calcul, export PDF/Excel,
+lecture et modification des paramètres, création d'instantanés. Un prérequis
+trésorerie désactivé bloque également ces opérations. Les instantanés existants
+et leur comparaison au réalisé restent consultables par les rôles autorisés.
+Le contrôle est effectué à chaque nouvelle requête, après le RBAC ; une opération
+déjà autorisée peut se terminer. Aucun worker ne produit ces prévisions.
+Les autres modules restent informatifs jusqu'à leurs lots M4 dédiés.
+
 ## Règles impératives
 
 - Séparer disponibilité produit, droit d'abonnement, choix administratif et RBAC.
