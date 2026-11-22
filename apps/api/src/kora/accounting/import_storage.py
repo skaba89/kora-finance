@@ -52,7 +52,8 @@ def _check_rate(user_id: uuid.UUID, company_id: uuid.UUID, operation: str) -> No
 def _check_capacity(session: Session, company_id: uuid.UUID, size: int) -> None:
     # Sous le verrou du dossier : inclut les références expirées non encore purgées.
     total_bytes = func.coalesce(func.sum(ImportBatch.size_bytes), 0)
-    query = select(func.count(ImportBatch.id), total_bytes).where(ImportBatch.tenant_id == company_id)
+    tenant_filter = ImportBatch.tenant_id == company_id
+    query = select(func.count(ImportBatch.id), total_bytes).where(tenant_filter)
     count, total = session.execute(query).one()
     if count >= MAX_STAGED_FILES or total + size > MAX_STAGED_BYTES:
         raise ConflictError("Capacité des imports atteinte. Attendez la purge des fichiers.")
