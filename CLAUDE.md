@@ -318,3 +318,6 @@ sur les permissions ; persistance et audit à livrer dans M6b.
 
 M6b1 prépare le stockage global des offres (0028), en lecture seule pour le
 runtime, sans attribution ni changement des permissions.
+
+M6b2a prépare les périodes de licence (0029), RLS forcée, non-chevauchement
+et lecture seule du runtime jusqu'au service audité.
