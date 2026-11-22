@@ -19,6 +19,12 @@ La désactivation d'un prérequis conserve les choix de ses dépendants. Seul un
 administrateur plateforme actif peut modifier la configuration interne. Aucun
 endpoint public ni garde métier ne consomme encore ces choix.
 
+Le lot M3a prépare l'administration : annuaire minimal paginé des entreprises,
+contrôle du droit plateforme en base, contexte dédié et instantané cohérent des
+choix, révisions et dépendances du catalogue. L'état configuré est distinct des
+droits métier effectivement appliqués. Les routes HTTP et contrats générés sont
+livrés séparément en M3b.
+
 ## Règles impératives
 
 - Séparer disponibilité produit, droit d'abonnement, choix administratif et RBAC.

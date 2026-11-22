@@ -1,6 +1,7 @@
 """Persistance interne de la configuration ; aucune route HTTP au lot M2."""
 
 import uuid
+from dataclasses import dataclass
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -19,13 +20,53 @@ def _require_tenant(session: Session, company_id: uuid.UUID) -> None:
         raise ForbiddenError("Contexte du dossier obligatoire.")
 
 
-def effective_modules(session: Session, company_id: uuid.UUID) -> dict[Module, ModuleStatus]:
-    """Lecture interne, dans un contexte tenant déjà autorisé par l'appelant."""
+@dataclass(frozen=True)
+class ModuleConfiguration:
+    module: Module
+    released: bool
+    default_enabled: bool
+    dependencies: tuple[Module, ...]
+    configured_enabled: bool | None
+    revision: int
+    configured_status: ModuleStatus
+
+
+def module_configuration(session: Session, company_id: uuid.UUID) -> list[ModuleConfiguration]:
+    """Instantané cohérent : état calculé et choix explicite dans la même lecture."""
     _require_tenant(session, company_id)
     rows = session.scalars(
-        select(TenantModuleOverride).where(TenantModuleOverride.tenant_id == company_id)
+        select(TenantModuleOverride)
+        .where(TenantModuleOverride.tenant_id == company_id)
+        .execution_options(populate_existing=True)
     )
-    return resolve_modules({Module(row.module): row.enabled for row in rows})
+    overrides = {Module(row.module): (row.enabled, row.revision) for row in rows}
+    statuses = resolve_modules({module: choice[0] for module, choice in overrides.items()})
+    return [
+        ModuleConfiguration(
+            module=module,
+            released=definition.released,
+            default_enabled=definition.default_enabled,
+            dependencies=tuple(sorted(definition.dependencies)),
+            configured_enabled=overrides[module][0] if module in overrides else None,
+            revision=overrides[module][1] if module in overrides else 0,
+            configured_status=statuses[module],
+        )
+        for module, definition in CATALOG.items()
+    ]
+
+
+def effective_modules(session: Session, company_id: uuid.UUID) -> dict[Module, ModuleStatus]:
+    """Lecture interne, dans un contexte tenant déjà autorisé par l'appelant."""
+    return {row.module: row.configured_status for row in module_configuration(session, company_id)}
+
+
+def require_platform_admin(session: Session, actor_id: uuid.UUID) -> None:
+    """Vérifie le droit courant en base, sans accorder un rôle sur un dossier."""
+    admin = session.scalar(
+        select(User.id).where(User.id == actor_id, User.is_active, User.is_platform_admin)
+    )
+    if admin is None:
+        raise ForbiddenError("Administration de la plateforme requise.")
 
 
 def set_module_override(
@@ -43,11 +84,7 @@ def set_module_override(
     Le journal d'audit et le choix sont atomiques avec le commit de l'appelant.
     """
     _require_tenant(session, company_id)
-    admin = session.scalar(
-        select(User.id).where(User.id == actor_id, User.is_active, User.is_platform_admin)
-    )
-    if admin is None:
-        raise ForbiddenError("Administration de la plateforme requise.")
+    require_platform_admin(session, actor_id)
     if module not in CATALOG or (enabled and not CATALOG[module].released):
         raise BusinessRuleError("Module non disponible.")
     company = session.scalar(select(Company.id).where(Company.id == company_id).with_for_update())
