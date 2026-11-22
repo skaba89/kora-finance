@@ -19,6 +19,7 @@ from kora.api.v1 import (
     ledger,
     lettering,
     mfa,
+    modules,
     partners,
     purchases,
     reports,
@@ -32,6 +33,7 @@ PREFIX = "/api/v1"
 ROUTERS: tuple[APIRouter, ...] = (
     auth.router,
     mfa.router,
+    modules.router,
     companies.router,
     accounting.router,
     ledger.router,
