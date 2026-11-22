@@ -37,6 +37,11 @@ session PostgreSQL) — détails dans `worklog.md` et `AUDIT_SUIVI_20261109.md`.
 Le cahier des charges complet et les critères d'acceptation de chaque phase sont dans
 `docs/PLAN.md`.
 
+Le chantier de modularité par tenant (benchmark Tiime/Pennylane et adaptation
+africaine) est désormais cadré par `docs/MODULARITE.md`. Le catalogue pur M1
+ne modifie pas les droits effectifs ; les gardes serveur précèdent toute activation
+commerciale ou administrative.
+
 ## Architecture
 
 ```
