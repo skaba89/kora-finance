@@ -83,3 +83,13 @@ Un client API qui utilise la saisie interactive conserve ses droits comptables.
 
 Toute activation repose sur des capacités réellement disponibles et validées.
 Les paramètres de pays, le style et les fonctions sont configurables séparément.
+
+## M4c1 — Documents commerciaux
+
+Contrôle de la création de nouveaux devis et factures (ventes et achats)
+au niveau des services, y compris la conversion d'un devis en facture.
+Les documents déjà créés restent consultables et traitables ; les avoirs
+correctifs restent autorisés selon les règles métier et le RBAC. Les règlements,
+la comptabilisation, les remboursements et les annulations ne sont pas bloqués
+afin de préserver les obligations existantes. Les fonctions annexes feront
+l'objet d'un inventaire distinct avant toute restriction.
