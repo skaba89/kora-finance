@@ -3,6 +3,15 @@
 Entrées datées, les plus récentes en haut. Chaque session y note ce qui a été fait,
 vérifié, et ce qui reste.
 
+## 2026-11-22 — Modularité M5a : administration plateforme
+
+PR #159 fusionnée (`c0849da`), CI #371 verte. Écran FR/EN de gestion des
+modules par client, confirmation et révisions ; aucun changement de schéma.
+Déploiement VPS confirmé par les healthchecks. Recette métier positive à
+confirmer. Ajout d'une recette Playwright de refus de l'administration par un
+dirigeant ordinaire et de conservation de son accès métier ; CI à exécuter.
+Suite : simulation/visibilité des restrictions et cadrage M6 des offres.
+
 ## 2026-11-21 — Phase 5D2b1 : fondations du staging
 
 PR #139 fusionnée (`54d1140`), CI #323 verte. Migration additive 0026 et

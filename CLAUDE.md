@@ -45,6 +45,9 @@ M3a prépare l'annuaire et le contexte d'administration sans droit comptable ;
 M3b expose les routes HTTP d'administration et de lecture tenant. M4a applique
 la restriction aux nouveaux calculs et exports prévisionnels, en conservant
 les instantanés historiques et le RBAC existant.
+M5a (PR #159 fusionnée, CI verte) livre l'écran d'administration des modules
+FR/EN réservé à la plateforme ; la recette métier reste à confirmer. Le lot
+M6 (offres et licences) doit rester distinct des choix administratifs et du RBAC.
 
 ## Architecture
 

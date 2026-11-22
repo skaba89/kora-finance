@@ -106,3 +106,25 @@ correctifs restent autorisés selon les règles métier et le RBAC. Les règleme
 la comptabilisation, les remboursements et les annulations ne sont pas bloqués
 afin de préserver les obligations existantes. Les fonctions annexes feront
 l'objet d'un inventaire distinct avant toute restriction.
+
+## M5a — Administration plateforme (PR #159)
+
+Écran FR/EN intégré dans main : annuaire paginé, sélection du dossier, états
+configurés, dépendances, confirmation de désactivation et révision optimiste.
+Accès réservé au SUPER_ADMIN actif ; aucune nouvelle migration. La CI #371
+est verte. La configuration seule ne garantit pas le blocage de toutes les
+opérations : les gardes M4 restent progressives et les historiques préservés.
+
+## Prochain lot — Portail SaaS
+
+- M5b : recette des droits plateforme, isolation et retour au dossier métier ;
+  simulation des conséquences et indication de la couverture effective M4.
+- M6a : cadrer les offres et licences indépendamment des choix administratifs,
+  sans tarif fictif ni mutation des droits existants.
+- M6b : persistance versionnée, audit des changements, expiration et essais,
+  migrations additives et contrats générés.
+- M6c : interface de gestion et supervision, puis paiement réel après sélection
+  et validation du prestataire adapté au marché guinéen.
+
+Aucune donnée comptable ni identité client supplémentaire n'est exposée à la
+plateforme sans besoin explicite et validation du périmètre.
