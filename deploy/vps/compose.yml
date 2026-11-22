@@ -159,6 +159,8 @@ services:
     # administrée côté fournisseur, la purge manuelle avec la clé distincte
     # KORA_BACKUP_ADMIN_S3_* depuis un poste hors VPS.
     environment:
+      KORA_ENV: production
+      KORA_ENCRYPTION_KEYS: ${KORA_ENCRYPTION_KEYS:?}
       KORA_BACKUP_S3_ENDPOINT_URL: ${KORA_BACKUP_S3_ENDPOINT_URL:?}
       KORA_BACKUP_S3_REGION: ${KORA_BACKUP_S3_REGION:-garage}
       KORA_BACKUP_S3_BUCKET: ${KORA_BACKUP_S3_BUCKET:?}

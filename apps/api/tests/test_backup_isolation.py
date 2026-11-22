@@ -9,7 +9,12 @@ Les scripts de sauvegarde/restauration doivent passer par le service `backup` so
 profil, et backup.sh ne doit plus purger (rétention administrée côté fournisseur).
 """
 
+import os
+import subprocess
+import sys
 from pathlib import Path
+
+from cryptography.fernet import Fernet
 
 from kora.core.config import BackupSettings, Settings
 
@@ -69,6 +74,7 @@ def _assert_isolation(compose: Path) -> None:
     backup_env = _service_block(text, "backup")
     if "x-backup-env:" in text:
         backup_env += _anchor_block(text, "x-backup-env")
+    assert "KORA_ENCRYPTION_KEYS:" in backup_env
     assert "KORA_BACKUP_S3_BUCKET" in backup_env, (
         f"{compose.name} : le service « backup » doit porter les variables dédiées"
     )
@@ -139,3 +145,21 @@ def test_la_configuration_runtime_ne_lit_pas_les_identifiants_sauvegarde() -> No
     assert BackupSettings.model_config["env_prefix"] == "KORA_BACKUP_S3_"
     assert not any("backup" in field for field in Settings.model_fields)
     assert not any(field.startswith("s3_") and "backup" in field for field in Settings.model_fields)
+
+
+def test_chiffrement_sans_configuration_runtime() -> None:
+    """Reproduit le conteneur backup : aucun secret runtime hormis le chiffrement."""
+    env = {key: value for key, value in os.environ.items() if not key.startswith("KORA_")}
+    env.update(KORA_ENV="production", KORA_ENCRYPTION_KEYS=Fernet.generate_key().decode())
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from kora.storage import objects; "
+            "sealed = objects.seal(b'PGDMP', 'backups/test.dump.enc'); "
+            "assert objects.unseal(sealed.blob, sealed.wrapped_key, "
+            "'backups/test.dump.enc') == b'PGDMP'",
+        ],
+        env=env,
+        check=True,
+    )
