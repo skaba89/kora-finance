@@ -3,13 +3,20 @@
 from functools import lru_cache
 
 from cryptography.fernet import Fernet, MultiFernet
+from pydantic import SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from kora.core.config import get_settings
+
+class EncryptionSettings(BaseSettings):
+    """Configuration minimale commune au runtime et aux sauvegardes isolées."""
+
+    model_config = SettingsConfigDict(env_prefix="KORA_", extra="ignore")
+    encryption_keys: SecretStr
 
 
 @lru_cache
 def _cipher() -> MultiFernet:
-    keys = [k.strip() for k in get_settings().encryption_keys.get_secret_value().split(",")]
+    keys = [k.strip() for k in EncryptionSettings().encryption_keys.get_secret_value().split(",")]
     if not keys or not all(keys):
         raise RuntimeError("KORA_ENCRYPTION_KEYS ne contient aucune clé valide")
     # La première clé chiffre ; toutes déchiffrent (rotation sans interruption).

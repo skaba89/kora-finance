@@ -36,6 +36,7 @@ x-api-env: &api-env
   KORA_S3_SECRET_ACCESS_KEY: ${KORA_S3_SECRET_ACCESS_KEY:?lancer make env}
 
 x-backup-env: &backup-env
+  KORA_ENCRYPTION_KEYS: ${KORA_ENCRYPTION_KEYS:?lancer make env}
   # Sauvegardes (KF-09) : bucket et clé DÉDIÉS, distincts du stockage des pièces.
   # La clé de sauvegarde ne porte aucun droit de suppression (rétention administrée
   # côté fournisseur) ; la clé d'administration de la purge n'est jamais committée ici.
