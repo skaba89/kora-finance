@@ -50,12 +50,11 @@ def test_periodes_adjacentes_et_isolation(
         session.add(period(date(2026, 11, 1), date(2026, 12, 1)))
         session.add(period(date(2026, 12, 1), date(2027, 1, 1)))
         session.flush()
-        with (
-            pytest.raises(IntegrityError, match="commercial_license_periods_no_overlap"),
-            session.begin_nested(),
-        ):
-            session.add(period(date(2026, 11, 15), date(2026, 12, 15)))
+        savepoint = session.begin_nested()
+        session.add(period(date(2026, 11, 15), date(2026, 12, 15)))
+        with pytest.raises(IntegrityError, match="commercial_license_periods_no_overlap"):
             session.flush()
+        savepoint.rollback()
 
         assert len(session.scalars(select(CommercialLicensePeriod)).all()) == 2
         bind_tenant(session, theirs.id)
