@@ -2491,3 +2491,9 @@ PR #164 fusionnée, CI #384 verte. Migration additive 0029, référence à une
 offre, périodes disjointes et RLS. Tests PostgreSQL de privilèges, périodes
 adjacentes, chevauchement et isolement ajoutés ; CI requise avant fusion.
 Aucun changement des droits métier ni création de licence initiale.
+
+## Modularité — M6b2b : publication (2026-11-23)
+
+PR #165 fusionnée, CI #387 verte. Service de publication immuable et auditée,
+migration 0030, tests de privilèges, refus, conflit, audit et rollback.
+CI complète requise avant fusion ; attribution des licences à livrer ensuite.

@@ -167,3 +167,10 @@ contrainte GiST de non-chevauchement par dossier (fin exclue). Le runtime reste
 en lecture seule avant le service audité ; aucun abonnement initial. Le statut
 commercial ne modifie pas les permissions métier. Publication et attribution
 par service contrôlé restent à livrer.
+
+## M6b2b — publication des offres
+
+Migration 0030 : droit INSERT uniquement pour le runtime, UPDATE et DELETE
+restent révoqués. Service interne réservé à un administrateur plateforme actif
+sans contexte tenant ; validation du modèle commercial, conflit de version et
+audit atomique. Aucun endpoint, tarif, licence ou changement de droits métier.
