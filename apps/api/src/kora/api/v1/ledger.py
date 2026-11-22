@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, Query, Request, Response, status
 from pydantic import BaseModel, Field
 
 from kora.accounting import entries, journals
@@ -19,6 +19,8 @@ from kora.models.ledger import (
     JournalKind,
 )
 from kora.tenancy.deps import EntriesPost, EntriesRead, EntriesWrite, JournalsManage, TenantContext
+from kora.tenancy.module_config import require_enabled_module
+from kora.tenancy.modules import Module
 
 router = APIRouter(prefix="/companies/{company_id}", tags=["comptabilité générale"])
 
@@ -249,9 +251,16 @@ def list_entries(
 
 @router.post("/entries", status_code=status.HTTP_201_CREATED, responses=WRITE_ERRORS)
 def create_entry(
-    body: EntryCreate, tenant: EntriesWrite, db: DbSession, ctx: Ctx, response: Response
+    body: EntryCreate,
+    tenant: EntriesWrite,
+    db: DbSession,
+    ctx: Ctx,
+    response: Response,
+    request: Request,
 ) -> EntryOut:
     """Crée un brouillon. Avec un `id` déjà connu du dossier : renvoie l'existant (200)."""
+    if "x-kora-offline-sync" in request.headers:
+        require_enabled_module(db, tenant.company_id, Module.OFFLINE)
     entry, created = entries.create_draft(db, _actor(tenant, ctx), body.data(), entry_id=body.id)
     if not created:
         response.status_code = status.HTTP_200_OK

@@ -39,6 +39,16 @@ Le contrôle est effectué à chaque nouvelle requête, après le RBAC ; une op�
 déjà autorisée peut se terminer. Aucun worker ne produit ces prévisions.
 Les autres modules restent informatifs jusqu'à leurs lots M4 dédiés.
 
+M4b distingue la synchronisation hors connexion de la saisie interactive :
+la Server Action fixe le marqueur interne `X-Kora-Offline-Sync` sur chacun
+de ses appels (libre et guidé). Le serveur vérifie le module après le RBAC,
+avant même un rejeu idempotent. La préparation d'un nouvel instantané local
+vérifie également les capacités. Une réponse 403 conserve le brouillon dans
+la file locale en état rejeté, relançable après réactivation. Les écritures
+ordinaires restent autorisées selon le RBAC ; le marqueur distingue le parcours,
+ce n'est pas un mécanisme d'authentification ni une preuve de connectivité.
+Un client API qui utilise la saisie interactive conserve ses droits comptables.
+
 ## Règles impératives
 
 - Séparer disponibilité produit, droit d'abonnement, choix administratif et RBAC.

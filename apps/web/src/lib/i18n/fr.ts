@@ -1192,6 +1192,7 @@ export const fr = {
     retry: "Réessayer",
     enterOffline: "Saisir hors connexion",
     notAllowed: "Vous ne pouvez pas saisir d'écritures dans ce dossier.",
+    moduleDisabled: "La saisie hors connexion est désactivée pour ce dossier. Vos brouillons locaux sont conservés.",
     invalidItem: "Saisie illisible : supprimez-la et saisissez-la de nouveau.",
     pageTitle: "Saisie hors connexion",
     pageSubtitle:

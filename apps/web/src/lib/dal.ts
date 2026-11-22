@@ -23,6 +23,14 @@ export const getCompany = cache(async (companyId: string) =>
   ),
 );
 
+export async function getModuleCapabilities(companyId: string) {
+  return read(
+    (await api()).GET("/api/v1/companies/{company_id}/module-capabilities", {
+      params: { path: { company_id: companyId } },
+    }),
+  );
+}
+
 export async function getFiscalYears(companyId: string) {
   return read(
     (await api()).GET("/api/v1/companies/{company_id}/fiscal-years", {
