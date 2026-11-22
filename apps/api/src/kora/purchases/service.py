@@ -55,6 +55,8 @@ from kora.models.sales import (
     compute_line_ht,
     compute_line_tax,
 )
+from kora.tenancy.module_config import require_enabled_module
+from kora.tenancy.modules import Module
 
 NUMBERED_KINDS = (PurchaseDocKind.SUPPLIER_INVOICE, PurchaseDocKind.SUPPLIER_CREDIT_NOTE)
 
@@ -401,6 +403,8 @@ def create_document(session: Session, actor: Actor, data: DocumentData) -> Purch
         raise BusinessRuleError(
             "Type de document inconnu (supplier_invoice, supplier_credit_note)."
         ) from exc
+    if doc_kind != PurchaseDocKind.SUPPLIER_CREDIT_NOTE:
+        require_enabled_module(session, actor.company_id, Module.PURCHASES)
     partner = _partner(session, actor.company_id, data.partner_id)
     if not partner.is_supplier:
         raise BusinessRuleError(
