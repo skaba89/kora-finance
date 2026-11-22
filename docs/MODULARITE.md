@@ -25,6 +25,12 @@ choix, révisions et dépendances du catalogue. L'état configuré est distinct 
 droits métier effectivement appliqués. Les routes HTTP et contrats générés sont
 livrés séparément en M3b.
 
+M3b expose l'annuaire, la configuration et la mutation sur `/platform/module-clients`,
+ainsi que la lecture des capacités configurées sur `/companies/{company_id}/module-capabilities`.
+Les routes plateforme ne donnent aucun accès comptable. La mutation exige une
+révision attendue et une valeur booléenne stricte. Les états restent informatifs
+tant que M4 ne contrôle pas les autorisations métier.
+
 ## Règles impératives
 
 - Séparer disponibilité produit, droit d'abonnement, choix administratif et RBAC.

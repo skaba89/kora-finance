@@ -5271,6 +5271,179 @@
         "title": "MfaVerifyRequest",
         "type": "object"
       },
+      "Module": {
+        "enum": [
+          "sales",
+          "purchases",
+          "accounting",
+          "treasury",
+          "imports",
+          "forecast",
+          "offline",
+          "expenses",
+          "documents",
+          "ocr",
+          "assets",
+          "analytics",
+          "budgets",
+          "tax_reporting",
+          "firm",
+          "funding",
+          "ai",
+          "makitiplus",
+          "payments"
+        ],
+        "title": "Module",
+        "type": "string"
+      },
+      "ModuleCapability": {
+        "properties": {
+          "configured_status": {
+            "$ref": "#/components/schemas/ModuleStatus"
+          },
+          "module": {
+            "$ref": "#/components/schemas/Module"
+          }
+        },
+        "required": [
+          "module",
+          "configured_status"
+        ],
+        "title": "ModuleCapability",
+        "type": "object"
+      },
+      "ModuleClient": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "legal_name": {
+            "title": "Legal Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "legal_name"
+        ],
+        "title": "ModuleClient",
+        "type": "object"
+      },
+      "ModuleClientPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ModuleClient"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "ModuleClientPage",
+        "type": "object"
+      },
+      "ModuleConfiguration": {
+        "properties": {
+          "configured_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configured Enabled"
+          },
+          "configured_status": {
+            "$ref": "#/components/schemas/ModuleStatus"
+          },
+          "default_enabled": {
+            "title": "Default Enabled",
+            "type": "boolean"
+          },
+          "dependencies": {
+            "items": {
+              "$ref": "#/components/schemas/Module"
+            },
+            "title": "Dependencies",
+            "type": "array"
+          },
+          "module": {
+            "$ref": "#/components/schemas/Module"
+          },
+          "released": {
+            "title": "Released",
+            "type": "boolean"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "module",
+          "released",
+          "default_enabled",
+          "dependencies",
+          "configured_enabled",
+          "revision",
+          "configured_status"
+        ],
+        "title": "ModuleConfiguration",
+        "type": "object"
+      },
+      "ModuleOverrideIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "expected_revision": {
+            "maximum": 2147483646.0,
+            "minimum": 0.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "enabled",
+          "expected_revision"
+        ],
+        "title": "ModuleOverrideIn",
+        "type": "object"
+      },
+      "ModuleStatus": {
+        "enum": [
+          "enabled",
+          "disabled",
+          "unreleased",
+          "dependency_disabled"
+        ],
+        "title": "ModuleStatus",
+        "type": "string"
+      },
       "MonthOut": {
         "properties": {
           "expenses": {
@@ -17651,6 +17824,90 @@
         ]
       }
     },
+    "/api/v1/companies/{company_id}/module-capabilities": {
+      "get": {
+        "operationId": "company_module_capabilities_api_v1_companies__company_id__module_capabilities_get",
+        "parameters": [
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModuleCapability"
+                  },
+                  "title": "Response Company Module Capabilities Api V1 Companies  Company Id  Module Capabilities Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Company Module Capabilities",
+        "tags": [
+          "modules"
+        ]
+      }
+    },
     "/api/v1/companies/{company_id}/partners": {
       "get": {
         "description": "Référentiel des tiers du dossier, filtrable et paginé.",
@@ -26374,6 +26631,293 @@
         "summary": "Preview",
         "tags": [
           "invitations"
+        ]
+      }
+    },
+    "/api/v1/platform/module-clients": {
+      "get": {
+        "operationId": "platform_module_clients_api_v1_platform_module_clients_get",
+        "parameters": [
+          {
+            "description": "Taille de page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Taille de page",
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Décalage",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Décalage",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleClientPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Platform Module Clients",
+        "tags": [
+          "modules"
+        ]
+      }
+    },
+    "/api/v1/platform/module-clients/{client_id}/modules": {
+      "get": {
+        "operationId": "platform_module_configuration_api_v1_platform_module_clients__client_id__modules_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModuleConfiguration"
+                  },
+                  "title": "Response Platform Module Configuration Api V1 Platform Module Clients  Client Id  Modules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Platform Module Configuration",
+        "tags": [
+          "modules"
+        ]
+      }
+    },
+    "/api/v1/platform/module-clients/{client_id}/modules/{module}": {
+      "put": {
+        "operationId": "platform_module_update_api_v1_platform_module_clients__client_id__modules__module__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "module",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Module"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModuleOverrideIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModuleConfiguration"
+                  },
+                  "title": "Response Platform Module Update Api V1 Platform Module Clients  Client Id  Modules  Module  Put",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Platform Module Update",
+        "tags": [
+          "modules"
         ]
       }
     },

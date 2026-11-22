@@ -2419,3 +2419,10 @@ vérification du droit courant, contexte RLS dédié et instantané du catalogue
 avec choix explicites et révisions. Tests d'autorisation et d'isolation ajoutés.
 Aucune route publique ni modification des autorisations métier ; M3b reste à
 livrer avec génération des contrats OpenAPI et TypeScript.
+
+## Modularité — M3b (2026-11-22)
+
+Routes plateforme pour l'annuaire, la lecture et la mutation versionnée ;
+lecture des capacités tenant via le contrôle d'accès existant. Tests HTTP sur
+les droits et les conflits, l'isolation et la validation stricte. Les contrats
+doivent être régénérés avec le générateur épinglé avant fusion.
