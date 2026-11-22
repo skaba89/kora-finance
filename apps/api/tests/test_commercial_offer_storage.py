@@ -19,4 +19,5 @@ def test_catalogue_commercial_global_en_lecture_seule(db: Session) -> None:
 
 
 def test_identite_version_offre_est_composee() -> None:
-    assert [column.key for column in inspect(CommercialOfferVersion).primary_key] == ["code", "version"]
+    keys = [column.key for column in inspect(CommercialOfferVersion).primary_key]
+    assert keys == ["code", "version"]
