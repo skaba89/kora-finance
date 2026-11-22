@@ -383,6 +383,14 @@ par dossier par fenêtre horaire Redis ; le dépassement renvoie 429 avec
 Retry-After, une panne Redis bloque avec 503. Les nouveaux dépôts dépassant
 la capacité renvoient 409. Aucune route publique n'est encore ajoutée.
 
+**5D2c3 — API de dépôt et précontrôle.** Deux routes POST sous
+`/companies/{company_id}/accounting-imports`, protégées par `entries:write` :
+dépôt brut de 10 Mio maximum (plafond compatible proxy), puis `/{batch_id}/precheck`.
+Le dépôt renvoie l'identifiant et l'expiration, y compris en cas de rejeu.
+Le rapport donne les totaux exacts en chaînes, le nombre total d'anomalies et
+les 200 premières seulement. Les options du fichier sont persistées au dépôt.
+Aucune écriture comptable n'est créée ; l'assistant frontend reste à livrer.
+
 ## Phase 6 — Dossier de financement
 Pack généré en un clic, lien signé, révocable et expirable, journal des consultations.
 - Un lien révoqué renvoie 410 et ne donne plus accès à aucun document.

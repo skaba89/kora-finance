@@ -2392,3 +2392,13 @@ HTTP et le contrat frontend restent à livrer.
 PR #145 fusionnée, CI #337 verte. Quotas transactionnels par dossier et
 limitation horaire Redis par utilisateur et dossier. Tests ajoutés pour
 rejeu, isolation, capacité et panne Redis. 16 tests purs réussis en local.
+
+Correction CI de la PR #146 fusionnée sur main, CI #340 verte.
+
+## Phase 5D2c3 — API de dépôt et précontrôle
+
+Dépôt brut borné à 10 Mio et rapport de précontrôle via deux routes protégées
+par `entries:write`. Totaux monétaires en chaînes, 200 anomalies maximum avec
+compteur complet, contrat OpenAPI et TypeScript régénéré. Tests HTTP ajoutés
+pour le dépôt, le précontrôle, l'isolation IDOR et la limite de taille.
+L'intégration comptable et l'assistant UX restent distincts.

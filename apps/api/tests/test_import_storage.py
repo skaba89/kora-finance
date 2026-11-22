@@ -3,6 +3,7 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 
 import pytest
+from fastapi.testclient import TestClient
 from redis.exceptions import RedisError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -11,6 +12,7 @@ from kora.accounting import import_storage
 from kora.accounting.import_purge import purge_expired_imports, purge_orphan_page
 from kora.accounting.import_service import precheck_staged_import
 from kora.accounting.import_storage import load_staged_content, read_staged_import, stage_import
+from kora.api.v1 import imports as import_routes
 from kora.core import quota
 from kora.core.errors import (
     ConflictError,
@@ -68,6 +70,56 @@ def test_stage_replay_and_integrity(
     storage[key] = storage[key][:-1] + bytes([storage[key][-1] ^ 1])
     with pytest.raises(ServiceUnavailableError):
         read_staged_import(user, company.id, first.id)
+
+
+def test_import_http_precheck(
+    client: TestClient, make_company: MakeCompany, storage: dict[str, bytes], db: Session
+) -> None:
+    company, other = make_company(), make_company()
+    url = f"/api/v1/companies/{company.id}/accounting-imports"
+    content = (
+        b"journal;ecriture;date;compte;libelle;debit;credit\n"
+        b"VT;1;2026-02-01;571;Vente;10;0\nVT;1;2026-02-01;701;Vente;0;10\n"
+    )
+    response = client.post(
+        url,
+        params={"file_format": "csv", "source_currency": "GNF"},
+        headers=company.headers,
+        content=content,
+    )
+    assert response.status_code == 200, response.text
+    batch = response.json()
+    assert len(storage) == 1
+    report = client.post(f"{url}/{batch['id']}/precheck", headers=company.headers)
+    assert report.status_code == 200, report.text
+    assert report.json() == {
+        "rows": 2,
+        "entries": 1,
+        "debit": "10",
+        "credit": "10",
+        "valid": True,
+        "issue_count": 0,
+        "issues": [],
+    }
+    foreign_url = f"/api/v1/companies/{other.id}/accounting-imports/{batch['id']}/precheck"
+    assert client.post(foreign_url, headers=other.headers).status_code == 404
+    bind_tenant(db, company.id)
+    assert db.scalar(select(func.count()).select_from(JournalEntry)) == 0
+
+
+def test_import_http_size(
+    client: TestClient, make_company: MakeCompany, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    company = make_company()
+    monkeypatch.setattr(import_routes, "MAX_UPLOAD_BYTES", 4)
+    url = f"/api/v1/companies/{company.id}/accounting-imports"
+    response = client.post(
+        url,
+        params={"file_format": "csv", "source_currency": "GNF"},
+        headers=company.headers,
+        content=b"12345",
+    )
+    assert response.status_code == 413
 
 
 def test_stage_access_and_expiration(
