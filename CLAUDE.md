@@ -312,3 +312,6 @@ aucune donnée comptable ni indicateur commercial fictif (`docs/MODULARITE.md`).
 
 M6a1 introduit les versions d'offres commerciales sans attribution de droits,
 prix ni mutation de configuration ; voir `docs/MODULARITE.md`.
+
+M6a2 définit les périodes de licence et leurs états commerciaux, sans effet
+sur les permissions ; persistance et audit à livrer dans M6b.

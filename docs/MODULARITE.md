@@ -143,3 +143,11 @@ immuable de capacités livrées, prérequis inclus. Aucun tarif ni offre attribu
 par défaut ; aucun changement de module, de RBAC ou de données existantes.
 La composition d'une offre n'est pas une autorisation métier. Le prochain lot
 modélisera licences, essais et expiration avant persistance et audit M6b.
+
+## M6a2 — périodes de licence
+
+Modèle pur immuable lié au dossier et à une version d'offre. Dates civiles
+explicites, début inclus et fin exclue ; états planifié, essai, actif, suspendu
+et expiré. L'expiration prime sur la suspension hors période. Le renouvellement
+est représenté par une nouvelle période ; aucun paiement ni contrôle de droits.
+M6b devra garantir références, non-chevauchement, historique et audit en base.
