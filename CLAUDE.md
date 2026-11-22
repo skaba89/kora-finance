@@ -42,8 +42,9 @@ africaine) est désormais cadré par `docs/MODULARITE.md`. Le catalogue pur M1
 et la persistance M2 versionnée et auditée ne modifient pas les droits effectifs ;
 les gardes serveur précèdent toute activation commerciale ou administrative.
 M3a prépare l'annuaire et le contexte d'administration sans droit comptable ;
-M3b expose les routes HTTP d'administration et de lecture tenant, sans modifier
-les autorisations métier (M4).
+M3b expose les routes HTTP d'administration et de lecture tenant. M4a applique
+la restriction aux nouveaux calculs et exports prévisionnels, en conservant
+les instantanés historiques et le RBAC existant.
 
 ## Architecture
 

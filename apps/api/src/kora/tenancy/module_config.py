@@ -60,6 +60,12 @@ def effective_modules(session: Session, company_id: uuid.UUID) -> dict[Module, M
     return {row.module: row.configured_status for row in module_configuration(session, company_id)}
 
 
+def require_enabled_module(session: Session, company_id: uuid.UUID, module: Module) -> None:
+    """Garde complémentaire au RBAC, après autorisation et liaison du tenant."""
+    if effective_modules(session, company_id)[module] != ModuleStatus.ENABLED:
+        raise ForbiddenError("Ce module n'est pas actif pour ce dossier.")
+
+
 def require_platform_admin(session: Session, actor_id: uuid.UUID) -> None:
     """Vérifie le droit courant en base, sans accorder un rôle sur un dossier."""
     admin = session.scalar(

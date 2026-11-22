@@ -2426,3 +2426,9 @@ Routes plateforme pour l'annuaire, la lecture et la mutation versionnée ;
 lecture des capacités tenant via le contrôle d'accès existant. Tests HTTP sur
 les droits et les conflits, l'isolation et la validation stricte. Les contrats
 doivent être régénérés avec le générateur épinglé avant fusion.
+
+## Modularité — M4a (2026-11-22)
+
+Garde serveur prévisionnel après contrôle RBAC et tenant : calculs, exports,
+paramètres et nouveaux instantanés. Historique préservé ; tests HTTP sur la
+désactivation, la réactivation, les dépendances et l'isolation des entreprises.
