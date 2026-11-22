@@ -11,6 +11,7 @@ ne se déchiffre pas.
 import logging
 import os
 from dataclasses import dataclass
+from datetime import datetime
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
@@ -115,3 +116,20 @@ def delete(object_key: str) -> None:
     """Suppression idempotente (un objet absent n'est pas une erreur, comme en S3).
     Lève les erreurs du service : l'appelant décide de réessayer."""
     _client().delete_object(Bucket=get_settings().s3_bucket, Key=object_key)
+
+
+def list_page(
+    prefix: str, *, cursor: str | None = None
+) -> tuple[list[tuple[str, datetime]], str | None]:
+    """Une page S3 bornée ; le curseur opaque permet de reprendre le balayage."""
+    try:
+        if cursor is None:
+            page = _client().list_objects_v2(Bucket=get_settings().s3_bucket, Prefix=prefix)
+        else:
+            page = _client().list_objects_v2(
+                Bucket=get_settings().s3_bucket, Prefix=prefix, ContinuationToken=cursor
+            )
+    except (BotoCoreError, ClientError) as exc:
+        raise ServiceUnavailableError(_UNAVAILABLE) from exc
+    found = [(o["Key"], o["LastModified"]) for o in page.get("Contents", [])]
+    return found, page.get("NextContinuationToken")

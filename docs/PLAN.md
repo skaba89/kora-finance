@@ -353,6 +353,14 @@ réessai. Le même fichier peut être redéposé après purge. Le balayage des
 objets orphelins et la planification du worker restent à intégrer avant
 l'ouverture du service aux utilisateurs.
 
+**5D2b3b — Réconciliation des objets orphelins.** Balayage S3 paginé
+du préfixe canonique d'un dossier existant. Seuls les objets vieux de 48 h
+au moins, sans référence en base après acquisition du verrou de dépôt,
+sont supprimés. Les clés non canoniques, les objets récents et les imports
+référencés sont préservés. Le curseur permet de poursuivre page par page.
+La planification automatique et le traitement opérationnel des préfixes
+de dossiers supprimés restent à livrer ; aucune purge globale n'est activée.
+
 ## Phase 6 — Dossier de financement
 Pack généré en un clic, lien signé, révocable et expirable, journal des consultations.
 - Un lien révoqué renvoie 410 et ne donne plus accès à aucun document.

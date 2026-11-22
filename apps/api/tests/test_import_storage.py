@@ -1,11 +1,12 @@
+import uuid
 from collections.abc import Callable
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from kora.accounting.import_purge import purge_expired_imports
+from kora.accounting.import_purge import purge_expired_imports, purge_orphan_page
 from kora.accounting.import_storage import read_staged_import, stage_import
 from kora.core.errors import ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError
 from kora.db.tenant import bind_tenant
@@ -149,3 +150,39 @@ def test_purge_storage_failure_is_retryable(
             purge_expired_imports(company.id)
     assert f"imports/{company.id}/{staged.id}" in storage
     assert purge_expired_imports(company.id) == 1
+
+
+def test_orphan_reconciliation_preserves_references_and_recent_objects(
+    db: Session,
+    make_company: MakeCompany,
+    storage: dict[str, bytes],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    company = make_company()
+    user = db.get_one(User, company.owner.id)
+    active = stage_import(user, company.id, b"active", file_format="csv", source_currency="GNF")
+    prefix = f"imports/{company.id}/"
+    valid = f"{prefix}{active.id}"
+    orphan = f"{prefix}{uuid.uuid4()}"
+    recent = f"{prefix}{uuid.uuid4()}"
+    foreign = f"imports/{uuid.uuid4()}/{uuid.uuid4()}"
+    malformed = f"{prefix}not-a-uuid"
+    old = utcnow() - timedelta(days=3)
+    for key in (orphan, recent, foreign, malformed):
+        storage[key] = b"encrypted"
+
+    def page(
+        requested: str, *, cursor: str | None = None
+    ) -> tuple[list[tuple[str, datetime]], str | None]:
+        assert requested == prefix
+        if cursor is None:
+            return [(valid, old), (orphan, old), (recent, utcnow())], "next"
+        assert cursor == "next"
+        return [(foreign, old), (malformed, old)], None
+
+    monkeypatch.setattr(objects, "list_page", page)
+    assert purge_orphan_page(company.id) == (1, "next")
+    assert purge_orphan_page(company.id, cursor="next") == (0, None)
+    assert orphan not in storage
+    assert {valid, recent, foreign, malformed} <= storage.keys()
+    assert read_staged_import(user, company.id, active.id) == b"active"
