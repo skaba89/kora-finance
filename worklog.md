@@ -2379,3 +2379,10 @@ clé canonique et vérification de référence sous verrou. Tests ajoutés ;
 PR #143 fusionnée, CI #333 verte. Scheduler et workers existants réutilisés
 pour purge par dossier et pagination S3. Tests de distribution et chaînage
 ajoutés ; les préfixes de dossiers supprimés restent hors purge automatique.
+
+## Phase 5D2c1 — précontrôle du fichier déposé
+
+PR #144 fusionnée, CI #335 verte. Liaison du staging chiffré au moteur de
+précontrôle métier : options persistées, contrôle de droits renouvelé et
+rapport sans écritures comptables. Test d'intégration ajouté ; les routes
+HTTP et le contrat frontend restent à livrer.

@@ -3,16 +3,18 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from kora.accounting.import_purge import purge_expired_imports, purge_orphan_page
-from kora.accounting.import_storage import read_staged_import, stage_import
+from kora.accounting.import_service import precheck_staged_import
+from kora.accounting.import_storage import load_staged_content, read_staged_import, stage_import
 from kora.core.errors import ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError
 from kora.db.tenant import bind_tenant
 from kora.models.common import utcnow
 from kora.models.identity import CompanyMembership, User
 from kora.models.imports import ImportBatch
+from kora.models.ledger import JournalEntry
 from kora.storage import objects
 from kora.tenancy.roles import Role
 from tests.conftest import CompanyFixture, UserFixture
@@ -186,3 +188,27 @@ def test_orphan_reconciliation_preserves_references_and_recent_objects(
     assert orphan not in storage
     assert {valid, recent, foreign, malformed} <= storage.keys()
     assert read_staged_import(user, company.id, active.id) == b"active"
+
+
+def test_precheck_staged_uses_persisted_options_and_catalog(
+    db: Session, make_company: MakeCompany, storage: dict[str, bytes]
+) -> None:
+    company = make_company()
+    user = db.get_one(User, company.owner.id)
+    content = (
+        b"journal;ecriture;date;compte;libelle;debit;credit\n"
+        b"VT;1;2026-02-01;571;Vente;10;0\nVT;1;2026-02-01;701;Vente;0;10\n"
+    )
+    staged = stage_import(user, company.id, content, file_format="csv", source_currency="GNF")
+    report = precheck_staged_import(user, company.id, staged.id)
+    assert report.valid
+    assert (report.rows, report.entries, report.debit, report.credit) == (2, 1, 10, 10)
+    wrong_format = stage_import(
+        user, company.id, content, file_format="fec", source_currency="GNF", fec_delimiter="\t"
+    )
+    loaded = load_staged_content(user, company.id, wrong_format.id)
+    assert (loaded.file_format, loaded.currency, loaded.fec_delimiter) == ("fec", "GNF", "\t")
+    assert not precheck_staged_import(user, company.id, wrong_format.id).valid
+    assert len(storage) == 2
+    bind_tenant(db, company.id)
+    assert db.scalar(select(func.count()).select_from(JournalEntry)) == 0

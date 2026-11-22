@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from kora.accounting.import_business import ImportCatalog, ImportPeriod, validate_import
+from kora.accounting.import_storage import load_staged_content
 from kora.accounting.import_validation import ImportIssue, ImportReport
 from kora.core.errors import ForbiddenError, NotFoundError
 from kora.db.snapshot import lecture_instantanee
@@ -75,4 +76,21 @@ def precheck_import_for_company(
         catalog = _catalog(session, company_id)
     return validate_import(
         content, file_format=file_format, catalog=catalog, fec_scale=0, fec_delimiter=fec_delimiter
+    )
+
+
+def precheck_staged_import(user: User, company_id: uuid.UUID, batch_id: uuid.UUID) -> ImportReport:
+    """Précontrôle d'un fichier chiffré avec ses options persistées, non modifiables.
+
+    Les droits sont revérifiés lors du chargement puis du contrôle du catalogue.
+    Aucun contenu source ni écriture comptable n'est renvoyé ou créé.
+    """
+    staged = load_staged_content(user, company_id, batch_id)
+    return precheck_import_for_company(
+        user,
+        company_id,
+        staged.content,
+        file_format=staged.file_format,
+        source_currency=staged.currency,
+        fec_delimiter=staged.fec_delimiter,
     )
