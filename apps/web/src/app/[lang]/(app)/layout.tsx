@@ -20,6 +20,11 @@ async function UserMenu() {
   const [{ t }, user] = await Promise.all([getDictionary(), getCurrentUser()]);
   return (
     <div className="flex min-w-0 items-center gap-1 sm:gap-3">
+      {user.is_platform_admin ? (
+        <Link href="/administration/modules" className="hover:bg-accent rounded-lg px-2 py-3 text-sm font-medium">
+          Administration
+        </Link>
+      ) : null}
       <Link href="/compte/securite" className="hover:bg-accent flex min-h-11 min-w-11 max-w-full items-center justify-center gap-2 rounded-lg px-2 text-sm" title={t.nav.security}>
         <UserRound aria-hidden className="text-primary size-5 shrink-0" />
         <span className="sr-only sm:not-sr-only sm:max-w-36 sm:truncate">{user.full_name}</span>
