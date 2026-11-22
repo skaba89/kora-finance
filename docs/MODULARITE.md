@@ -135,3 +135,11 @@ Accueil FR/EN réservé aux administrateurs plateforme, total réel des dossiers
 via l'annuaire existant, accès à la configuration des modules. Aucun indicateur
 commercial fictif ni accès aux données comptables. Recette de refus desktop/mobile
 étendue à l'accueil ; recette positive et CI requises avant mise en production.
+
+## M6a1 — définition versionnée des offres
+
+Moteur pur `kora.tenancy.offers.OfferVersion` : code, version positive et ensemble
+immuable de capacités livrées, prérequis inclus. Aucun tarif ni offre attribuée
+par défaut ; aucun changement de module, de RBAC ou de données existantes.
+La composition d'une offre n'est pas une autorisation métier. Le prochain lot
+modélisera licences, essais et expiration avant persistance et audit M6b.

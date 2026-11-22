@@ -309,3 +309,6 @@ l'import FEC (format français) pour les cabinets guinéens.
 
 Le portail plateforme M5b ajoute un accueil FR/EN et le total réel des dossiers ;
 aucune donnée comptable ni indicateur commercial fictif (`docs/MODULARITE.md`).
+
+M6a1 introduit les versions d'offres commerciales sans attribution de droits,
+prix ni mutation de configuration ; voir `docs/MODULARITE.md`.

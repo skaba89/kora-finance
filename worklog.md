@@ -2465,3 +2465,10 @@ Test d'intégration de suspension, réactivation et isolation entre dossiers.
 PR #160 fusionnée, CI verte. Ajout de l'accueil administrateur avec le total réel
 des dossiers et accès aux modules, sans nouvelle API ni migration. Test E2E de
 refus d'accès étendu. CI et recette positive à valider.
+
+## Modularité — M6a1 : offres commerciales (2026-11-22)
+
+PR #161 fusionnée, CI #375 verte. Définition pure des versions d'offres,
+validation de disponibilité et dépendances, sans attribution de droits ni prix.
+Dix scénarios directs validés localement ; tests pytest ajoutés pour la CI.
+Licences et persistance à livrer séparément.
