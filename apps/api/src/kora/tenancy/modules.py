@@ -47,7 +47,9 @@ CATALOG: Mapping[Module, ModuleDefinition] = MappingProxyType(
         Module.TREASURY: ModuleDefinition(True, default_enabled=True),
         Module.IMPORTS: ModuleDefinition(False, frozenset({Module.ACCOUNTING})),
         Module.FORECAST: ModuleDefinition(True, frozenset({Module.TREASURY}), default_enabled=True),
-        Module.OFFLINE: ModuleDefinition(True, frozenset({Module.ACCOUNTING}), default_enabled=True),
+        Module.OFFLINE: ModuleDefinition(
+            True, frozenset({Module.ACCOUNTING}), default_enabled=True
+        ),
         Module.EXPENSES: ModuleDefinition(False),
         Module.DOCUMENTS: ModuleDefinition(False),
         Module.OCR: ModuleDefinition(False, frozenset({Module.DOCUMENTS})),
