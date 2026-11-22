@@ -223,9 +223,12 @@ def test_module_ventes_suspend_les_relances_automatiques(
     db.commit()
     config = f"/api/v1/platform/module-clients/{first.id}/modules/sales"
     headers = admin.headers(client)
-    assert client.put(
-        config, headers=headers, json={"enabled": False, "expected_revision": 0}
-    ).status_code == 200
+    assert (
+        client.put(
+            config, headers=headers, json={"enabled": False, "expected_revision": 0}
+        ).status_code
+        == 200
+    )
     assert first_policy.get().json()["enabled"] is True
     assert first_policy.put({"enabled": True, "offsets_days": [2]}).status_code == 403
 
@@ -238,9 +241,12 @@ def test_module_ventes_suspend_les_relances_automatiques(
     assert count(first) == 0
     _execute(mailbox, second, _jour_iso(JOURS_RAPPEL))
     assert count(second) == 1
-    assert client.put(
-        config, headers=headers, json={"enabled": True, "expected_revision": 1}
-    ).status_code == 200
+    assert (
+        client.put(
+            config, headers=headers, json={"enabled": True, "expected_revision": 1}
+        ).status_code
+        == 200
+    )
     _execute(mailbox, first, _jour_iso(JOURS_RAPPEL))
     assert count(first) == 1
 
