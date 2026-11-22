@@ -11,9 +11,17 @@ def test_offre_versionnee_sans_modifier_les_droits_existants() -> None:
     assert resolve_modules({}) == before
 
 
-@pytest.mark.parametrize("modules", [frozenset(), frozenset({Module.OCR})])
-def test_offre_refuse_les_modules_indisponibles_ou_absents(modules: frozenset[Module]) -> None:
-    with pytest.raises(ValueError):
+@pytest.mark.parametrize(
+    ("modules", "message"),
+    [
+        (frozenset(), "Une offre doit contenir des modules immuables"),
+        (frozenset({Module.OCR}), "Module non disponible dans une offre"),
+    ],
+)
+def test_offre_refuse_les_modules_indisponibles_ou_absents(
+    modules: frozenset[Module], message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
         OfferVersion(code="gestion", version=1, modules=modules)
 
 
