@@ -13,6 +13,12 @@ fictif ; aucun module indisponible ne peut être accordé par le moteur. Les six
 capacités déjà livrées conservent leur valeur par défaut active. Une capacité
 nouvellement livrée doit recevoir une décision explicite d'activation par défaut.
 
+Le lot M2 stocke les choix explicites par dossier, avec une révision optimiste
+(0 pour un choix absent), une isolation RLS et un événement d'audit atomique.
+La désactivation d'un prérequis conserve les choix de ses dépendants. Seul un
+administrateur plateforme actif peut modifier la configuration interne. Aucun
+endpoint public ni garde métier ne consomme encore ces choix.
+
 ## Règles impératives
 
 - Séparer disponibilité produit, droit d'abonnement, choix administratif et RBAC.

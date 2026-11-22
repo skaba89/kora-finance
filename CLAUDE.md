@@ -39,8 +39,8 @@ Le cahier des charges complet et les critères d'acceptation de chaque phase son
 
 Le chantier de modularité par tenant (benchmark Tiime/Pennylane et adaptation
 africaine) est désormais cadré par `docs/MODULARITE.md`. Le catalogue pur M1
-ne modifie pas les droits effectifs ; les gardes serveur précèdent toute activation
-commerciale ou administrative.
+et la persistance M2 versionnée et auditée ne modifient pas les droits effectifs ;
+les gardes serveur précèdent toute activation commerciale ou administrative.
 
 ## Architecture
 

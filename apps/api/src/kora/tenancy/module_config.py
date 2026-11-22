@@ -1,0 +1,86 @@
+"""Persistance interne de la configuration ; aucune route HTTP au lot M2."""
+
+import uuid
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from kora.audit.service import record_event
+from kora.core.errors import BusinessRuleError, ConflictError, ForbiddenError, NotFoundError
+from kora.db.tenant import current_tenant
+from kora.models.common import utcnow
+from kora.models.identity import Company, User
+from kora.models.modules import TenantModuleOverride
+from kora.tenancy.modules import CATALOG, Module, ModuleStatus, resolve_modules
+
+
+def _require_tenant(session: Session, company_id: uuid.UUID) -> None:
+    if current_tenant(session) != company_id:
+        raise ForbiddenError("Contexte du dossier obligatoire.")
+
+
+def effective_modules(session: Session, company_id: uuid.UUID) -> dict[Module, ModuleStatus]:
+    """Lecture interne, dans un contexte tenant déjà autorisé par l'appelant."""
+    _require_tenant(session, company_id)
+    rows = session.scalars(
+        select(TenantModuleOverride).where(TenantModuleOverride.tenant_id == company_id)
+    )
+    return resolve_modules({Module(row.module): row.enabled for row in rows})
+
+
+def set_module_override(
+    session: Session,
+    company_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    module: Module,
+    enabled: bool,
+    expected_revision: int,
+) -> int:
+    """Enregistre un choix sous verrou ; l'appelant possède la transaction.
+
+    Révision 0 = choix absent. Aucun changement n'est appliqué aux droits métier.
+    Le journal d'audit et le choix sont atomiques avec le commit de l'appelant.
+    """
+    _require_tenant(session, company_id)
+    admin = session.scalar(
+        select(User.id).where(User.id == actor_id, User.is_active, User.is_platform_admin)
+    )
+    if admin is None:
+        raise ForbiddenError("Administration de la plateforme requise.")
+    if module not in CATALOG or (enabled and not CATALOG[module].released):
+        raise BusinessRuleError("Module non disponible.")
+    company = session.scalar(select(Company.id).where(Company.id == company_id).with_for_update())
+    if company is None:
+        raise NotFoundError("Dossier introuvable.")
+    row = session.scalar(
+        select(TenantModuleOverride)
+        .where(
+            TenantModuleOverride.tenant_id == company_id,
+            TenantModuleOverride.module == module.value,
+        )
+        .execution_options(populate_existing=True)
+    )
+    revision = row.revision if row is not None else 0
+    if revision != expected_revision:
+        raise ConflictError("Configuration modifiée ; actualisez avant de réessayer.")
+    if row is not None and row.enabled == enabled:
+        return revision
+    previous = row.enabled if row is not None else None
+    revision += 1
+    if row is None:
+        row = TenantModuleOverride(tenant_id=company_id, module=module.value)
+        session.add(row)
+    row.enabled = enabled
+    row.revision = revision
+    row.updated_by_user_id = actor_id
+    row.updated_at = utcnow()
+    record_event(
+        session,
+        action="module.configuration_changed",
+        entity_type="module",
+        entity_id=module.value,
+        actor_user_id=actor_id,
+        payload={"previous": previous, "enabled": enabled, "revision": revision},
+    )
+    return revision
