@@ -62,6 +62,8 @@ from kora.models.sales import (
     compute_line_tax,
 )
 from kora.sales import pdf as sales_pdf
+from kora.tenancy.module_config import require_enabled_module
+from kora.tenancy.modules import Module
 
 NUMBERED_KINDS = (DocKind.INVOICE, DocKind.CREDIT_NOTE)
 
@@ -406,6 +408,8 @@ def create_document(session: Session, actor: Actor, data: DocumentData) -> Sales
         doc_kind = DocKind(data.doc_kind)
     except ValueError as exc:
         raise BusinessRuleError("Type de document inconnu (quote, invoice, credit_note).") from exc
+    if doc_kind != DocKind.CREDIT_NOTE:
+        require_enabled_module(session, actor.company_id, Module.SALES)
     partner = _partner(session, actor.company_id, data.partner_id)
     if not partner.is_active:
         raise BusinessRuleError("Le tier est désactivé : réactivez-le avant facturation.")

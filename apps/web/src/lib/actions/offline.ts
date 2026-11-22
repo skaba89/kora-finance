@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 
 import { createApiClient } from "@/lib/api/client";
 import { clientIp, toApiError } from "@/lib/api/server";
-import { can, getActiveAccounts, getCompany, getCurrentUser, getFiscalYears, getGuidedOptions, getJournals } from "@/lib/dal";
+import { can, getActiveAccounts, getCompany, getCurrentUser, getFiscalYears, getGuidedOptions, getJournals, getModuleCapabilities } from "@/lib/dal";
 import { type Snapshot, snapshotExpiry, type SyncOutcome } from "@/lib/offline/model";
 import { parseEntry, parseGuided, UUID } from "@/lib/payloads";
 import { ACCESS_COOKIE } from "@/lib/session";
@@ -27,6 +27,10 @@ export async function prepareOfflineAction(companyId: string): Promise<ActionSta
   const t = await actionDictionary();
   const company = await getCompany(companyId);
   if (!can(company, "entries:write")) return { status: "error", message: t.offline.notAllowed };
+  const capabilities = await getModuleCapabilities(companyId);
+  if (!capabilities.some((module) => module.module === "offline" && module.configured_status === "enabled")) {
+    return { status: "error", message: t.offline.moduleDisabled };
+  }
   const [user, journals, accounts, guided, years] = await Promise.all([
     getCurrentUser(),
     getJournals(companyId),
@@ -74,6 +78,8 @@ export async function syncOfflineItemAction(input: SyncInput): Promise<SyncOutco
   }
   const client = createApiClient(fetch, { accessToken, clientIp: await clientIp() });
   const path = { company_id: input.companyId };
+  // Marqueur interne fixé par la Server Action, jamais fourni par le navigateur.
+  const headers = { "X-Kora-Offline-Sync": "1" };
 
   const call = async () => {
     if (input.kind === "guided") {
@@ -81,12 +87,13 @@ export async function syncOfflineItemAction(input: SyncInput): Promise<SyncOutco
       if (!body) return null;
       return client.POST("/api/v1/companies/{company_id}/guided-entries", {
         params: { path },
+        headers,
         body: { ...body, id: input.id },
       });
     }
     const body = parseEntry(input.payload);
     if (!body) return null;
-    return client.POST("/api/v1/companies/{company_id}/entries", { params: { path }, body: { ...body, id: input.id } });
+    return client.POST("/api/v1/companies/{company_id}/entries", { params: { path }, headers, body: { ...body, id: input.id } });
   };
 
   try {

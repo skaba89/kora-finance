@@ -39,6 +39,16 @@ Le contrôle est effectué à chaque nouvelle requête, après le RBAC ; une op�
 déjà autorisée peut se terminer. Aucun worker ne produit ces prévisions.
 Les autres modules restent informatifs jusqu'à leurs lots M4 dédiés.
 
+M4b distingue la synchronisation hors connexion de la saisie interactive :
+la Server Action fixe le marqueur interne `X-Kora-Offline-Sync` sur chacun
+de ses appels (libre et guidé). Le serveur vérifie le module après le RBAC,
+avant même un rejeu idempotent. La préparation d'un nouvel instantané local
+vérifie également les capacités. Une réponse 403 conserve le brouillon dans
+la file locale en état rejeté, relançable après réactivation. Les écritures
+ordinaires restent autorisées selon le RBAC ; le marqueur distingue le parcours,
+ce n'est pas un mécanisme d'authentification ni une preuve de connectivité.
+Un client API qui utilise la saisie interactive conserve ses droits comptables.
+
 M4c2 suspend les nouvelles relances automatiques lorsque Ventes est désactivé,
 y compris lors d'une exécution du worker déjà enfilée. La politique est conservée
 et reprend à la réactivation ; son activation explicite est refusée tant que le
@@ -80,3 +90,13 @@ Les emails de relances déjà enregistrées poursuivent leur traitement normal.
 
 Toute activation repose sur des capacités réellement disponibles et validées.
 Les paramètres de pays, le style et les fonctions sont configurables séparément.
+
+## M4c1 — Documents commerciaux
+
+Contrôle de la création de nouveaux devis et factures (ventes et achats)
+au niveau des services, y compris la conversion d'un devis en facture.
+Les documents déjà créés restent consultables et traitables ; les avoirs
+correctifs restent autorisés selon les règles métier et le RBAC. Les règlements,
+la comptabilisation, les remboursements et les annulations ne sont pas bloqués
+afin de préserver les obligations existantes. Les fonctions annexes feront
+l'objet d'un inventaire distinct avant toute restriction.

@@ -4,7 +4,7 @@ import uuid
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Response, status
+from fastapi import APIRouter, Request, Response, status
 from pydantic import BaseModel, Field
 
 from kora.accounting import guided
@@ -16,6 +16,8 @@ from kora.models.accounting import Account
 from kora.models.common import utcnow
 from kora.models.ledger import MAX_LINE_AMOUNT
 from kora.tenancy.deps import EntriesWrite
+from kora.tenancy.module_config import require_enabled_module
+from kora.tenancy.modules import Module
 
 router = APIRouter(prefix="/companies/{company_id}/guided-entries", tags=["saisie guidée"])
 
@@ -186,8 +188,15 @@ class GuidedCreated(BaseModel):
     responses={**WRITE_ERRORS, 200: {"model": GuidedCreated, "description": "Déjà enregistrée"}},
 )
 def create_guided_entry(
-    tenant: EntriesWrite, db: DbSession, ctx: Ctx, body: GuidedCreate, response: Response
+    tenant: EntriesWrite,
+    db: DbSession,
+    ctx: Ctx,
+    body: GuidedCreate,
+    response: Response,
+    request: Request,
 ) -> GuidedCreated:
+    if "x-kora-offline-sync" in request.headers:
+        require_enabled_module(db, tenant.company_id, Module.OFFLINE)
     entry, created = guided.create(
         db, Actor(tenant.company_id, tenant.user.id, ctx), body.data(), entry_id=body.id
     )

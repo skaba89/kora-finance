@@ -2433,6 +2433,12 @@ Garde serveur prévisionnel après contrôle RBAC et tenant : calculs, exports,
 paramètres et nouveaux instantanés. Historique préservé ; tests HTTP sur la
 désactivation, la réactivation, les dépendances et l'isolation des entreprises.
 
+## Modularité — M4b (2026-11-22)
+
+Contrôle de la préparation et de la synchronisation hors connexion (libre et
+guidée), y compris les rejeux idempotents. Conservation de la file locale et
+tests de réactivation, dépendance comptable et saisie interactive inchangée.
+
 ## Modularité — M4c2 : relances automatiques
 
 Garde Ventes à l'activation de politique et à chaque exécution du worker ;
