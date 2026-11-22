@@ -8,6 +8,9 @@ test("un dirigeant ordinaire ne peut pas administrer les modules plateforme", as
 
   // Le dirigeant possède ses droits métier mais pas les droits plateforme.
   await expect(page.getByRole("link", { name: "Administration", exact: true })).toHaveCount(0);
+  await page.goto("/administration");
+  await expect(page.getByRole("heading", { name: "Page introuvable" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Administration Kora Finance" })).toHaveCount(0);
   await page.goto("/administration/modules");
   await expect(page.getByRole("heading", { name: "Page introuvable" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Administration des modules" })).toHaveCount(0);

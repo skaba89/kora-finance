@@ -2459,3 +2459,9 @@ tests de réactivation, dépendance comptable et saisie interactive inchangée.
 Garde Ventes à l'activation de politique et à chaque exécution du worker ;
 configuration et historique conservés, recouvrement manuel préservé.
 Test d'intégration de suspension, réactivation et isolation entre dossiers.
+
+## Modularité — M5b : accueil plateforme (2026-11-22)
+
+PR #160 fusionnée, CI verte. Ajout de l'accueil administrateur avec le total réel
+des dossiers et accès aux modules, sans nouvelle API ni migration. Test E2E de
+refus d'accès étendu. CI et recette positive à valider.
