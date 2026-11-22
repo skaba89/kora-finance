@@ -2472,3 +2472,9 @@ PR #161 fusionnée, CI #375 verte. Définition pure des versions d'offres,
 validation de disponibilité et dépendances, sans attribution de droits ni prix.
 Dix scénarios directs validés localement ; tests pytest ajoutés pour la CI.
 Licences et persistance à livrer séparément.
+
+## Modularité — M6a2 : licences (2026-11-22)
+
+PR #162 fusionnée, CI #378 verte. Modèle pur des périodes de licence et calcul
+explicite des états, sans mutation des droits. Treize contrôles directs réussis ;
+pytest et CI complète requis avant fusion. Persistance et audit restent M6b.
