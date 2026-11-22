@@ -22,6 +22,7 @@ def test_module_commercial_desactive_preserve_les_obligations(
     db: Session,
     make_user: Callable[..., UserFixture],
     make_company: Callable[..., CompanyFixture],
+    *,
     module: str,
     invoice_kind: str,
     credit_kind: str,
