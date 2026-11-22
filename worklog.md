@@ -2438,3 +2438,9 @@ désactivation, la réactivation, les dépendances et l'isolation des entreprise
 Contrôle de la préparation et de la synchronisation hors connexion (libre et
 guidée), y compris les rejeux idempotents. Conservation de la file locale et
 tests de réactivation, dépendance comptable et saisie interactive inchangée.
+
+## Modularité — M4c2 : relances automatiques
+
+Garde Ventes à l'activation de politique et à chaque exécution du worker ;
+configuration et historique conservés, recouvrement manuel préservé.
+Test d'intégration de suspension, réactivation et isolation entre dossiers.

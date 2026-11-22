@@ -49,6 +49,13 @@ ordinaires restent autorisées selon le RBAC ; le marqueur distingue le parcours
 ce n'est pas un mécanisme d'authentification ni une preuve de connectivité.
 Un client API qui utilise la saisie interactive conserve ses droits comptables.
 
+M4c2 suspend les nouvelles relances automatiques lorsque Ventes est désactivé,
+y compris lors d'une exécution du worker déjà enfilée. La politique est conservée
+et reprend à la réactivation ; son activation explicite est refusée tant que le
+module est inactif, mais sa désactivation reste possible. L'historique et le
+recouvrement manuel des créances existantes restent accessibles selon le RBAC.
+Les emails de relances déjà enregistrées poursuivent leur traitement normal.
+
 ## Règles impératives
 
 - Séparer disponibilité produit, droit d'abonnement, choix administratif et RBAC.
