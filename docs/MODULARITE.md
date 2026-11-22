@@ -128,3 +128,10 @@ opérations : les gardes M4 restent progressives et les historiques préservés.
 
 Aucune donnée comptable ni identité client supplémentaire n'est exposée à la
 plateforme sans besoin explicite et validation du périmètre.
+
+## M5b — accueil plateforme
+
+Accueil FR/EN réservé aux administrateurs plateforme, total réel des dossiers
+via l'annuaire existant, accès à la configuration des modules. Aucun indicateur
+commercial fictif ni accès aux données comptables. Recette de refus desktop/mobile
+étendue à l'accueil ; recette positive et CI requises avant mise en production.

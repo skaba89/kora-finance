@@ -21,7 +21,7 @@ async function UserMenu() {
   return (
     <div className="flex min-w-0 items-center gap-1 sm:gap-3">
       {user.is_platform_admin ? (
-        <Link href="/administration/modules" className="hover:bg-accent rounded-lg px-2 py-3 text-sm font-medium">
+        <Link href="/administration" className="hover:bg-accent rounded-lg px-2 py-3 text-sm font-medium">
           Administration
         </Link>
       ) : null}

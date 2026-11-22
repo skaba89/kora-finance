@@ -306,3 +306,6 @@ colonne `note`) · présentation des états · comptes 13 non affectés présent
 trésorerie · taux de TVA et autres taxes en vigueur, format de déclaration · mentions
 légales obligatoires des factures · durée de conservation des pièces · ajout d'une pièce à une écriture d'un exercice clôturé (autorisé aujourd'hui) · **regroupements du tableau de bord** (`accounting/dashboard.py` : trésorerie 52/53/55/57, chiffre d'affaires 70, résultat provisoire classes 6 à 8) · **correspondances de la saisie guidée** (`accounting/data/saisie_guidee_v1.csv`, comptes 4431/4452 pour la TVA, journaux par opération, virement interne sans compte 585) · pertinence de
 l'import FEC (format français) pour les cabinets guinéens.
+
+Le portail plateforme M5b ajoute un accueil FR/EN et le total réel des dossiers ;
+aucune donnée comptable ni indicateur commercial fictif (`docs/MODULARITE.md`).

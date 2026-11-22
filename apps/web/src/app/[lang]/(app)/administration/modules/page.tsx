@@ -58,6 +58,7 @@ async function ModuleSettings({ searchParams }: { searchParams: PageProps<"/[lan
     <main id="main-content" tabIndex={-1}>
       <PageHeader title={label("Administration des modules", "Module administration")}
         subtitle={label("Configurez les fonctionnalités disponibles pour chaque dossier client.", "Configure available features for each client company.")} />
+      <Link href="/administration" className="text-primary mb-4 inline-block text-sm font-medium underline underline-offset-4">{label("Retour à l’administration", "Back to administration")}</Link>
       <div className="grid gap-4 lg:grid-cols-[minmax(220px,1fr)_minmax(0,3fr)]">
         <Card>
           <CardHeader><CardTitle>{label("Clients", "Clients")} ({page.total})</CardTitle></CardHeader>
