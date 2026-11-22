@@ -2402,3 +2402,11 @@ par `entries:write`. Totaux monétaires en chaînes, 200 anomalies maximum avec
 compteur complet, contrat OpenAPI et TypeScript régénéré. Tests HTTP ajoutés
 pour le dépôt, le précontrôle, l'isolation IDOR et la limite de taille.
 L'intégration comptable et l'assistant UX restent distincts.
+
+## Phase 5D2c4 — interface de précontrôle
+
+Accès depuis les écritures pour les dossiers GNF et rôles autorisés, formulaire
+CSV/Excel/FEC FR/EN, dépôt brut puis précontrôle par Server Action et rapport
+borné avec totaux exacts. Aucun changement de l'API ni création d'écriture.
+Recette Playwright ajoutée : fichier déséquilibré, fichier équilibré, journal
+inchangé. La génération des brouillons reste un chantier distinct.

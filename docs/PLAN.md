@@ -391,6 +391,11 @@ Le rapport donne les totaux exacts en chaînes, le nombre total d'anomalies et
 les 200 premières seulement. Les options du fichier sont persistées au dépôt.
 Aucune écriture comptable n'est créée ; l'assistant frontend reste à livrer.
 
+**5D2c4 — Interface de précontrôle.** Depuis le journal des écritures des
+dossiers GNF, dépôt CSV/Excel/FEC et précontrôle via Server Action authentifiée,
+rapport des totaux exacts, anomalies bornées et expiration du dépôt. Le parcours
+est distinct de toute génération d'écriture, qui reste à livrer.
+
 ## Phase 6 — Dossier de financement
 Pack généré en un clic, lien signé, révocable et expirable, journal des consultations.
 - Un lien révoqué renvoie 410 et ne donne plus accès à aucun document.
