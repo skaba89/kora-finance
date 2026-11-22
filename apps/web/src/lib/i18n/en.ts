@@ -1191,6 +1191,7 @@ export const en: typeof fr = {
     retry: "Try again",
     enterOffline: "Enter entries offline",
     notAllowed: "You cannot record entries in this company.",
+    moduleDisabled: "Offline entry is disabled for this company. Your local drafts are retained.",
     invalidItem: "Unreadable entry: delete it and enter it again.",
     pageTitle: "Offline entry",
     pageSubtitle:
