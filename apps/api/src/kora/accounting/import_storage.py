@@ -7,9 +7,11 @@ from datetime import datetime, timedelta
 from typing import Literal, cast
 
 from cryptography.fernet import InvalidToken
-from sqlalchemy import select
+from redis.exceptions import RedisError
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from kora.core import quota
 from kora.core.errors import (
     BusinessRuleError,
     ConflictError,
@@ -17,6 +19,7 @@ from kora.core.errors import (
     NotFoundError,
     PayloadTooLargeError,
     ServiceUnavailableError,
+    TooManyRequestsError,
 )
 from kora.db.session import get_sessionmaker
 from kora.db.tenant import bind_tenant
@@ -26,6 +29,33 @@ from kora.models.imports import ImportBatch
 from kora.storage import objects
 from kora.tenancy.access import resolve_role
 from kora.tenancy.permissions import Permission, permissions_for
+
+MAX_STAGED_FILES = 10
+MAX_STAGED_BYTES = 128 * 1024 * 1024
+
+
+def _check_rate(user_id: uuid.UUID, company_id: uuid.UUID, operation: str) -> None:
+    """Budget partagé entre formats ; une panne Redis bloque l'opération."""
+    try:
+        for scope, subject, limit in (("user", user_id, 20), ("company", company_id, 60)):
+            if not quota.allowed(
+                f"import-{operation}-{scope}", str(subject), limit=limit, window_seconds=quota.HOUR
+            ):
+                raise TooManyRequestsError(
+                    "Limite horaire des imports atteinte.",
+                    headers={"Retry-After": quota.retry_after(quota.HOUR)},
+                )
+    except RedisError as exc:
+        raise ServiceUnavailableError("Le service d'import est indisponible.") from exc
+
+
+def _check_capacity(session: Session, company_id: uuid.UUID, size: int) -> None:
+    # Sous le verrou du dossier : inclut les références expirées non encore purgées.
+    total_bytes = func.coalesce(func.sum(ImportBatch.size_bytes), 0)
+    query = select(func.count(ImportBatch.id), total_bytes).where(ImportBatch.tenant_id == company_id)
+    count, total = session.execute(query).one()
+    if count >= MAX_STAGED_FILES or total + size > MAX_STAGED_BYTES:
+        raise ConflictError("Capacité des imports atteinte. Attendez la purge des fichiers.")
 
 
 @dataclass(frozen=True)
@@ -81,6 +111,7 @@ def stage_import(
             raise BusinessRuleError("Le fichier est vide.")
         if len(content) > (16 if file_format == "xlsx" else 32) * 1024 * 1024:
             raise PayloadTooLargeError("Le fichier dépasse la taille maximale autorisée.")
+        _check_rate(user.id, company_id, "stage")
         delimiter = "NONE"
         if file_format == "fec":
             delimiter = "TAB" if fec_delimiter == "\t" else "PIPE"
@@ -98,6 +129,7 @@ def stage_import(
             if existing.expires_at <= utcnow():
                 raise ConflictError("Cet import a expiré et doit être purgé avant un nouvel envoi.")
             return StagedImport(existing.id, existing.expires_at)
+        _check_capacity(session, company_id, len(content))
         batch_id = uuid.uuid4()
         key = f"imports/{company_id}/{batch_id}"
         sealed = objects.seal(content, key)
@@ -130,6 +162,7 @@ def load_staged_content(user: User, company_id: uuid.UUID, batch_id: uuid.UUID) 
     """Réautorise chaque lecture ; n'expose jamais de clé ni de lien de stockage."""
     with get_sessionmaker()() as session, session.begin():
         _authorize(session, user, company_id, lock=False)
+        _check_rate(user.id, company_id, "read")
         batch = session.scalar(
             select(ImportBatch)
             .where(ImportBatch.tenant_id == company_id, ImportBatch.id == batch_id)

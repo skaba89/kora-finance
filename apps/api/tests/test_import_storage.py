@@ -3,13 +3,22 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 
 import pytest
+from redis.exceptions import RedisError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from kora.accounting import import_storage
 from kora.accounting.import_purge import purge_expired_imports, purge_orphan_page
 from kora.accounting.import_service import precheck_staged_import
 from kora.accounting.import_storage import load_staged_content, read_staged_import, stage_import
-from kora.core.errors import ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError
+from kora.core import quota
+from kora.core.errors import (
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    ServiceUnavailableError,
+    TooManyRequestsError,
+)
 from kora.db.tenant import bind_tenant
 from kora.models.common import utcnow
 from kora.models.identity import CompanyMembership, User
@@ -212,3 +221,41 @@ def test_precheck_staged_uses_persisted_options_and_catalog(
     assert len(storage) == 2
     bind_tenant(db, company.id)
     assert db.scalar(select(func.count()).select_from(JournalEntry)) == 0
+
+
+def test_stage_capacity_preserves_replay_and_isolates_tenants(
+    db: Session,
+    make_company: MakeCompany,
+    storage: dict[str, bytes],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mine, other = make_company(), make_company()
+    user = db.get_one(User, mine.owner.id)
+    other_user = db.get_one(User, other.owner.id)
+    monkeypatch.setattr(import_storage, "MAX_STAGED_FILES", 1)
+    first = stage_import(user, mine.id, b"one", file_format="csv", source_currency="GNF")
+    assert stage_import(user, mine.id, b"one", file_format="csv", source_currency="GNF") == first
+    with pytest.raises(ConflictError):
+        stage_import(user, mine.id, b"two", file_format="csv", source_currency="GNF")
+    monkeypatch.setattr(import_storage, "MAX_STAGED_BYTES", 2)
+    with pytest.raises(ConflictError):
+        stage_import(other_user, other.id, b"one", file_format="csv", source_currency="GNF")
+    stage_import(other_user, other.id, b"ok", file_format="csv", source_currency="GNF")
+    assert len(storage) == 2
+
+
+def test_import_quota_fails_closed(
+    db: Session, make_company: MakeCompany, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    company = make_company()
+    user = db.get_one(User, company.owner.id)
+    monkeypatch.setattr(quota, "allowed", lambda *args, **kwargs: False)
+    with pytest.raises(TooManyRequestsError):
+        stage_import(user, company.id, b"data", file_format="csv", source_currency="GNF")
+
+    def fail(scope: str, subject: str, *, limit: int, window_seconds: int) -> bool:
+        raise RedisError("Redis indisponible")
+
+    monkeypatch.setattr(quota, "allowed", fail)
+    with pytest.raises(ServiceUnavailableError):
+        stage_import(user, company.id, b"data", file_format="csv", source_currency="GNF")

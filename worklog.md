@@ -2386,3 +2386,9 @@ PR #144 fusionnée, CI #335 verte. Liaison du staging chiffré au moteur de
 précontrôle métier : options persistées, contrôle de droits renouvelé et
 rapport sans écritures comptables. Test d'intégration ajouté ; les routes
 HTTP et le contrat frontend restent à livrer.
+
+## Phase 5D2c2 — quotas des imports
+
+PR #145 fusionnée, CI #337 verte. Quotas transactionnels par dossier et
+limitation horaire Redis par utilisateur et dossier. Tests ajoutés pour
+rejeu, isolation, capacité et panne Redis. 16 tests purs réussis en local.
