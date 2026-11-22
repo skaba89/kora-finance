@@ -58,6 +58,12 @@ Les emails de relances déjà enregistrées poursuivent leur traitement normal.
 
 ## Règles impératives
 
+M4d1 distingue les nouvelles opérations de trésorerie (création de comptes,
+mouvements autonomes, virements et imports de relevés), soumises à la garde
+Trésorerie, de la consultation et du rapprochement des relevés historiques.
+Les règlements commerciaux existants et les écritures comptables restent
+accessibles selon leurs droits métier ; aucun historique n'est supprimé.
+
 - Séparer disponibilité produit, droit d'abonnement, choix administratif et RBAC.
 - La décision serveur doit être appliquée aux API, actions, workers, exports et
   synchronisations offline. Masquer un menu ne constitue pas un contrôle d'accès.

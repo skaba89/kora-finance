@@ -2427,6 +2427,12 @@ lecture des capacités tenant via le contrôle d'accès existant. Tests HTTP sur
 les droits et les conflits, l'isolation et la validation stricte. Les contrats
 doivent être régénérés avec le générateur épinglé avant fusion.
 
+## Modularité — M4d1 : trésorerie
+
+Garde serveur sur les nouveaux comptes, mouvements autonomes, virements et
+imports de relevés. Historique et rapprochement existants préservés ; test de
+désactivation, réactivation et isolation entre dossiers.
+
 ## Modularité — M4a (2026-11-22)
 
 Garde serveur prévisionnel après contrôle RBAC et tenant : calculs, exports,

@@ -45,6 +45,8 @@ from kora.models.treasury import (
     FinancialMovement,
     MovementDirection,
 )
+from kora.tenancy.module_config import require_enabled_module
+from kora.tenancy.modules import Module
 
 # Code du journal de trésorerie attendu pour chaque type de compte (journaux par
 # défaut du dossier). Repli : premier journal de trésorerie actif par code croissant,
@@ -370,6 +372,7 @@ def list_movements(
 
 
 def create_account(session: Session, actor: Actor, data: AccountData) -> FinancialAccount:
+    require_enabled_module(session, actor.company_id, Module.TREASURY)
     kind = data.kind
     if kind not in _GL_PREFIX_BY_KIND:
         raise BusinessRuleError("Type de compte financier inconnu.")
@@ -430,6 +433,7 @@ def record_movement(
     session: Session, actor: Actor, account_id: uuid.UUID, data: MovementData
 ) -> FinancialMovement:
     """Dépôt, retrait ou frais bancaires : une écriture validée + une trace immuable."""
+    require_enabled_module(session, actor.company_id, Module.TREASURY)
     # Verrou du compte : les mouvements concurrents sur le même compte se sérialisent.
     account = _account(session, actor.company_id, account_id, lock=True)
     if not account.is_active:
@@ -517,6 +521,7 @@ def record_transfer(
     data: TransferData,
 ) -> tuple[FinancialMovement, FinancialMovement]:
     """Virement interne : une écriture, deux mouvements liés (crédit source, débit cible)."""
+    require_enabled_module(session, actor.company_id, Module.TREASURY)
     if source_account_id == target_account_id:
         raise BusinessRuleError("Le virement interne exige deux comptes différents.")
     # Verrous pris dans l'ordre des identifiants : aucun interblocage possible entre
