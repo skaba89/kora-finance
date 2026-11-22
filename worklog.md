@@ -2373,3 +2373,9 @@ PR #142 fusionnée, CI #331 verte (1193 tests API, 93 Vitest, 88 E2E).
 Réconciliation S3 paginée par dossier avec délai de grâce de 48 heures,
 clé canonique et vérification de référence sous verrou. Tests ajoutés ;
 16 tests purs d'import réussis localement. Planification à livrer ensuite.
+
+## Phase 5D2b3c — maintenance périodique des imports
+
+PR #143 fusionnée, CI #333 verte. Scheduler et workers existants réutilisés
+pour purge par dossier et pagination S3. Tests de distribution et chaînage
+ajoutés ; les préfixes de dossiers supprimés restent hors purge automatique.

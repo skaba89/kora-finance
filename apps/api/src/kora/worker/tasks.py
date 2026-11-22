@@ -184,3 +184,40 @@ def run_reminder_policy(tenant_id: str, as_of_iso: str | None = None) -> None:
             "doublons": run.doublons,
         },
     )
+
+
+@dramatiq.actor(max_retries=0)
+def scan_import_maintenance() -> None:
+    """Enfile la maintenance par dossier, sans accès aux imports hors RLS."""
+    from sqlalchemy import select  # noqa: PLC0415
+
+    from kora.models.identity import Company  # noqa: PLC0415
+
+    with get_sessionmaker()() as session:
+        ids = list(session.scalars(select(Company.id)))
+    for company_id in ids:
+        try:
+            maintain_imports.send(str(company_id))
+        except Exception:
+            logger.exception("mise en file de la maintenance des imports impossible")
+
+
+@dramatiq.actor(max_retries=0)
+def maintain_imports(tenant_id: str) -> None:
+    """Un lot borné de références expirées et le début du balayage S3."""
+    from kora.accounting.import_purge import purge_expired_imports  # noqa: PLC0415
+
+    removed = purge_expired_imports(uuid.UUID(tenant_id))
+    logger.info("imports expirés purgés", extra={"dossier": tenant_id, "nombre": removed})
+    reconcile_import_objects.send(tenant_id)
+
+
+@dramatiq.actor(max_retries=0)
+def reconcile_import_objects(tenant_id: str, cursor: str | None = None) -> None:
+    """Une page S3 par message ; un échec sera repris au prochain balayage."""
+    from kora.accounting.import_purge import purge_orphan_page  # noqa: PLC0415
+
+    removed, next_cursor = purge_orphan_page(uuid.UUID(tenant_id), cursor=cursor)
+    logger.info("imports orphelins purgés", extra={"dossier": tenant_id, "nombre": removed})
+    if next_cursor is not None and next_cursor != cursor:
+        reconcile_import_objects.send(tenant_id, next_cursor)

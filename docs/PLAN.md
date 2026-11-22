@@ -361,6 +361,13 @@ référencés sont préservés. Le curseur permet de poursuivre page par page.
 La planification automatique et le traitement opérationnel des préfixes
 de dossiers supprimés restent à livrer ; aucune purge globale n'est activée.
 
+**5D2b3c — Maintenance périodique.** Le scheduler existant enfile un
+balayage indépendant des relances à chaque tick (3600 s par défaut).
+Une tâche par dossier purge au plus 100 références expirées ; les pages
+S3 sont traitées par messages distincts. Les échecs transitoires sont
+repris au prochain tick, sans multiplier les retries. Aucun préfixe de
+dossier supprimé n'est purgé automatiquement. Aucun endpoint ajouté.
+
 ## Phase 6 — Dossier de financement
 Pack généré en un clic, lien signé, révocable et expirable, journal des consultations.
 - Un lien révoqué renvoie 410 et ne donne plus accès à aucun document.
