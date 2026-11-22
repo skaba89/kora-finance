@@ -2478,3 +2478,9 @@ Licences et persistance à livrer séparément.
 PR #162 fusionnée, CI #378 verte. Modèle pur des périodes de licence et calcul
 explicite des états, sans mutation des droits. Treize contrôles directs réussis ;
 pytest et CI complète requis avant fusion. Persistance et audit restent M6b.
+
+## Modularité — M6b1 : stockage des offres (2026-11-22)
+
+PR #163 fusionnée, CI #380 verte. Migration additive 0028, modèle enregistré,
+contraintes et lecture seule du runtime. Tests de privilèges et de clé composée
+ajoutés ; validation PostgreSQL en CI requise. Aucun changement de droits.
