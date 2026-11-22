@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from kora.models.offers import CommercialOfferVersion
 
 
-def test_catalogue_commercial_global_en_lecture_seule(db: Session) -> None:
+def test_catalogue_commercial_global_ajout_uniquement(db: Session) -> None:
     privileges = db.execute(
         text(
             """
@@ -15,7 +15,7 @@ def test_catalogue_commercial_global_en_lecture_seule(db: Session) -> None:
             """
         )
     ).one()
-    assert tuple(privileges) == (True, False, False, False)
+    assert tuple(privileges) == (True, True, False, False)
 
 
 def test_identite_version_offre_est_composee() -> None:

@@ -321,3 +321,6 @@ runtime, sans attribution ni changement des permissions.
 
 M6b2a prépare les périodes de licence (0029), RLS forcée, non-chevauchement
 et lecture seule du runtime jusqu'au service audité.
+
+M6b2b ouvre uniquement l’ajout des offres versionnées via un service plateforme
+avec audit atomique (0030) ; attribution et droits inchangés.
