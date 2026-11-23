@@ -2661,6 +2661,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/module-clients/{client_id}/licenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Platform Client Licenses */
+        get: operations["platform_client_licenses_api_v1_platform_module_clients__client_id__licenses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/module-clients/{client_id}/modules": {
         parameters: {
             query?: never;
@@ -4929,6 +4946,34 @@ export interface components {
             offset: number;
             /** Total */
             total: number;
+        };
+        /** LicensePeriodOut */
+        LicensePeriodOut: {
+            /** 
+             * End On
+             * Format: date
+             */
+            ends_on: string;
+            /** 
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Offer Code */
+            offer_code: string;
+            /** Offer Version */
+            offer_version: number;
+            /** 
+             * Starts On
+             * Format: date
+             */
+            starts_on: string;
+            /** Status */
+            status: string;
+            /** Suspended */
+            suspended: boolean;
         };
         /** ModuleConfiguration */
         ModuleConfiguration: {
@@ -17351,6 +17396,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModuleClientPage"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_client_licenses_api_v1_platform_module_clients__client_id__licenses_get: {
+        parameters: {
+            query: {
+                /** 
+                 * As Of
+                 * @description Date civile de consultation
+                 * Format: date
+                 */
+                as_of: string;
+            };
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LicensePeriodOut"][];
                 };
             };
             /** @description Unauthorized */
