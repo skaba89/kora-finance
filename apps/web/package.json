@@ -43,7 +43,7 @@
     "shadcn": "4.23.0",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3",
-    "vitest": "5.0.5"
+    "vitest": "5.1.1"
   },
   "engines": {
     "node": ">=24 <25"
