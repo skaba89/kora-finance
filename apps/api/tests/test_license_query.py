@@ -30,6 +30,8 @@ def test_consultation_licences_statuts_et_isolation(
     with Session(owner_engine) as owner:
         bind_tenant(owner, company.id)
         owner.add(CommercialOfferVersion(code=code, version=1, modules=["sales"]))
+        # La FK composite exige que l’offre soit insérée avant ses périodes.
+        owner.flush()
         owner.add(
             CommercialLicensePeriod(
                 tenant_id=company.id,
