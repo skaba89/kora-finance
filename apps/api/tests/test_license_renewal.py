@@ -1,7 +1,7 @@
 """Garanties métier pures des renouvellements commerciaux."""
 
 from dataclasses import replace
-from datetime import date
+from datetime import UTC, date, datetime
 from uuid import UUID
 
 import pytest
@@ -55,7 +55,6 @@ def test_renouvellement_permet_un_nouvel_essai_explicite() -> None:
 
 
 def test_renouvellement_refuse_une_date_avec_heure() -> None:
-    from datetime import datetime
 
     with pytest.raises(ValueError, match="nouvelle fin"):
-        preview_renewal(initial(), ends_on=datetime(2027, 3, 1))  # type: ignore[arg-type]
+        preview_renewal(initial(), ends_on=datetime(2027, 3, 1, tzinfo=UTC))  # type: ignore[arg-type]
