@@ -15,9 +15,7 @@ from kora.tenancy.modules import Module
 from kora.tenancy.offers import OfferVersion
 
 
-def assign_license(
-    session: Session, *, actor_id: uuid.UUID, period: LicensePeriod
-) -> uuid.UUID:
+def assign_license(session: Session, *, actor_id: uuid.UUID, period: LicensePeriod) -> uuid.UUID:
     """Insère une période dans une transaction possédée par l'appelant.
 
     L'admin est vérifié avant de lier le dossier à la RLS. La contrainte
@@ -31,9 +29,7 @@ def assign_license(
         or period.offer_version > 2_147_483_647
     ):
         raise BusinessRuleError("Identifiant d'offre invalide.")
-    published = session.get(
-        CommercialOfferVersion, (period.offer_code, period.offer_version)
-    )
+    published = session.get(CommercialOfferVersion, (period.offer_code, period.offer_version))
     if published is None:
         raise NotFoundError("Version d'offre non publiée.")
     try:
