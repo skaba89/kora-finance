@@ -17439,11 +17439,7 @@ export interface operations {
     platform_client_licenses_api_v1_platform_module_clients__client_id__licenses_get: {
         parameters: {
             query: {
-                /**
-                 * As Of
-                 * @description Date civile de consultation
-                 * Format: date
-                 */
+                /** @description Date civile de consultation */
                 as_of: string;
             };
             header?: never;
