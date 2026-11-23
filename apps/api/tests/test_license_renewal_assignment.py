@@ -77,13 +77,16 @@ def test_renouvellement_persiste_adjacent_audite_et_rollback(
     assert previous.kind == "trial"
     assert previous.ends_on == date(2027, 2, 1)
     assert verify_chain(db).ok
-    assert db.scalar(
-        select(AuditEvent).where(
-            AuditEvent.action == "commercial.license_assigned",
-            AuditEvent.entity_id == str(new_id),
-            AuditEvent.tenant_id == company.id,
+    assert (
+        db.scalar(
+            select(AuditEvent).where(
+                AuditEvent.action == "commercial.license_assigned",
+                AuditEvent.entity_id == str(new_id),
+                AuditEvent.tenant_id == company.id,
+            )
         )
-    ) is not None
+        is not None
+    )
     bind_tenant(db, None)
     with pytest.raises(ConflictError):
         renew_license(db, actor_id=admin.id, **args)
