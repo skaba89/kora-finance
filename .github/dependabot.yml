@@ -35,6 +35,10 @@ updates:
     # absent de l'image). Bump toujours en paire dans la même PR, manuellement.
     ignore:
       - dependency-name: "@playwright/test"
+      # ESLint 10 invalide le graphe de dépendances de eslint-config-next 16.4.5
+      # et bloque la génération CycloneDX (npm ls ELSPROBLEMS).
+      - dependency-name: "eslint"
+        versions: [">=10"]
 
   - package-ecosystem: github-actions
     directory: /
