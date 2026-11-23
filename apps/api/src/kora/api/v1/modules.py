@@ -1,14 +1,16 @@
 """Configuration plateforme et lecture des capacités d'un dossier."""
 
 import uuid
+from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field, StrictBool, StrictInt
 
 from kora.api.v1.common import TENANT_ERRORS, WRITE_ERRORS, Limit, Offset, RequestBody
 from kora.auth.deps import CurrentUser, DbSession
 from kora.tenancy.deps import CompanyRead
+from kora.tenancy.license_query import list_license_periods
 from kora.tenancy.module_admin import ModuleClientPage, bind_module_client, list_module_clients
 from kora.tenancy.module_config import (
     ModuleConfiguration,
@@ -28,6 +30,30 @@ class ModuleOverrideIn(RequestBody):
 class ModuleCapability(BaseModel):
     module: Module
     configured_status: ModuleStatus
+
+
+class LicensePeriodOut(BaseModel):
+    id: uuid.UUID
+    offer_code: str
+    offer_version: int
+    kind: str
+    starts_on: date
+    ends_on: date
+    suspended: bool
+    status: str
+
+
+@router.get("/platform/module-clients/{client_id}/licenses", responses=TENANT_ERRORS)
+def platform_client_licenses(
+    client_id: uuid.UUID,
+    user: CurrentUser,
+    db: DbSession,
+    as_of: Annotated[date, Query(description="Date civile de consultation")],
+) -> list[LicensePeriodOut]:
+    return [
+        LicensePeriodOut.model_validate(row, from_attributes=True)
+        for row in list_license_periods(db, actor_id=user.id, company_id=client_id, as_of=as_of)
+    ]
 
 
 @router.get("/platform/module-clients", responses=TENANT_ERRORS)

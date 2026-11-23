@@ -4924,6 +4924,57 @@
         "title": "LetteringOut",
         "type": "object"
       },
+      "LicensePeriodOut": {
+        "properties": {
+          "ends_on": {
+            "format": "date",
+            "title": "Ends On",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "offer_code": {
+            "title": "Offer Code",
+            "type": "string"
+          },
+          "offer_version": {
+            "title": "Offer Version",
+            "type": "integer"
+          },
+          "starts_on": {
+            "format": "date",
+            "title": "Starts On",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "suspended": {
+            "title": "Suspended",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "offer_code",
+          "offer_version",
+          "kind",
+          "starts_on",
+          "ends_on",
+          "suspended",
+          "status"
+        ],
+        "title": "LicensePeriodOut",
+        "type": "object"
+      },
       "LiveResponse": {
         "properties": {
           "status": {
@@ -26724,6 +26775,100 @@
           }
         ],
         "summary": "Platform Module Clients",
+        "tags": [
+          "modules"
+        ]
+      }
+    },
+    "/api/v1/platform/module-clients/{client_id}/licenses": {
+      "get": {
+        "operationId": "platform_client_licenses_api_v1_platform_module_clients__client_id__licenses_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Date civile de consultation",
+            "in": "query",
+            "name": "as_of",
+            "required": true,
+            "schema": {
+              "description": "Date civile de consultation",
+              "format": "date",
+              "title": "As Of",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LicensePeriodOut"
+                  },
+                  "title": "Response Platform Client Licenses Api V1 Platform Module Clients  Client Id  Licenses Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Platform Client Licenses",
         "tags": [
           "modules"
         ]
