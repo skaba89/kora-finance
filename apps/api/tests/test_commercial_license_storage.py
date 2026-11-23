@@ -13,7 +13,7 @@ from kora.models.offers import CommercialOfferVersion
 from tests.conftest import CompanyFixture
 
 
-def test_periodes_commerciales_en_lecture_seule(db: Session) -> None:
+def test_periodes_commerciales_insertion_seule(db: Session) -> None:
     privileges = db.execute(
         text(
             """
@@ -24,7 +24,7 @@ def test_periodes_commerciales_en_lecture_seule(db: Session) -> None:
             """
         )
     ).one()
-    assert tuple(privileges) == (True, False, False, False)
+    assert tuple(privileges) == (True, True, False, False)
 
 
 def test_periodes_adjacentes_et_isolation(
