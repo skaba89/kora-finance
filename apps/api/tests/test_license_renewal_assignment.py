@@ -16,7 +16,6 @@ from kora.models.identity import User
 from kora.models.licenses import CommercialLicensePeriod
 from kora.models.offers import CommercialOfferVersion
 from kora.tenancy.license_renewal_assignment import renew_license
-from kora.tenancy.licenses import LicenseKind
 from tests.conftest import CompanyFixture, UserFixture
 
 
