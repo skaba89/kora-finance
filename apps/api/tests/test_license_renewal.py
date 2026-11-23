@@ -29,7 +29,8 @@ def test_renouvellement_adjacent_immuable() -> None:
     assert renewed.kind == LicenseKind.PAID
     assert renewed.tenant_id == previous.tenant_id
     assert (renewed.offer_code, renewed.offer_version) == (
-        previous.offer_code, previous.offer_version
+        previous.offer_code,
+        previous.offer_version,
     )
     assert previous.kind == LicenseKind.TRIAL
     assert previous.status_on(date(2027, 2, 1)) == LicenseStatus.EXPIRED
@@ -48,9 +49,7 @@ def test_renouvellement_suspendu_refuse() -> None:
 
 
 def test_renouvellement_permet_un_nouvel_essai_explicite() -> None:
-    renewed = preview_renewal(
-        initial(), ends_on=date(2027, 3, 1), kind=LicenseKind.TRIAL
-    )
+    renewed = preview_renewal(initial(), ends_on=date(2027, 3, 1), kind=LicenseKind.TRIAL)
     assert renewed.status_on(date(2027, 2, 1)) == LicenseStatus.TRIAL
 
 
