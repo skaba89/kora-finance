@@ -3,7 +3,7 @@ from collections.abc import Callable
 from datetime import date
 
 import pytest
-from sqlalchemy import select, text
+from sqlalchemy import Engine, select, text
 from sqlalchemy.orm import Session
 
 from kora.audit.service import verify_chain
@@ -20,7 +20,7 @@ from tests.conftest import CompanyFixture, UserFixture
 
 def test_attribution_licence_auditee_et_sans_chevauchement(
     db: Session,
-    owner_engine,
+    owner_engine: Engine,
     make_company: Callable[..., CompanyFixture],
     make_user: Callable[..., UserFixture],
 ) -> None:
