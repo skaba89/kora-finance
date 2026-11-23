@@ -26,7 +26,11 @@ def assign_license(
     Aucun module effectif, rôle ou paiement n'est modifié.
     """
     bind_module_client(session, actor_id, period.tenant_id)
-    if len(period.offer_code) > 64 or "\x00" in period.offer_code or period.offer_version > 2_147_483_647:
+    if (
+        len(period.offer_code) > 64
+        or "\x00" in period.offer_code
+        or period.offer_version > 2_147_483_647
+    ):
         raise BusinessRuleError("Identifiant d'offre invalide.")
     published = session.get(
         CommercialOfferVersion, (period.offer_code, period.offer_version)
@@ -61,7 +65,7 @@ def assign_license(
             session.flush()
     except IntegrityError as exc:
         # La base reste l'autorité finale pour dates et chevauchements.
-        if getattr(getattr(exc.orig, "sqlstate", None), "upper", lambda: "")() == "23P01":
+        if getattr(exc.orig, "sqlstate", None) == "23P01":
             raise ConflictError("Une période commerciale chevauche déjà ces dates.") from exc
         raise
 
