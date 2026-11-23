@@ -4756,12 +4756,12 @@ export interface components {
         };
         /** LicensePeriodOut */
         LicensePeriodOut: {
-            /** 
-             * End On
+            /**
+             * Ends On
              * Format: date
              */
             ends_on: string;
-            /** 
+            /**
              * Id
              * Format: uuid
              */
@@ -4772,7 +4772,7 @@ export interface components {
             offer_code: string;
             /** Offer Version */
             offer_version: number;
-            /** 
+            /**
              * Starts On
              * Format: date
              */
@@ -17439,7 +17439,7 @@ export interface operations {
     platform_client_licenses_api_v1_platform_module_clients__client_id__licenses_get: {
         parameters: {
             query: {
-                /** 
+                /**
                  * As Of
                  * @description Date civile de consultation
                  * Format: date

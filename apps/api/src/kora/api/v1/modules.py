@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field, StrictBool, StrictInt
 from kora.api.v1.common import TENANT_ERRORS, WRITE_ERRORS, Limit, Offset, RequestBody
 from kora.auth.deps import CurrentUser, DbSession
 from kora.tenancy.deps import CompanyRead
-from kora.tenancy.module_admin import ModuleClientPage, bind_module_client, list_module_clients
 from kora.tenancy.license_query import list_license_periods
+from kora.tenancy.module_admin import ModuleClientPage, bind_module_client, list_module_clients
 from kora.tenancy.module_config import (
     ModuleConfiguration,
     module_configuration,
@@ -48,7 +48,7 @@ def platform_client_licenses(
     client_id: uuid.UUID,
     user: CurrentUser,
     db: DbSession,
-    as_of: date = Query(..., description="Date civile de consultation"),
+    as_of: Annotated[date, Query(description="Date civile de consultation")],
 ) -> list[LicensePeriodOut]:
     return [
         LicensePeriodOut.model_validate(row, from_attributes=True)
