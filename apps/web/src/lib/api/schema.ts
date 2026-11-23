@@ -4754,6 +4754,34 @@ export interface components {
              */
             id: string;
         };
+        /** LicensePeriodOut */
+        LicensePeriodOut: {
+            /** 
+             * End On
+             * Format: date
+             */
+            ends_on: string;
+            /** 
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Offer Code */
+            offer_code: string;
+            /** Offer Version */
+            offer_version: number;
+            /** 
+             * Starts On
+             * Format: date
+             */
+            starts_on: string;
+            /** Status */
+            status: string;
+            /** Suspended */
+            suspended: boolean;
+        };
         /** LiveResponse */
         LiveResponse: {
             /**
@@ -4946,34 +4974,6 @@ export interface components {
             offset: number;
             /** Total */
             total: number;
-        };
-        /** LicensePeriodOut */
-        LicensePeriodOut: {
-            /** 
-             * End On
-             * Format: date
-             */
-            ends_on: string;
-            /** 
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Kind */
-            kind: string;
-            /** Offer Code */
-            offer_code: string;
-            /** Offer Version */
-            offer_version: number;
-            /** 
-             * Starts On
-             * Format: date
-             */
-            starts_on: string;
-            /** Status */
-            status: string;
-            /** Suspended */
-            suspended: boolean;
         };
         /** ModuleConfiguration */
         ModuleConfiguration: {
