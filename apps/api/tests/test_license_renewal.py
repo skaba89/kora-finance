@@ -56,4 +56,4 @@ def test_renouvellement_permet_un_nouvel_essai_explicite() -> None:
 def test_renouvellement_refuse_une_date_avec_heure() -> None:
 
     with pytest.raises(ValueError, match="nouvelle fin"):
-        preview_renewal(initial(), ends_on=datetime(2027, 3, 1, tzinfo=UTC))  # type: ignore[arg-type]
+        preview_renewal(initial(), ends_on=datetime(2027, 3, 1, tzinfo=UTC))
