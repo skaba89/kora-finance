@@ -29,6 +29,7 @@ jobs:
         run: docker build -t kora-api:scan apps/api
       - name: Scanner l'image (HIGH, CRITICAL, corrigées uniquement)
         run: |
+          mkdir -p artifacts
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$PWD":/repo \
@@ -53,6 +54,7 @@ jobs:
         run: docker build -t kora-web:scan apps/web
       - name: Scanner l'image (HIGH, CRITICAL, corrigées uniquement)
         run: |
+          mkdir -p artifacts
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$PWD":/repo \
