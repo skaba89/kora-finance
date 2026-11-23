@@ -54,34 +54,33 @@ def test_consultation_licences_statuts_et_isolation(
         owner.commit()
     with pytest.raises(ForbiddenError):
         list_license_periods(
-            db, actor_id=other.owner.id, company_id=company.id,
+            db,
+            actor_id=other.owner.id,
+            company_id=company.id,
             as_of=date(2027, 1, 15),
         )
     bind_tenant(db, other.id)
     with pytest.raises(ForbiddenError):
         list_license_periods(
-            db, actor_id=admin.id, company_id=company.id,
+            db,
+            actor_id=admin.id,
+            company_id=company.id,
             as_of=date(2027, 1, 15),
         )
     bind_tenant(db, None)
     jan = list_license_periods(
         db, actor_id=admin.id, company_id=company.id, as_of=date(2027, 1, 15)
     )
-    assert [row.status for row in jan] == [
-        LicenseStatus.TRIAL, LicenseStatus.SCHEDULED
-    ]
+    assert [row.status for row in jan] == [LicenseStatus.TRIAL, LicenseStatus.SCHEDULED]
     assert [row.kind for row in jan] == [LicenseKind.TRIAL, LicenseKind.PAID]
     bind_tenant(db, None)
-    feb = list_license_periods(
-        db, actor_id=admin.id, company_id=company.id, as_of=date(2027, 2, 1)
-    )
-    assert [row.status for row in feb] == [
-        LicenseStatus.EXPIRED, LicenseStatus.SUSPENDED
-    ]
+    feb = list_license_periods(db, actor_id=admin.id, company_id=company.id, as_of=date(2027, 2, 1))
+    assert [row.status for row in feb] == [LicenseStatus.EXPIRED, LicenseStatus.SUSPENDED]
     bind_tenant(db, None)
-    assert list_license_periods(
-        db, actor_id=admin.id, company_id=other.id, as_of=date(2027, 2, 1)
-    ) == []
+    assert (
+        list_license_periods(db, actor_id=admin.id, company_id=other.id, as_of=date(2027, 2, 1))
+        == []
+    )
 
 
 def test_consultation_refuse_date_invalide(
@@ -92,6 +91,8 @@ def test_consultation_refuse_date_invalide(
     company, admin = make_company(), make_user()
     with pytest.raises(BusinessRuleError):
         list_license_periods(
-            db, actor_id=admin.id, company_id=company.id,
+            db,
+            actor_id=admin.id,
+            company_id=company.id,
             as_of="2027-01-01",  # type: ignore[arg-type]
         )
