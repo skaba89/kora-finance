@@ -33,9 +33,12 @@ def test_attribution_licence_auditee_et_sans_chevauchement(
         owner.add(CommercialOfferVersion(code=code, version=1, modules=["sales"]))
         owner.commit()
     period = LicensePeriod(
-        tenant_id=company.id, offer_code=code, offer_version=1,
+        tenant_id=company.id,
+        offer_code=code,
+        offer_version=1,
         kind=LicenseKind.TRIAL,
-        starts_on=date(2027, 1, 1), ends_on=date(2027, 2, 1),
+        starts_on=date(2027, 1, 1),
+        ends_on=date(2027, 2, 1),
     )
     with pytest.raises(ForbiddenError):
         assign_license(db, actor_id=other.owner.id, period=period)
@@ -45,20 +48,28 @@ def test_attribution_licence_auditee_et_sans_chevauchement(
     bind_tenant(db, None)
     assigned_id = assign_license(db, actor_id=admin.id, period=period)
     assert db.get_one(CommercialLicensePeriod, assigned_id).kind == "trial"
-    assert db.scalar(select(AuditEvent).where(
-        AuditEvent.action == "commercial.license_assigned",
-        AuditEvent.entity_id == str(assigned_id),
-        AuditEvent.tenant_id == company.id,
-    )) is not None
+    assert (
+        db.scalar(
+            select(AuditEvent).where(
+                AuditEvent.action == "commercial.license_assigned",
+                AuditEvent.entity_id == str(assigned_id),
+                AuditEvent.tenant_id == company.id,
+            )
+        )
+        is not None
+    )
     assert verify_chain(db).ok
     bind_tenant(db, None)
     with pytest.raises(ConflictError):
         assign_license(db, actor_id=admin.id, period=period)
     bind_tenant(db, None)
     adjacent = LicensePeriod(
-        tenant_id=company.id, offer_code=code, offer_version=1,
+        tenant_id=company.id,
+        offer_code=code,
+        offer_version=1,
         kind=LicenseKind.PAID,
-        starts_on=date(2027, 2, 1), ends_on=date(2027, 3, 1),
+        starts_on=date(2027, 2, 1),
+        ends_on=date(2027, 3, 1),
     )
     assign_license(db, actor_id=admin.id, period=adjacent)
     db.rollback()
@@ -67,12 +78,14 @@ def test_attribution_licence_auditee_et_sans_chevauchement(
 
 
 def test_licence_runtime_insert_seul(db: Session) -> None:
-    rights = db.execute(text("""
+    rights = db.execute(
+        text("""
         SELECT has_table_privilege('commercial_license_periods', 'SELECT'),
                has_table_privilege('commercial_license_periods', 'INSERT'),
                has_table_privilege('commercial_license_periods', 'UPDATE'),
                has_table_privilege('commercial_license_periods', 'DELETE')
-    """)).one()
+    """)
+    ).one()
     assert tuple(rights) == (True, True, False, False)
 
 
@@ -86,10 +99,14 @@ def test_offre_inexistante_refusee(
     db.commit()
     with pytest.raises(NotFoundError):
         assign_license(
-            db, actor_id=admin.id,
+            db,
+            actor_id=admin.id,
             period=LicensePeriod(
-                tenant_id=company.id, offer_code=f"missing-{uuid.uuid4().hex}",
-                offer_version=1, kind=LicenseKind.PAID,
-                starts_on=date(2027, 4, 1), ends_on=date(2027, 5, 1),
+                tenant_id=company.id,
+                offer_code=f"missing-{uuid.uuid4().hex}",
+                offer_version=1,
+                kind=LicenseKind.PAID,
+                starts_on=date(2027, 4, 1),
+                ends_on=date(2027, 5, 1),
             ),
         )
