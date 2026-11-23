@@ -18,7 +18,7 @@ dependencies = [
     "pyotp>=2.10,<2.13",
     "cryptography>=50.0,<50.1",
     "segno>=1.6,<1.7",
-    "email-validator>=2.3,<2.4",
+    "email-validator>=2.3,<2.5",
     "openpyxl>=3.1.5,<3.2",
     "reportlab>=5.0.1,<5.2",
     # Publié chaque jour : version exacte, au moins deux semaines d'ancienneté.

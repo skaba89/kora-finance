@@ -7,9 +7,10 @@ from datetime import timedelta
 import pytest
 from fastapi.testclient import TestClient
 from redis.exceptions import ConnectionError as RedisConnectionError
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
+from kora.auth.one_time import token_hash
 from kora.core.config import get_settings
 from kora.email.sender import OUTBOX
 from kora.models.common import utcnow
@@ -257,7 +258,7 @@ def test_email_en_anglais_pour_un_compte_anglophone(client: TestClient, mailbox:
 
 
 def test_renvoi_de_la_verification_et_quota(
-    client: TestClient, make_user: MakeUser, mailbox: Mailbox
+    client: TestClient, make_user: MakeUser, mailbox: Mailbox, db: Session
 ) -> None:
     user = make_user()
     headers = user.headers(client)
@@ -272,11 +273,23 @@ def test_renvoi_de_la_verification_et_quota(
     assert "Retry-After" in blocked.headers
     sent = mailbox.deliver()
     assert len(sent) == limit
-    # Seul le dernier lien est valable.
+    # La livraison asynchrone des emails n'impose pas l'ordre d'émission.
+    # Identifier le lien encore actif en base, pas le dernier email reçu.
     tokens = [_token(m.text, "verification-email") for m in sent]
+    active_hash = db.scalar(
+        select(EmailToken.token_hash).where(
+            EmailToken.user_id == user.id,
+            EmailToken.used_at.is_(None),
+        )
+    )
+    assert active_hash is not None
+    active = [token for token in tokens if token_hash(token) == active_hash]
+    assert len(active) == 1
     verify = "/api/v1/auth/email/verify"
-    assert client.post(verify, json={"token": tokens[0]}).status_code == 400
-    assert client.post(verify, json={"token": tokens[-1]}).status_code == 204
+    for token in tokens:
+        if token != active[0]:
+            assert client.post(verify, json={"token": token}).status_code == 400
+    assert client.post(verify, json={"token": active[0]}).status_code == 204
 
 
 def test_renvoi_sans_effet_si_deja_verifiee(
