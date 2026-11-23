@@ -48,16 +48,20 @@ def test_renouvellement_persiste_adjacent_audite_et_rollback(
         )
         owner.commit()
 
-    args = {
-        "company_id": company.id,
-        "previous_id": previous_id,
-        "ends_on": date(2027, 3, 1),
-    }
+    def renew(actor_id: uuid.UUID) -> uuid.UUID:
+        return renew_license(
+            db,
+            actor_id=actor_id,
+            company_id=company.id,
+            previous_id=previous_id,
+            ends_on=date(2027, 3, 1),
+        )
+
     with pytest.raises(ForbiddenError):
-        renew_license(db, actor_id=other.owner.id, **args)
+        renew(other.owner.id)
     bind_tenant(db, other.id)
     with pytest.raises(ForbiddenError):
-        renew_license(db, actor_id=admin.id, **args)
+        renew(admin.id)
     bind_tenant(db, None)
     with pytest.raises(NotFoundError):
         renew_license(
@@ -68,7 +72,7 @@ def test_renouvellement_persiste_adjacent_audite_et_rollback(
             ends_on=date(2027, 3, 1),
         )
     bind_tenant(db, None)
-    new_id = renew_license(db, actor_id=admin.id, **args)
+    new_id = renew(admin.id)
     renewed = db.get_one(CommercialLicensePeriod, new_id)
     previous = db.get_one(CommercialLicensePeriod, previous_id)
     assert renewed.starts_on == previous.ends_on
@@ -89,7 +93,7 @@ def test_renouvellement_persiste_adjacent_audite_et_rollback(
     )
     bind_tenant(db, None)
     with pytest.raises(ConflictError):
-        renew_license(db, actor_id=admin.id, **args)
+        renew(admin.id)
     db.rollback()
     bind_tenant(db, company.id)
     assert db.get(CommercialLicensePeriod, new_id) is None
