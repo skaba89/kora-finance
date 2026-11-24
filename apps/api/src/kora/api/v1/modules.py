@@ -5,12 +5,17 @@ from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Query
-from pydantic import BaseModel, Field, StrictBool, StrictInt
+from pydantic import BaseModel, Field, StrictBool, StrictInt, StringConstraints
 
 from kora.api.v1.common import TENANT_ERRORS, WRITE_ERRORS, Limit, Offset, RequestBody
 from kora.auth.deps import CurrentUser, DbSession
 from kora.tenancy.deps import CompanyRead
 from kora.tenancy.license_query import list_license_periods
+from kora.tenancy.license_suspension import (
+    REASON_MAX_LENGTH,
+    REASON_MIN_LENGTH,
+    change_license_suspension,
+)
 from kora.tenancy.module_admin import ModuleClientPage, bind_module_client, list_module_clients
 from kora.tenancy.module_config import (
     ModuleConfiguration,
@@ -25,6 +30,23 @@ router = APIRouter(tags=["modules"])
 class ModuleOverrideIn(RequestBody):
     enabled: StrictBool
     expected_revision: Annotated[StrictInt, Field(ge=0, le=2147483646)]
+
+
+class LicenseSuspensionIn(RequestBody):
+    suspended: StrictBool
+    expected_suspended: StrictBool
+    reason: Annotated[
+        str,
+        StringConstraints(
+            strip_whitespace=True, min_length=REASON_MIN_LENGTH, max_length=REASON_MAX_LENGTH
+        ),
+    ]
+
+
+class LicenseSuspensionOut(BaseModel):
+    id: uuid.UUID
+    suspended: bool
+    changed: bool
 
 
 class ModuleCapability(BaseModel):
@@ -54,6 +76,35 @@ def platform_client_licenses(
         LicensePeriodOut.model_validate(row, from_attributes=True)
         for row in list_license_periods(db, actor_id=user.id, company_id=client_id, as_of=as_of)
     ]
+
+
+@router.put(
+    "/platform/module-clients/{client_id}/licenses/{license_id}/suspension",
+    responses=WRITE_ERRORS,
+)
+def platform_license_suspension(
+    client_id: uuid.UUID,
+    license_id: uuid.UUID,
+    body: LicenseSuspensionIn,
+    user: CurrentUser,
+    db: DbSession,
+) -> LicenseSuspensionOut:
+    """Suspend ou réactive une période commerciale, sans effet sur paiements ou droits comptables.
+
+    `expected_suspended` rejette (409) une demande fondée sur un état obsolète.
+    Le changement et son audit (avec motif) sont validés dans une seule transaction.
+    """
+    changed = change_license_suspension(
+        db,
+        actor_id=user.id,
+        company_id=client_id,
+        license_id=license_id,
+        suspended=body.suspended,
+        expected_suspended=body.expected_suspended,
+        reason=body.reason,
+    )
+    db.commit()
+    return LicenseSuspensionOut(id=license_id, suspended=body.suspended, changed=changed)
 
 
 @router.get("/platform/module-clients", responses=TENANT_ERRORS)

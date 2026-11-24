@@ -57,6 +57,7 @@ def test_suspension_reactivation_audit_et_rollback(
             license_id=identifier,
             suspended=value,
             expected_suspended=expected,
+            reason="Recette sécurité",
         )
 
     with pytest.raises(ForbiddenError):
@@ -67,6 +68,7 @@ def test_suspension_reactivation_audit_et_rollback(
             license_id=identifier,
             suspended=True,
             expected_suspended=False,
+            reason="Recette sécurité",
         )
     bind_tenant(db, other.id)
     with pytest.raises(ForbiddenError):
@@ -77,6 +79,7 @@ def test_suspension_reactivation_audit_et_rollback(
             license_id=identifier,
             suspended=True,
             expected_suspended=False,
+            reason="Recette sécurité",
         )
     bind_tenant(db, None)
     with pytest.raises(NotFoundError):
@@ -87,6 +90,7 @@ def test_suspension_reactivation_audit_et_rollback(
             license_id=identifier,
             suspended=True,
             expected_suspended=False,
+            reason="Recette sécurité",
         )
     assert change(True, False)
     assert db.get_one(CommercialLicensePeriod, identifier).suspended is True
@@ -96,6 +100,14 @@ def test_suspension_reactivation_audit_et_rollback(
     assert verify_chain(db).ok
     assert change(False, True)
     assert verify_chain(db).ok
+    reactivated = db.scalar(
+        select(AuditEvent).where(
+            AuditEvent.action == "commercial.license_reactivated",
+            AuditEvent.entity_id == str(identifier),
+        )
+    )
+    assert reactivated is not None
+    assert reactivated.payload["reason"] == "Recette sécurité"
     assert (
         db.scalar(
             select(AuditEvent).where(
@@ -123,6 +135,20 @@ def test_privileges_suspension_colonne_seule(db: Session) -> None:
     assert tuple(rights) == (True, False, False, False)
 
 
+@pytest.mark.parametrize("reason", ["", "  ab  ", "x" * 501, "motif\x00nul", 12])
+def test_suspension_exige_motif_valide_avant_acces(db: Session, reason: object) -> None:
+    with pytest.raises(BusinessRuleError):
+        change_license_suspension(
+            db,
+            actor_id=uuid.uuid4(),
+            company_id=uuid.uuid4(),
+            license_id=uuid.uuid4(),
+            suspended=True,
+            expected_suspended=False,
+            reason=reason,  # type: ignore[arg-type]
+        )
+
+
 def test_suspension_refuse_type_non_booleen(db: Session) -> None:
     with pytest.raises(BusinessRuleError):
         change_license_suspension(
@@ -132,4 +158,5 @@ def test_suspension_refuse_type_non_booleen(db: Session) -> None:
             license_id=uuid.uuid4(),
             suspended=1,  # type: ignore[arg-type]
             expected_suspended=False,
+            reason="Recette sécurité",
         )

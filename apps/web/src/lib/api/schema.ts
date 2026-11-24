@@ -2678,6 +2678,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/module-clients/{client_id}/licenses/{license_id}/suspension": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Platform License Suspension
+         * @description Suspend ou réactive une période commerciale, sans effet sur paiements ou droits comptables.
+         *
+         *     `expected_suspended` rejette (409) une demande fondée sur un état obsolète.
+         *     Le changement et son audit (avec motif) sont validés dans une seule transaction.
+         */
+        put: operations["platform_license_suspension_api_v1_platform_module_clients__client_id__licenses__license_id__suspension_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/module-clients/{client_id}/modules": {
         parameters: {
             query?: never;
@@ -4779,6 +4802,27 @@ export interface components {
             starts_on: string;
             /** Status */
             status: string;
+            /** Suspended */
+            suspended: boolean;
+        };
+        /** LicenseSuspensionIn */
+        LicenseSuspensionIn: {
+            /** Expected Suspended */
+            expected_suspended: boolean;
+            /** Reason */
+            reason: string;
+            /** Suspended */
+            suspended: boolean;
+        };
+        /** LicenseSuspensionOut */
+        LicenseSuspensionOut: {
+            /** Changed */
+            changed: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
             /** Suspended */
             suspended: boolean;
         };
@@ -17493,6 +17537,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_license_suspension_api_v1_platform_module_clients__client_id__licenses__license_id__suspension_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+                license_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LicenseSuspensionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LicenseSuspensionOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

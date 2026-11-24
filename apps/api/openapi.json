@@ -4975,6 +4975,56 @@
         "title": "LicensePeriodOut",
         "type": "object"
       },
+      "LicenseSuspensionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_suspended": {
+            "title": "Expected Suspended",
+            "type": "boolean"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          },
+          "suspended": {
+            "title": "Suspended",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "suspended",
+          "expected_suspended",
+          "reason"
+        ],
+        "title": "LicenseSuspensionIn",
+        "type": "object"
+      },
+      "LicenseSuspensionOut": {
+        "properties": {
+          "changed": {
+            "title": "Changed",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "suspended": {
+            "title": "Suspended",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "suspended",
+          "changed"
+        ],
+        "title": "LicenseSuspensionOut",
+        "type": "object"
+      },
       "LiveResponse": {
         "properties": {
           "status": {
@@ -26869,6 +26919,115 @@
           }
         ],
         "summary": "Platform Client Licenses",
+        "tags": [
+          "modules"
+        ]
+      }
+    },
+    "/api/v1/platform/module-clients/{client_id}/licenses/{license_id}/suspension": {
+      "put": {
+        "description": "Suspend ou réactive une période commerciale, sans effet sur paiements ou droits comptables.\n\n`expected_suspended` rejette (409) une demande fondée sur un état obsolète.\nLe changement et son audit (avec motif) sont validés dans une seule transaction.",
+        "operationId": "platform_license_suspension_api_v1_platform_module_clients__client_id__licenses__license_id__suspension_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "license_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "License Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseSuspensionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LicenseSuspensionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Platform License Suspension",
         "tags": [
           "modules"
         ]
