@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { LicenseSuspensionForm } from "@/components/licenses/license-suspension-form";
 import { PageHeader, PageSkeleton } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { changeLicenseSuspensionAction } from "@/lib/actions/licenses";
 import { api, read } from "@/lib/api/server";
 import { getCurrentUser } from "@/lib/dal";
 import { getDictionary } from "@/lib/i18n/server";
@@ -20,7 +22,7 @@ const statuses: Record<string, [string, string]> = {
 };
 
 async function LicenseList({ searchParams }: { searchParams: Query }) {
-  const [user, { locale }, query] = await Promise.all([
+  const [user, { t, locale }, query] = await Promise.all([
     getCurrentUser(), getDictionary(), searchParams,
   ]);
   if (!user.is_platform_admin) notFound();
@@ -54,6 +56,25 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
       }))
     : [];
 
+  const suspensionLabels = {
+    suspend: label("Suspendre", "Suspend"),
+    reactivate: label("Réactiver", "Reactivate"),
+    reason: label("Motif de l’intervention", "Reason for this change"),
+    reasonHint: label(
+      "Obligatoire (3 à 500 caractères), conservé dans le journal d’audit.",
+      "Required (3 to 500 characters), kept in the audit log.",
+    ),
+    confirmSuspend: label(
+      "Suspendre cette période de licence ? Aucun paiement ni droit comptable n’est modifié.",
+      "Suspend this license period? No payment or accounting right is changed.",
+    ),
+    confirmReactivate: label(
+      "Réactiver cette période de licence ?",
+      "Reactivate this license period?",
+    ),
+    pending: t.common.pending,
+  };
+
   const filteredLicenses = status
     ? licenses.filter((license) => license.status === status)
     : licenses;
@@ -67,8 +88,8 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
       <PageHeader
         title={label("Licences commerciales", "Commercial licenses")}
         subtitle={label(
-          "Consultation sécurisée et en lecture seule des périodes de licence.",
-          "Secure, read-only view of license periods.",
+          "Consultation des périodes de licence et suspension auditée, sans effet sur les paiements ni les droits comptables.",
+          "License periods with audited suspension, without effect on payments or accounting rights.",
         )}
       />
       <Link href="/administration" className="text-primary mb-4 inline-block text-sm font-medium underline underline-offset-4">
@@ -186,6 +207,15 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
                       {license.suspended
                         ? <p>{label("Suspension enregistrée", "Suspension recorded")}</p>
                         : null}
+                      <LicenseSuspensionForm
+                        key={`${license.id}-${license.suspended}`}
+                        action={changeLicenseSuspensionAction.bind(
+                          null, selected.id, license.id, license.suspended,
+                        )}
+                        suspended={license.suspended}
+                        labels={suspensionLabels}
+                        fieldId={license.id}
+                      />
                     </CardContent>
                   </Card>
                 ))}
