@@ -140,6 +140,22 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
               <p className="text-muted-foreground text-sm">
                 {label("États calculés au", "Statuses calculated as of")} <time dateTime={asOf}>{asOf}</time> (UTC)
               </p>
+              <section aria-label={label("Répartition des états de licence", "License status distribution")} className="space-y-2">
+                <h3 className="text-sm font-semibold">
+                  {label("Répartition des périodes du dossier", "Company license periods by status")}
+                </h3>
+                <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                  {Object.entries(statuses).map(([value, names]) => (
+                    <div key={value} className="rounded-lg border p-3">
+                      <dt className="text-muted-foreground text-xs">{names[en ? 1 : 0]}</dt>
+                      <dd className="text-xl font-semibold tabular-nums">{statusCounts[value] ?? 0}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="text-muted-foreground text-xs">
+                  {label("Comptage des périodes, et non des dossiers, à la date UTC sélectionnée.", "Period counts, not company counts, at the selected UTC date.")}
+                </p>
+              </section>
               <p className="text-muted-foreground text-sm" role="status">
                 {label("Périodes affichées", "Displayed periods")} : {filteredLicenses.length} / {licenses.length}
                 {status ? ` — ${statuses[status]?.[en ? 1 : 0]} : ${statusCounts[status] ?? 0}` : ""}
