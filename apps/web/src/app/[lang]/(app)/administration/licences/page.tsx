@@ -40,7 +40,7 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
   const today = new Date().toISOString().slice(0, 10);
   const requestedDate = typeof query.as_of === "string" ? query.as_of : undefined;
   // Reject invalid calendar dates rather than silently requesting another period.
-  const validDate = requestedDate && /^\\d{4}-\\d{2}-\\d{2}$/.test(requestedDate)
+  const validDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)
     && !Number.isNaN(Date.parse(`${requestedDate}T00:00:00.000Z`))
     && new Date(`${requestedDate}T00:00:00.000Z`).toISOString().slice(0, 10) === requestedDate;
   const asOf = validDate ? requestedDate : today;
