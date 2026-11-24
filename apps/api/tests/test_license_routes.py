@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
+from kora.api.v1.modules import router
 from kora.db.tenant import bind_tenant
 from kora.models.identity import User
 from kora.models.licenses import CommercialLicensePeriod
@@ -65,7 +66,6 @@ def test_api_lecture_licences_plateforme(
 
 def test_aucune_mutation_http_licence_exposee_sans_revue_securite() -> None:
     """Une exposition future des mutations exige une revue RBAC/IDOR explicite."""
-    from kora.api.v1.modules import router
 
     base = "/platform/module-clients/"
     license_routes = [
