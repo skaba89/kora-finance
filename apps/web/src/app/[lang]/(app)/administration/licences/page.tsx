@@ -44,11 +44,23 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
     && !Number.isNaN(Date.parse(`${requestedDate}T00:00:00.000Z`))
     && new Date(`${requestedDate}T00:00:00.000Z`).toISOString().slice(0, 10) === requestedDate;
   const asOf = validDate ? requestedDate : today;
+  const requestedStatus = typeof query.status === "string" ? query.status : "";
+  const status = requestedStatus && Object.hasOwn(statuses, requestedStatus)
+    ? requestedStatus : "";
+  const statusSuffix = status ? `&status=${status}` : "";
   const licenses = selected
     ? await read(client.GET("/api/v1/platform/module-clients/{client_id}/licenses", {
         params: { path: { client_id: selected.id }, query: { as_of: asOf } },
       }))
     : [];
+
+  const filteredLicenses = status
+    ? licenses.filter((license) => license.status === status)
+    : licenses;
+  const statusCounts = licenses.reduce<Record<string, number>>((counts, license) => {
+    counts[license.status] = (counts[license.status] ?? 0) + 1;
+    return counts;
+  }, {});
 
   return (
     <main id="main-content" tabIndex={-1}>
@@ -74,7 +86,7 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
             {companies.items.map((item) => (
               <Link
                 key={item.id}
-                href={`/administration/licences?offset=${offset}&client=${item.id}&as_of=${asOf}`}
+                href={`/administration/licences?offset=${offset}&client=${item.id}&as_of=${asOf}${statusSuffix}`}
                 aria-current={selected?.id === item.id ? "page" : undefined}
                 className={`block break-words rounded-lg border px-3 py-2 text-sm hover:bg-accent ${selected?.id === item.id ? "border-primary font-semibold" : ""}`}
               >
@@ -83,10 +95,10 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
             ))}
             <nav aria-label={label("Pagination des dossiers", "Company pagination")} className="flex flex-wrap gap-3 text-sm">
               {offset > 0
-                ? <Link href={`/administration/licences?offset=${Math.max(0, offset - 50)}&as_of=${asOf}`}>{label("Précédent", "Previous")}</Link>
+                ? <Link href={`/administration/licences?offset=${Math.max(0, offset - 50)}&as_of=${asOf}${statusSuffix}`}>{label("Précédent", "Previous")}</Link>
                 : null}
               {offset + 50 < companies.total
-                ? <Link href={`/administration/licences?offset=${offset + 50}&as_of=${asOf}`}>{label("Suivant", "Next")}</Link>
+                ? <Link href={`/administration/licences?offset=${offset + 50}&as_of=${asOf}${statusSuffix}`}>{label("Suivant", "Next")}</Link>
                 : null}
             </nav>
           </CardContent>
@@ -107,6 +119,16 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
                   <input id="licenses-as-of" type="date" name="as_of" required
                     defaultValue={asOf} className="border-input bg-background rounded-md border px-3 py-2" />
                 </label>
+                <label htmlFor="licenses-status" className="flex flex-col gap-1 text-sm font-medium">
+                  {label("État", "Status")}
+                  <select id="licenses-status" name="status" defaultValue={status}
+                    className="border-input bg-background rounded-md border px-3 py-2">
+                    <option value="">{label("Tous les états", "All statuses")}</option>
+                    {Object.entries(statuses).map(([value, names]) => (
+                      <option key={value} value={value}>{names[en ? 1 : 0]}</option>
+                    ))}
+                  </select>
+                </label>
                 <button type="submit" className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium">
                   {label("Consulter", "View")}
                 </button>
@@ -118,11 +140,18 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
               <p className="text-muted-foreground text-sm">
                 {label("États calculés au", "Statuses calculated as of")} <time dateTime={asOf}>{asOf}</time> (UTC)
               </p>
+              <p className="text-muted-foreground text-sm" role="status">
+                {label("Périodes affichées", "Displayed periods")} : {filteredLicenses.length} / {licenses.length}
+                {status ? ` — ${statuses[status]?.[en ? 1 : 0]} : ${statusCounts[status] ?? 0}` : ""}
+                {" "}({label("dossier sélectionné uniquement", "selected company only")})
+              </p>
               {licenses.length === 0
                 ? <p>{label("Aucune période de licence enregistrée.", "No license periods recorded.")}</p>
-                : null}
+                : filteredLicenses.length === 0
+                  ? <p>{label("Aucune période pour cet état.", "No periods match this status.")}</p>
+                  : null}
               <div className="grid gap-3 xl:grid-cols-2">
-                {licenses.map((license) => (
+                {filteredLicenses.map((license) => (
                   <Card key={license.id}>
                     <CardHeader className="space-y-2">
                       <CardTitle className="break-words text-base">
