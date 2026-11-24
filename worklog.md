@@ -2497,3 +2497,28 @@ Aucun changement des droits métier ni création de licence initiale.
 PR #165 fusionnée, CI #387 verte. Service de publication immuable et auditée,
 migration 0030, tests de privilèges, refus, conflit, audit et rollback.
 CI complète requise avant fusion ; attribution des licences à livrer ensuite.
+
+## Rattrapage du suivi — PR #166 à #194 (2026-11-24)
+
+Le journal s'arrêtait à M6b2b (#165). Entrées reconstituées depuis GitHub ;
+chaque PR listée est fusionnée avec le job CI « Résultat » en succès.
+
+- **Commercial (M6)** : #166 publication auditée des offres ; #179 attribution
+  contrôlée des licences (M6b3) ; #182 consultation des abonnements ; #183
+  préparation pure des renouvellements ; #184 suspension/réactivation auditée
+  (service) ; #186 renouvellement persisté ; #187 à #189 consultation HTTP
+  sécurisée des licences, y compris à date choisie (M6b6a-c) ; #190 filtre par
+  état (M6c1) ; #191 synthèse des états par dossier (M6c2).
+- **Sécurité avant mutations HTTP** : #192 verrou de structure des routes
+  (M6c3) ; #193 refus HTTP des verbes d'écriture sur les licences (M6c4,
+  correctif Ruff I001 en `f83d47f`) ; #194 relecture verrouillée
+  (`populate_existing`) et audit `commercial.license_renewed` dans
+  `renew_license` (M6c5) : un renouvellement pouvait ignorer une suspension
+  concurrente, défaut démontré par un test rouge avant correctif.
+- **CI** : #180 blocage des mises à jour ESLint 10 incompatibles ; #185
+  rapports Trivy API et Web rétablis.
+- **Dépendances (Dependabot)** : #167 à #177, #181.
+
+Points ouverts : question métier sur le renouvellement d'une période expirée
+(début dans le passé) ; interface FR/EN des mutations de licences ; rôle SQL
+dédié aux mutations plateforme. Aucune mise en production associée à ces lots.
