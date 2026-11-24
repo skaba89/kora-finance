@@ -83,9 +83,7 @@ def test_aucune_mutation_http_licence_exposee_sans_revue_securite() -> None:
 
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "PATCH", "DELETE"])
-def test_mutations_http_licences_non_exposees(
-    client: TestClient, method: str
-) -> None:
+def test_mutations_http_licences_non_exposees(client: TestClient, method: str) -> None:
     """Aucune écriture commerciale ne doit être accessible par HTTP."""
     url = f"/api/v1/platform/module-clients/{uuid.uuid4()}/licenses"
     response = client.request(method, url, json={"suspended": True})
