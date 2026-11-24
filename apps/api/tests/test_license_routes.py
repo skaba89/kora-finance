@@ -4,10 +4,12 @@ import uuid
 from collections.abc import Callable
 from datetime import date
 
+from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
+from kora.api.v1.modules import router
 from kora.db.tenant import bind_tenant
 from kora.models.identity import User
 from kora.models.licenses import CommercialLicensePeriod
@@ -61,3 +63,17 @@ def test_api_lecture_licences_plateforme(
     assert rows[0]["ends_on"] == "2027-02-01"
     other_url = f"/api/v1/platform/module-clients/{other.id}/licenses"
     assert client.get(other_url, headers=headers, params=params).json() == []
+
+
+def test_aucune_mutation_http_licence_exposee_sans_revue_securite() -> None:
+    """Une exposition future des mutations exige une revue RBAC/IDOR explicite."""
+
+    base = "/platform/module-clients/"
+    license_routes = [
+        route
+        for route in router.routes
+        if isinstance(route, APIRoute) and route.path.startswith(base) and "/licenses" in route.path
+    ]
+    assert len(license_routes) == 1
+    assert license_routes[0].path == "/platform/module-clients/{client_id}/licenses"
+    assert license_routes[0].methods == {"GET"}
