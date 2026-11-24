@@ -71,8 +71,7 @@ def test_aucune_mutation_http_licence_exposee_sans_revue_securite() -> None:
     license_routes = [
         route
         for route in router.routes
-        if getattr(route, "path", "").startswith(base)
-        and "/licenses" in getattr(route, "path", "")
+        if getattr(route, "path", "").startswith(base) and "/licenses" in getattr(route, "path", "")
     ]
     assert len(license_routes) == 1
     assert license_routes[0].path == "/platform/module-clients/{client_id}/licenses"
