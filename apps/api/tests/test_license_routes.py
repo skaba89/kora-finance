@@ -1,10 +1,10 @@
 """API lecture licences: admin plateforme, isolation et dates civiles."""
 
 import uuid
-
-import pytest
 from collections.abc import Callable
 from datetime import date
+
+import pytest
 
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
