@@ -37,6 +37,15 @@ async function PlatformDashboard() {
             </Link>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader><CardTitle>{label("Licences commerciales", "Commercial licenses")}</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-muted-foreground text-sm">{label("Consultez les licences et leur état sans modifier les abonnements.", "View licenses and their status without changing subscriptions.")}</p>
+            <Link href="/administration/licences" className="text-primary font-medium underline underline-offset-4">
+              {label("Consulter les licences", "View licenses")}
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     </main>
   );
