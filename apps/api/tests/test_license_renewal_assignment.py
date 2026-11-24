@@ -81,6 +81,20 @@ def test_renouvellement_persiste_adjacent_audite_et_rollback(
     assert previous.kind == "trial"
     assert previous.ends_on == date(2027, 2, 1)
     assert verify_chain(db).ok
+    renewal_event = db.scalar(
+        select(AuditEvent).where(
+            AuditEvent.action == "commercial.license_renewed",
+            AuditEvent.entity_id == str(new_id),
+            AuditEvent.tenant_id == company.id,
+        )
+    )
+    assert renewal_event is not None
+    assert renewal_event.payload == {
+        "previous_license_id": str(previous_id),
+        "starts_on": "2027-02-01",
+        "ends_on": "2027-03-01",
+        "kind": "paid",
+    }
     assert (
         db.scalar(
             select(AuditEvent).where(
@@ -109,3 +123,63 @@ def test_renouvellement_refuse_date_invalide_avant_acces(db: Session) -> None:
             ends_on=date(2026, 1, 1),
             kind="paid",  # type: ignore[arg-type]
         )
+
+
+def test_renouvellement_relit_suspension_concurrente_sous_verrou(
+    db: Session,
+    owner_engine: Engine,
+    make_company: Callable[..., CompanyFixture],
+    make_user: Callable[..., UserFixture],
+) -> None:
+    """Une session ayant déjà chargé la période ne doit pas renouveler un état obsolète."""
+    company = make_company()
+    admin = make_user()
+    db.get_one(User, admin.id).is_platform_admin = True
+    db.commit()
+    previous_id = uuid.uuid4()
+    code = f"test-{uuid.uuid4().hex}"
+    with Session(owner_engine) as owner:
+        bind_tenant(owner, company.id)
+        owner.add(CommercialOfferVersion(code=code, version=1, modules=["sales"]))
+        owner.flush()
+        owner.add(
+            CommercialLicensePeriod(
+                id=previous_id,
+                tenant_id=company.id,
+                offer_code=code,
+                offer_version=1,
+                kind="paid",
+                starts_on=date(2027, 1, 1),
+                ends_on=date(2027, 2, 1),
+            )
+        )
+        owner.commit()
+    bind_tenant(db, company.id)
+    stale = db.get_one(CommercialLicensePeriod, previous_id)  # référence forte : carte d'identité
+    assert stale.suspended is False
+    db.commit()
+    with Session(owner_engine) as owner:
+        bind_tenant(owner, company.id)
+        owner.get_one(CommercialLicensePeriod, previous_id).suspended = True
+        owner.commit()
+    bind_tenant(db, None)
+    with pytest.raises(BusinessRuleError, match="suspendue"):
+        renew_license(
+            db,
+            actor_id=admin.id,
+            company_id=company.id,
+            previous_id=previous_id,
+            ends_on=date(2027, 3, 1),
+        )
+    assert stale.suspended is True
+    db.rollback()
+    bind_tenant(db, company.id)
+    assert (
+        db.scalar(
+            select(CommercialLicensePeriod.id).where(
+                CommercialLicensePeriod.tenant_id == company.id,
+                CommercialLicensePeriod.starts_on == date(2027, 2, 1),
+            )
+        )
+        is None
+    )

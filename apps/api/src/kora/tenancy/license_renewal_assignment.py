@@ -6,6 +6,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from kora.audit.service import record_event
 from kora.core.errors import BusinessRuleError, NotFoundError
 from kora.db.tenant import bind_tenant
 from kora.models.licenses import CommercialLicensePeriod
@@ -41,6 +42,9 @@ def renew_license(
             CommercialLicensePeriod.tenant_id == company_id,
         )
         .with_for_update(of=CommercialLicensePeriod)
+        # Relit la ligne verrouillée : un objet déjà chargé ne doit pas masquer
+        # une suspension validée entre-temps par une autre transaction.
+        .execution_options(populate_existing=True)
     )
     if previous is None:
         raise NotFoundError("Période précédente introuvable.")
@@ -59,4 +63,19 @@ def renew_license(
         raise BusinessRuleError(str(exc)) from exc
     # assign_license revalide les privilèges plateforme avant de lier le dossier.
     bind_tenant(session, None)
-    return assign_license(session, actor_id=actor_id, period=proposed)
+    new_id = assign_license(session, actor_id=actor_id, period=proposed)
+    # assign_license a relié le dossier : l'événement rejoint sa chaîne d'audit.
+    record_event(
+        session,
+        action="commercial.license_renewed",
+        entity_type="commercial_license",
+        entity_id=new_id,
+        actor_user_id=actor_id,
+        payload={
+            "previous_license_id": str(previous_id),
+            "starts_on": proposed.starts_on.isoformat(),
+            "ends_on": proposed.ends_on.isoformat(),
+            "kind": proposed.kind.value,
+        },
+    )
+    return new_id
