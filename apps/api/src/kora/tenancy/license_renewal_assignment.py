@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from kora.audit.service import record_event
 from kora.core.errors import BusinessRuleError, NotFoundError
 from kora.db.tenant import bind_tenant
+from kora.models.common import utcnow
 from kora.models.licenses import CommercialLicensePeriod
 from kora.tenancy.license_assignment import assign_license
 from kora.tenancy.license_renewal import preview_renewal
@@ -24,6 +25,7 @@ def renew_license(
     previous_id: uuid.UUID,
     ends_on: date,
     kind: LicenseKind = LicenseKind.PAID,
+    today: date | None = None,
 ) -> uuid.UUID:
     """Ajoute une période adjacente, via les protections d'assign_license.
 
@@ -31,8 +33,15 @@ def renew_license(
     le renouvellement ne confère aucun droit ni ne constate de paiement.
     Le verrou empêche une suspension concurrente non prise en compte ; la
     contrainte GiST empêche les périodes chevauchantes. Pas de commit interne.
+    Pas de renouvellement rétroactif (décision métier du 2026-11-24) : une
+    période source expirée exige une nouvelle attribution. `today` est
+    injectable pour les tests ; par défaut, date UTC (Guinée : UTC+0).
     """
-    if type(ends_on) is not date or not isinstance(kind, LicenseKind):
+    if (
+        type(ends_on) is not date
+        or not isinstance(kind, LicenseKind)
+        or (today is not None and type(today) is not date)
+    ):
         raise BusinessRuleError("Date ou type de renouvellement invalide.")
     bind_module_client(session, actor_id, company_id)
     previous = session.scalar(
@@ -61,6 +70,11 @@ def renew_license(
         proposed = preview_renewal(period, ends_on=ends_on, kind=kind)
     except ValueError as exc:
         raise BusinessRuleError(str(exc)) from exc
+    if proposed.starts_on < (today or utcnow().date()):
+        raise BusinessRuleError(
+            "Renouvellement rétroactif refusé : la période commencerait dans le passé ; "
+            "créez une nouvelle attribution."
+        )
     # assign_license revalide les privilèges plateforme avant de lier le dossier.
     bind_tenant(session, None)
     new_id = assign_license(session, actor_id=actor_id, period=proposed)
