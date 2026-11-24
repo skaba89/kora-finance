@@ -55,6 +55,7 @@ def test_renouvellement_persiste_adjacent_audite_et_rollback(
             company_id=company.id,
             previous_id=previous_id,
             ends_on=date(2027, 3, 1),
+            today=date(2027, 1, 15),
         )
 
     with pytest.raises(ForbiddenError):
@@ -70,6 +71,7 @@ def test_renouvellement_persiste_adjacent_audite_et_rollback(
             company_id=other.id,
             previous_id=previous_id,
             ends_on=date(2027, 3, 1),
+            today=date(2027, 1, 15),
         )
     bind_tenant(db, None)
     new_id = renew(admin.id)
@@ -170,6 +172,7 @@ def test_renouvellement_relit_suspension_concurrente_sous_verrou(
             company_id=company.id,
             previous_id=previous_id,
             ends_on=date(2027, 3, 1),
+            today=date(2027, 1, 15),
         )
     assert stale.suspended is True
     db.rollback()
@@ -183,3 +186,61 @@ def test_renouvellement_relit_suspension_concurrente_sous_verrou(
         )
         is None
     )
+
+
+def test_renouvellement_refuse_debut_dans_le_passe(
+    db: Session,
+    owner_engine: Engine,
+    make_company: Callable[..., CompanyFixture],
+    make_user: Callable[..., UserFixture],
+) -> None:
+    """Décision métier 2026-11-24 : pas de renouvellement rétroactif."""
+    company = make_company()
+    admin = make_user()
+    db.get_one(User, admin.id).is_platform_admin = True
+    db.commit()
+    previous_id = uuid.uuid4()
+    code = f"test-{uuid.uuid4().hex}"
+    with Session(owner_engine) as owner:
+        bind_tenant(owner, company.id)
+        owner.add(CommercialOfferVersion(code=code, version=1, modules=["sales"]))
+        owner.flush()
+        owner.add(
+            CommercialLicensePeriod(
+                id=previous_id,
+                tenant_id=company.id,
+                offer_code=code,
+                offer_version=1,
+                kind="paid",
+                starts_on=date(2027, 1, 1),
+                ends_on=date(2027, 2, 1),
+            )
+        )
+        owner.commit()
+
+    def renew(today: date) -> uuid.UUID:
+        bind_tenant(db, None)
+        return renew_license(
+            db,
+            actor_id=admin.id,
+            company_id=company.id,
+            previous_id=previous_id,
+            ends_on=date(2027, 3, 1),
+            today=today,
+        )
+
+    with pytest.raises(BusinessRuleError, match="passé"):
+        renew(date(2027, 2, 2))
+    db.rollback()
+    bind_tenant(db, company.id)
+    assert (
+        db.scalar(
+            select(CommercialLicensePeriod.id).where(
+                CommercialLicensePeriod.tenant_id == company.id,
+                CommercialLicensePeriod.starts_on == date(2027, 2, 1),
+            )
+        )
+        is None
+    )
+    # Le jour même de la fin de période (borne exclusive) reste admis.
+    assert renew(date(2027, 2, 1))
