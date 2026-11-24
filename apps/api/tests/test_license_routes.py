@@ -4,6 +4,7 @@ import uuid
 from collections.abc import Callable
 from datetime import date
 
+import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
@@ -77,3 +78,11 @@ def test_aucune_mutation_http_licence_exposee_sans_revue_securite() -> None:
     assert len(license_routes) == 1
     assert license_routes[0].path == "/platform/module-clients/{client_id}/licenses"
     assert license_routes[0].methods == {"GET"}
+
+
+@pytest.mark.parametrize("method", ["POST", "PUT", "PATCH", "DELETE"])
+def test_mutations_http_licences_non_exposees(client: TestClient, method: str) -> None:
+    """Aucune écriture commerciale ne doit être accessible par HTTP."""
+    url = f"/api/v1/platform/module-clients/{uuid.uuid4()}/licenses"
+    response = client.request(method, url, json={"suspended": True})
+    assert response.status_code == 405
