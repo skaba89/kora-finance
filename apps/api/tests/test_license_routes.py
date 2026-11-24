@@ -5,7 +5,6 @@ from collections.abc import Callable
 from datetime import date
 
 import pytest
-
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
@@ -79,7 +78,6 @@ def test_aucune_mutation_http_licence_exposee_sans_revue_securite() -> None:
     assert len(license_routes) == 1
     assert license_routes[0].path == "/platform/module-clients/{client_id}/licenses"
     assert license_routes[0].methods == {"GET"}
-
 
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "PATCH", "DELETE"])
