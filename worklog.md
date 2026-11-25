@@ -2522,3 +2522,29 @@ chaque PR listée est fusionnée avec le job CI « Résultat » en succès.
 Points ouverts : question métier sur le renouvellement d'une période expirée
 (début dans le passé) ; interface FR/EN des mutations de licences ; rôle SQL
 dédié aux mutations plateforme. Aucune mise en production associée à ces lots.
+
+## Session du 2026-11-24/25 — licences HTTP, 2FA admin, charge (PR #195 à #205)
+
+Toutes fusionnées, CI « Résultat » verte (9 contrôles).
+
+- **Licences (M6c6 à M6c10)** : #195 API de suspension/réactivation (motif
+  obligatoire audité, 409 sur état obsolète, tests 401/403/404 IDOR) ; #197
+  refus du renouvellement rétroactif (décision métier du 2026-11-24) ; #198
+  écran FR/EN de suspension ; #199 API de renouvellement (201, 409 double
+  envoi, 422 suspendue/rétroactif) ; #200 écran FR/EN de renouvellement.
+  Rôle SQL partagé avec privilège colonne conservé (décision du 2026-11-24).
+- **Sécurité** : #202 2FA exigible des admins plateforme
+  (`KORA_PLATFORM_ADMIN_REQUIRE_MFA`, désactivée par défaut, procédure
+  DEPLOIEMENT §6 bis) ; #205 message FR/EN au lieu d'une page d'erreur.
+- **Qualité** : #201 plancher de couverture backend à 90 % (mesurée 90,64 %).
+- **Performance** : #203 test de charge k6 en lecture seule (`make load`) ;
+  #204 journal des requêtes lentes et pool PostgreSQL 10 + 20 : les pics de
+  plusieurs secondes étaient des attentes de connexion (pool 15/15 saturé) ;
+  après correctif, max 338-500 ms et 0 requête lente sur 3 essais à 20 VU.
+- #196 : rattrapage du journal pour #166 à #194.
+
+Reste à faire : recette manuelle FR/EN des écrans de licences et de l'avis 2FA
+(#198, #200, #205 fusionnées par la fusion automatique avant recette) ;
+activation de la 2FA admin en production ; M6d/M6e bloqués (prix, entité
+facturante, opérateurs Mobile Money, règles d'essai à fournir) ; production
+non vérifiée dans cette session.
