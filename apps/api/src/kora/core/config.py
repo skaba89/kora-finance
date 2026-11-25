@@ -59,6 +59,15 @@ class Settings(BaseSettings):
     # la double authentification. Désactivée par défaut pour ne verrouiller aucun
     # administrateur existant : vérifier leur 2FA, puis activer en production.
     platform_admin_require_mfa: bool = False
+    # Seuil (ms) au-delà duquel une requête HTTP est journalisée comme lente
+    # (diagnostic de performance, gabarit de route uniquement).
+    slow_request_ms: int = Field(default=1000, ge=0)
+    # Pool PostgreSQL par processus. Mesuré sous charge (docs/TESTS_CHARGE.md) :
+    # 5 + 10 connexions saturaient sous rafale (attentes de plusieurs secondes),
+    # FastAPI servant jusqu'à 40 requêtes simultanées. Budget : API + worker +
+    # planificateur doivent rester sous max_connections (100 par défaut).
+    db_pool_size: int = Field(default=10, ge=1, le=50)
+    db_max_overflow: int = Field(default=20, ge=0, le=50)
     # Nombre de proxys de confiance devant l'API (pour lire l'IP client réelle).
     trusted_proxy_count: int = Field(default=0, ge=0, le=5)
 

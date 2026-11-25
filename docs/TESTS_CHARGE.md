@@ -25,9 +25,29 @@ si un seuil est dépassé. À confirmer sur l'infrastructure de production.
 | Balance + états (p95) | 429 ms |
 | Maximum observé | 9,15 s (états lourds, cas isolé) |
 
-Constat : des pics isolés au-delà de 9 s existent sur les états financiers alors
-que p99 reste sous 700 ms ; cause non diagnostiquée (démarrage à froid, verrou ou
-ressources du poste). À investiguer avant d'élever les objectifs.
+Constat : des pics isolés au-delà de 9 s existaient alors que p99 restait sous 700 ms.
+
+## Diagnostic des pics (2026-11-25)
+
+Le journal des requêtes lentes (`kora.slow_requests`, seuil `KORA_SLOW_REQUEST_MS`,
+1 000 ms par défaut) a montré que toutes les requêtes lentes tombaient **dans la
+même seconde, pool PostgreSQL saturé** (15 connexions sur 15, débordement 10/10) :
+attente de connexion, pas requête lente. FastAPI sert jusqu'à 40 requêtes
+simultanées par processus alors que le pool était de 5 + 10.
+
+Correctif : pool configurable (`KORA_DB_POOL_SIZE`, `KORA_DB_MAX_OVERFLOW`),
+porté à 10 + 20. Les connexions s'ouvrent à la demande : worker (4 fils) et
+planificateur n'en utilisent que quelques-unes ; total réel < 40 pour
+`max_connections` = 100.
+
+| 20 VU, 2 min, même image reconstruite | p95 | p99 | max | requêtes lentes |
+|---|---|---|---|---|
+| Pool 5 + 10, essai 1 | 41 ms | 94 ms | 1,86 s (connexion, Argon2) | 1 |
+| Pool 5 + 10, essai 2 | 95 ms | 410 ms | 2,63 s | 21 (pool saturé) |
+| Pool 10 + 20, essais 1 à 3 | 49-53 ms | 110-138 ms | 338-500 ms | 0 |
+
+La première référence (p95 352 ms, max 9,15 s) avait été mesurée sur une image
+plus ancienne déjà en service : non comparable directement.
 
 ## Limites (non couvert)
 
