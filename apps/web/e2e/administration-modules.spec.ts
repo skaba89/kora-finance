@@ -19,6 +19,9 @@ test("un dirigeant ordinaire ne peut pas administrer les modules plateforme", as
   await page.goto("/administration/licences");
   await expect(page.getByRole("heading", { name: "Page introuvable" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Licences commerciales" })).toHaveCount(0);
+  // M6c8 : aucune commande de suspension n'est rendue hors administration plateforme.
+  await expect(page.getByRole("button", { name: "Suspendre", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Réactiver", exact: true })).toHaveCount(0);
 
   // Le refus plateforme ne retire pas les permissions dans son propre dossier.
   await page.goto(`/dossiers/${companyId}`);
