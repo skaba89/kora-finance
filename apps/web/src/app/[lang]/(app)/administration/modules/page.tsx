@@ -3,10 +3,11 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { InlineAction } from "@/components/forms/inline-action";
+import { PlatformMfaNotice } from "@/components/admin/platform-mfa-notice";
 import { PageHeader, PageSkeleton } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { api, read } from "@/lib/api/server";
+import { api, read, readOrForbidden } from "@/lib/api/server";
 import type { components } from "@/lib/api/schema";
 import { updateModuleAction } from "@/lib/actions/modules";
 import { getCurrentUser } from "@/lib/dal";
@@ -43,7 +44,15 @@ async function ModuleSettings({ searchParams }: { searchParams: PageProps<"/[lan
   const name = (module: Module) => names[module][en ? 1 : 0];
   const offset = typeof query.offset === "string" && /^\d{1,8}$/.test(query.offset) ? Number(query.offset) : 0;
   const client = await api();
-  const page = await read(client.GET("/api/v1/platform/module-clients", { params: { query: { limit: 50, offset } } }));
+  const page = await readOrForbidden(client.GET("/api/v1/platform/module-clients", { params: { query: { limit: 50, offset } } }));
+  if (page === null) {
+    return (
+      <main id="main-content" tabIndex={-1}>
+        <PageHeader title={label("Administration des modules", "Module administration")} />
+        <PlatformMfaNotice refused locale={locale} />
+      </main>
+    );
+  }
   const selected = typeof query.client === "string" ? page.items.find((item) => item.id === query.client) : undefined;
   const modules = selected ? await read(client.GET("/api/v1/platform/module-clients/{client_id}/modules", {
     params: { path: { client_id: selected.id } },

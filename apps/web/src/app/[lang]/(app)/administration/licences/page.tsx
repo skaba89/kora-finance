@@ -4,11 +4,12 @@ import { Suspense } from "react";
 
 import { LicenseRenewalForm, nextDay, renewalAvailability } from "@/components/licenses/license-renewal-form";
 import { LicenseSuspensionForm } from "@/components/licenses/license-suspension-form";
+import { PlatformMfaNotice } from "@/components/admin/platform-mfa-notice";
 import { PageHeader, PageSkeleton } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { changeLicenseSuspensionAction, renewLicenseAction } from "@/lib/actions/licenses";
-import { api, read } from "@/lib/api/server";
+import { api, read, readOrForbidden } from "@/lib/api/server";
 import { getCurrentUser } from "@/lib/dal";
 import { getDictionary } from "@/lib/i18n/server";
 
@@ -33,9 +34,17 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
   const offset = typeof query.offset === "string" && /^\d{1,8}$/.test(query.offset)
     ? Number(query.offset) : 0;
   const client = await api();
-  const companies = await read(client.GET("/api/v1/platform/module-clients", {
+  const companies = await readOrForbidden(client.GET("/api/v1/platform/module-clients", {
     params: { query: { limit: 50, offset } },
   }));
+  if (companies === null) {
+    return (
+      <main id="main-content" tabIndex={-1}>
+        <PageHeader title={label("Licences commerciales", "Commercial licenses")} />
+        <PlatformMfaNotice refused locale={locale} />
+      </main>
+    );
+  }
   // Only accept a company present in the authorized server-side page.
   const selected = typeof query.client === "string"
     ? companies.items.find((item) => item.id === query.client)

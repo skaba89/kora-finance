@@ -2,9 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { PlatformMfaNotice } from "@/components/admin/platform-mfa-notice";
 import { PageHeader, PageSkeleton } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { api, read } from "@/lib/api/server";
+import { api, readOrForbidden } from "@/lib/api/server";
 import { getCurrentUser } from "@/lib/dal";
 import { getDictionary } from "@/lib/i18n/server";
 
@@ -13,13 +14,22 @@ async function PlatformDashboard() {
   if (!user.is_platform_admin) notFound();
   const label = (fr: string, en: string) => locale === "en" ? en : fr;
   const client = await api();
-  const page = await read(client.GET("/api/v1/platform/module-clients", {
+  const page = await readOrForbidden(client.GET("/api/v1/platform/module-clients", {
     params: { query: { limit: 1, offset: 0 } },
   }));
+  if (page === null) {
+    return (
+      <main id="main-content" tabIndex={-1}>
+        <PageHeader title={label("Administration Kora Finance", "Kora Finance administration")} />
+        <PlatformMfaNotice refused locale={locale} />
+      </main>
+    );
+  }
   return (
     <main id="main-content" tabIndex={-1}>
       <PageHeader title={label("Administration Kora Finance", "Kora Finance administration")}
         subtitle={label("Pilotez les dossiers et leurs fonctionnalités.", "Manage companies and their features.")} />
+      {user.mfa_enabled ? null : <PlatformMfaNotice refused={false} locale={locale} />}
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>{label("Dossiers clients", "Client companies")}</CardTitle></CardHeader>
