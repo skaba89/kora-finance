@@ -2548,3 +2548,26 @@ Reste à faire : recette manuelle FR/EN des écrans de licences et de l'avis 2FA
 activation de la 2FA admin en production ; M6d/M6e bloqués (prix, entité
 facturante, opérateurs Mobile Money, règles d'essai à fournir) ; production
 non vérifiée dans cette session.
+
+## Recette locale des écrans d'administration (2026-11-25, #207, #208)
+
+Recette Playwright sur la pile locale (directeur de démonstration rendu admin
+plateforme en base LOCALE ; script non versionné `apps/web/recette-locale/`).
+
+- **#207** : la page `/administration/licences` plantait pour tout admin
+  plateforme depuis #200 (fonctions appelées côté serveur depuis un module
+  "use client"), invisible en CI. Corrigé ; garde-fou Vitest
+  `client-boundary.test.ts` (contre-épreuve faite). Type de licence traduit,
+  libellé « Motif du renouvellement » distinct. Recette FR/EN, ordinateur et
+  mobile : suspension, annulation sans envoi, conflit entre deux sessions,
+  réactivation, renouvellement ; audit vérifié (aucune trace des demandes
+  annulées ou refusées, chaîne valide).
+- **#208** : `deploy/vps/compose.yml` ne transmettait pas
+  KORA_PLATFORM_ADMIN_REQUIRE_MFA, le pool (KORA_DB_*), KORA_SLOW_REQUEST_MS
+  ni les plafonds N-B6 : réglés dans `.env`, ils étaient ignorés en silence
+  (l'activation de la 2FA admin n'aurait rien fait). Corrigé ; contrôle CI
+  `scripts/check-compose-env.py`.
+- Avis 2FA (#205) validé en recette : avertissement sans exigence, refus clair
+  sur les trois pages avec exigence, accès aux dossiers intact.
+
+Le prochain déploiement doit inclure #204, #207 et #208.
