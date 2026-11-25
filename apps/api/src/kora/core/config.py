@@ -55,6 +55,10 @@ class Settings(BaseSettings):
     login_lockout_seconds: int = Field(default=900, ge=60)
     # Limitation de débit des routes d'authentification, par adresse IP.
     auth_rate_limit_per_minute: int = Field(default=20, ge=1)
+    # Administration plateforme (licences, modules) réservée aux comptes ayant activé
+    # la double authentification. Désactivée par défaut pour ne verrouiller aucun
+    # administrateur existant : vérifier leur 2FA, puis activer en production.
+    platform_admin_require_mfa: bool = False
     # Nombre de proxys de confiance devant l'API (pour lire l'IP client réelle).
     trusted_proxy_count: int = Field(default=0, ge=0, le=5)
 
