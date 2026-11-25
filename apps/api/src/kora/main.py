@@ -9,6 +9,7 @@ from kora.api.v1 import PREFIX, ROUTERS
 from kora.core.config import get_settings
 from kora.core.errors import install_error_handlers
 from kora.core.logging import configure_logging
+from kora.core.slow_requests import SlowRequestMiddleware
 
 
 def create_app() -> FastAPI:
@@ -34,6 +35,8 @@ def create_app() -> FastAPI:
             allow_headers=["*"],
         )
 
+    # Ajouté en dernier : enveloppe toute la pile, y compris CORS et les erreurs.
+    app.add_middleware(SlowRequestMiddleware)
     install_error_handlers(app)
     app.include_router(health.router)
 

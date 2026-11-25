@@ -25,8 +25,8 @@ def get_engine() -> Engine:
     return create_engine(
         str(settings.database_url),
         pool_pre_ping=True,
-        pool_size=5,
-        max_overflow=10,
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
         connect_args={"options": _session_options(settings)},
     )
 
