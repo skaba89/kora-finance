@@ -182,6 +182,20 @@ Dans `.env` : `KORA_EMAIL_BACKEND=smtp`, `KORA_EMAIL_FROM`, `KORA_SMTP_HOST`,
 `KORA_SMTP_PASSWORD`, puis `./deploy.sh --sans-git`. Déclarer SPF, DKIM et DMARC du
 domaine d'envoi chez le fournisseur.
 
+## 6 bis. Exiger la double authentification des administrateurs plateforme
+
+Les administrateurs plateforme peuvent suspendre et renouveler des licences
+commerciales. Pour leur imposer la double authentification (2FA) :
+
+1. Vérifier que chaque administrateur plateforme l'a activée (Sécurité du compte),
+   sans quoi il perdra l'accès à l'administration :
+   `SELECT email FROM users WHERE is_platform_admin AND is_active AND totp_enabled_at IS NULL;`
+   doit ne renvoyer aucune ligne.
+2. Ajouter `KORA_PLATFORM_ADMIN_REQUIRE_MFA=true` dans `deploy/vps/.env`, puis redéployer.
+
+Le droit est relu en base à chaque requête : la désactivation de la 2FA retire
+aussitôt l'accès plateforme. Les droits dans les dossiers ne sont pas concernés.
+
 ## 7. Passer à un vrai nom de domaine
 
 Créer un enregistrement DNS `A` vers l'IP du serveur, modifier `KORA_DOMAIN` dans `.env`,

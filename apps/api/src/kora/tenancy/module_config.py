@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from kora.audit.service import record_event
+from kora.core.config import get_settings
 from kora.core.errors import BusinessRuleError, ConflictError, ForbiddenError, NotFoundError
 from kora.db.tenant import current_tenant
 from kora.models.common import utcnow
@@ -69,10 +70,14 @@ def require_enabled_module(session: Session, company_id: uuid.UUID, module: Modu
 def require_platform_admin(session: Session, actor_id: uuid.UUID) -> None:
     """Vérifie le droit courant en base, sans accorder un rôle sur un dossier."""
     admin = session.scalar(
-        select(User.id).where(User.id == actor_id, User.is_active, User.is_platform_admin)
+        select(User).where(User.id == actor_id, User.is_active, User.is_platform_admin)
     )
     if admin is None:
         raise ForbiddenError("Administration de la plateforme requise.")
+    if get_settings().platform_admin_require_mfa and admin.totp_enabled_at is None:
+        raise ForbiddenError(
+            "Double authentification requise pour l'administration de la plateforme."
+        )
 
 
 def set_module_override(
