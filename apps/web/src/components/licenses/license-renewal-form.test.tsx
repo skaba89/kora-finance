@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { LicenseRenewalForm, nextDay, renewalAvailability } from "@/components/licenses/license-renewal-form";
+import { LicenseRenewalForm } from "@/components/licenses/license-renewal-form";
+import { nextDay, renewalAvailability } from "@/lib/licenses";
 import type { ActionState } from "@/lib/actions/state";
 
 const labels = {

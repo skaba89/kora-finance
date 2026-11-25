@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
-import { LicenseRenewalForm, nextDay, renewalAvailability } from "@/components/licenses/license-renewal-form";
+import { LicenseRenewalForm } from "@/components/licenses/license-renewal-form";
 import { LicenseSuspensionForm } from "@/components/licenses/license-suspension-form";
 import { PlatformMfaNotice } from "@/components/admin/platform-mfa-notice";
 import { PageHeader, PageSkeleton } from "@/components/page-header";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { changeLicenseSuspensionAction, renewLicenseAction } from "@/lib/actions/licenses";
 import { api, read, readOrForbidden } from "@/lib/api/server";
+import { nextDay, renewalAvailability } from "@/lib/licenses";
 import { getCurrentUser } from "@/lib/dal";
 import { getDictionary } from "@/lib/i18n/server";
 
@@ -66,6 +67,10 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
       }))
     : [];
 
+  const kindLabels: Record<string, string> = {
+    paid: label("Payante", "Paid"),
+    trial: label("Essai", "Trial"),
+  };
   const suspensionLabels = {
     suspend: label("Suspendre", "Suspend"),
     reactivate: label("Réactiver", "Reactivate"),
@@ -94,7 +99,7 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
     ),
     kind: label("Type", "Kind"),
     kinds: { paid: label("Payante", "Paid"), trial: label("Essai", "Trial") },
-    reason: suspensionLabels.reason,
+    reason: label("Motif du renouvellement", "Reason for renewal"),
     reasonHint: suspensionLabels.reasonHint,
     confirm: label(
       "Créer cette nouvelle période ? Aucun paiement n’est enregistré et la période actuelle reste inchangée.",
@@ -237,7 +242,7 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
-                      <p>{label("Type", "Kind")} : {license.kind}</p>
+                      <p>{label("Type", "Kind")} : {kindLabels[license.kind] ?? license.kind}</p>
                       <p>{label("Début", "Start")} : <time dateTime={license.starts_on}>{license.starts_on}</time></p>
                       <p>{label("Fin", "End")} : <time dateTime={license.ends_on}>{license.ends_on}</time></p>
                       {license.suspended
