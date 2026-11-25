@@ -10,6 +10,11 @@ x-api-env: &api-env
   KORA_REDIS_URL: redis://redis:6379/0
   KORA_JWT_SECRET: ${KORA_JWT_SECRET:?lancer make env}
   KORA_ENCRYPTION_KEYS: ${KORA_ENCRYPTION_KEYS:?lancer make env}
+  # Réglages d'exploitation, comme en production (scripts/check-compose-env.py).
+  KORA_PLATFORM_ADMIN_REQUIRE_MFA: ${KORA_PLATFORM_ADMIN_REQUIRE_MFA:-false}
+  KORA_DB_POOL_SIZE: ${KORA_DB_POOL_SIZE:-10}
+  KORA_DB_MAX_OVERFLOW: ${KORA_DB_MAX_OVERFLOW:-20}
+  KORA_SLOW_REQUEST_MS: ${KORA_SLOW_REQUEST_MS:-1000}
   # Seul le serveur web appelle l'API : il transmet l'IP du client (X-Forwarded-For).
   # En production, l'API ne doit pas être joignable directement depuis internet.
   KORA_TRUSTED_PROXY_COUNT: "1"

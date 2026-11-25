@@ -21,6 +21,14 @@ x-api-env: &api-env
   KORA_REDIS_URL: redis://redis:6379/0
   KORA_JWT_SECRET: ${KORA_JWT_SECRET:?}
   KORA_ENCRYPTION_KEYS: ${KORA_ENCRYPTION_KEYS:?}
+  # Réglages d'exploitation : chaque variable documentée dans env.example doit être
+  # transmise ici, sinon elle serait ignorée en silence (scripts/check-compose-env.py).
+  KORA_STATEMENT_TIMEOUT_MS: ${KORA_STATEMENT_TIMEOUT_MS:-60000}
+  KORA_LOCK_TIMEOUT_MS: ${KORA_LOCK_TIMEOUT_MS:-5000}
+  KORA_PLATFORM_ADMIN_REQUIRE_MFA: ${KORA_PLATFORM_ADMIN_REQUIRE_MFA:-false}
+  KORA_DB_POOL_SIZE: ${KORA_DB_POOL_SIZE:-10}
+  KORA_DB_MAX_OVERFLOW: ${KORA_DB_MAX_OVERFLOW:-20}
+  KORA_SLOW_REQUEST_MS: ${KORA_SLOW_REQUEST_MS:-1000}
   # Chaîne : Caddy → web → API. L'API ne fait confiance qu'au serveur web.
   KORA_TRUSTED_PROXY_COUNT: "1"
   KORA_AUTH_RATE_LIMIT_PER_MINUTE: "20"
