@@ -5,7 +5,7 @@ Contrats mécaniques vérifiés sur les sources :
 - docker-compose.yml et deploy/vps/compose.yml : chaque service attendu porte
   `deploy.resources.limits` (mémoire et CPU) ; tout service nouveau impose une
   décision explicite (le script échoue jusqu'à ce que son budget soit déclaré) ;
-- les outils de développement (profils « tools »/« e2e ») restent explicitement
+- les outils de développement (profils « tools »/« e2e »/« load ») restent explicitement
   hors budget, jamais déployés en production ;
 - Redis : `--maxmemory 200mb --maxmemory-policy noeviction` — au-delà du budget,
   les compteurs de débit échouent fermés plutôt qu'un OOM hôte ;
@@ -53,7 +53,7 @@ BUDGETS: dict[str, dict[str, tuple[str, str]]] = {
 }
 
 # Outils de développement (profils) : hors production, sans budget — liste close.
-SANS_BUDGET = {"api-tools", "web-tools", "e2e"}
+SANS_BUDGET = {"api-tools", "web-tools", "e2e", "load"}
 
 
 def services(text: str) -> dict[str, str]:

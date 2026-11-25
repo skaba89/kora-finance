@@ -25,7 +25,7 @@ API := $(COMPOSE) run --rm api-tools
 API_NODEPS := $(COMPOSE) run --rm --no-deps -T api-tools
 WEB := $(COMPOSE) run --rm --no-deps web-tools
 
-.PHONY: help env up down logs ps seed seed-reset \
+.PHONY: help env up down logs ps seed seed-reset load \
         api-lint api-typecheck api-test api-lock api-audit permissions-doc migrate \
         web-install web-lint web-typecheck web-test web-build web-audit \
         contract e2e secrets-scan sbom check
@@ -67,6 +67,9 @@ seed: ## Charge le jeu de démonstration Djouma Distribution SARL (comptes, écr
 # depuis le .env créé par « make env » — même commande que docs/DEMO.md §3.
 seed-reset: ## Réinitialise puis recharge le jeu de démonstration
 	$(COMPOSE) exec -e KORA_DATABASE_MIGRATION_URL="postgresql+psycopg://kora_owner:$${KORA_DB_OWNER_PASSWORD}@postgres:5432/kora" api python -m kora.scripts.seed_demo --reset
+
+load: ## Test de charge k6 en lecture seule (après make up et make seed)
+	$(COMPOSE) --profile load run --rm load
 
 # --- Backend
 api-lint: ## Ruff (lint + format)

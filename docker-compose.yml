@@ -310,6 +310,23 @@ services:
     depends_on:
       web: { condition: service_healthy }
 
+  # Test de charge en lecture seule (k6, image officielle Grafana épinglée) :
+  # `make load` après `make up` et `make seed`. Jamais déployé en production.
+  load:
+    profiles: ["load"]
+    image: grafana/k6:1.4.2
+    user: "${KORA_UID:-1000}:${KORA_GID:-1000}"
+    working_dir: /repo
+    volumes:
+      - ./infra/load:/repo:ro
+    environment:
+      KORA_LOAD_API_URL: http://api:8000
+      KORA_LOAD_VUS: ${KORA_LOAD_VUS:-20}
+      KORA_LOAD_DURATION: ${KORA_LOAD_DURATION:-2m}
+    command: ["run", "--summary-trend-stats=avg,med,p(95),p(99),max", "parcours-lecture.js"]
+    depends_on:
+      api: { condition: service_healthy }
+
 volumes:
   postgres_data:
   redis_data:
