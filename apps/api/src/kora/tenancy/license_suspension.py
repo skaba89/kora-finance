@@ -14,7 +14,7 @@ REASON_MIN_LENGTH = 3
 REASON_MAX_LENGTH = 500
 
 
-def _clean_reason(reason: object) -> str:
+def clean_reason(reason: object) -> str:
     """Motif d'intervention obligatoire, conservé tel quel (sans espaces de bord) dans l'audit."""
     if type(reason) is not str:
         raise BusinessRuleError("Motif de l'intervention requis.")
@@ -44,7 +44,7 @@ def change_license_suspension(
     """
     if type(suspended) is not bool or type(expected_suspended) is not bool:
         raise BusinessRuleError("État de suspension booléen requis.")
-    cleaned_reason = _clean_reason(reason)
+    cleaned_reason = clean_reason(reason)
     bind_module_client(session, actor_id, company_id)
     row = session.scalar(
         select(CommercialLicensePeriod)

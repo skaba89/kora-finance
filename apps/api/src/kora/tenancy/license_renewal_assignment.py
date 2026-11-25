@@ -13,6 +13,7 @@ from kora.models.common import utcnow
 from kora.models.licenses import CommercialLicensePeriod
 from kora.tenancy.license_assignment import assign_license
 from kora.tenancy.license_renewal import preview_renewal
+from kora.tenancy.license_suspension import clean_reason
 from kora.tenancy.licenses import LicenseKind, LicensePeriod
 from kora.tenancy.module_admin import bind_module_client
 
@@ -26,6 +27,7 @@ def renew_license(
     ends_on: date,
     kind: LicenseKind = LicenseKind.PAID,
     today: date | None = None,
+    reason: str,
 ) -> uuid.UUID:
     """Ajoute une période adjacente, via les protections d'assign_license.
 
@@ -43,6 +45,7 @@ def renew_license(
         or (today is not None and type(today) is not date)
     ):
         raise BusinessRuleError("Date ou type de renouvellement invalide.")
+    cleaned_reason = clean_reason(reason)
     bind_module_client(session, actor_id, company_id)
     previous = session.scalar(
         select(CommercialLicensePeriod)
@@ -90,6 +93,7 @@ def renew_license(
             "starts_on": proposed.starts_on.isoformat(),
             "ends_on": proposed.ends_on.isoformat(),
             "kind": proposed.kind.value,
+            "reason": cleaned_reason,
         },
     )
     return new_id

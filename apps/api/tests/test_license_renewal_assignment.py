@@ -56,6 +56,7 @@ def test_renouvellement_persiste_adjacent_audite_et_rollback(
             previous_id=previous_id,
             ends_on=date(2027, 3, 1),
             today=date(2027, 1, 15),
+            reason="Renouvellement annuel",
         )
 
     with pytest.raises(ForbiddenError):
@@ -72,6 +73,7 @@ def test_renouvellement_persiste_adjacent_audite_et_rollback(
             previous_id=previous_id,
             ends_on=date(2027, 3, 1),
             today=date(2027, 1, 15),
+            reason="Renouvellement annuel",
         )
     bind_tenant(db, None)
     new_id = renew(admin.id)
@@ -96,6 +98,7 @@ def test_renouvellement_persiste_adjacent_audite_et_rollback(
         "starts_on": "2027-02-01",
         "ends_on": "2027-03-01",
         "kind": "paid",
+        "reason": "Renouvellement annuel",
     }
     assert (
         db.scalar(
@@ -124,6 +127,20 @@ def test_renouvellement_refuse_date_invalide_avant_acces(db: Session) -> None:
             previous_id=uuid.uuid4(),
             ends_on=date(2026, 1, 1),
             kind="paid",  # type: ignore[arg-type]
+            reason="Renouvellement annuel",
+        )
+
+
+@pytest.mark.parametrize("reason", ["", "  ab ", "x" * 501, 7])
+def test_renouvellement_exige_motif_valide_avant_acces(db: Session, reason: object) -> None:
+    with pytest.raises(BusinessRuleError):
+        renew_license(
+            db,
+            actor_id=uuid.uuid4(),
+            company_id=uuid.uuid4(),
+            previous_id=uuid.uuid4(),
+            ends_on=date(2027, 3, 1),
+            reason=reason,  # type: ignore[arg-type]
         )
 
 
@@ -173,6 +190,7 @@ def test_renouvellement_relit_suspension_concurrente_sous_verrou(
             previous_id=previous_id,
             ends_on=date(2027, 3, 1),
             today=date(2027, 1, 15),
+            reason="Renouvellement annuel",
         )
     assert stale.suspended is True
     db.rollback()
@@ -227,6 +245,7 @@ def test_renouvellement_refuse_debut_dans_le_passe(
             previous_id=previous_id,
             ends_on=date(2027, 3, 1),
             today=today,
+            reason="Renouvellement annuel",
         )
 
     with pytest.raises(BusinessRuleError, match="passé"):
