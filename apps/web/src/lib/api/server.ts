@@ -66,3 +66,15 @@ export async function read<T>(
   }
   return data;
 }
+
+/**
+ * Comme `read`, mais un refus 403 renvoie `null` au lieu d'une erreur : la page
+ * explique alors le refus (ex. double authentification exigée des admins).
+ */
+export async function readOrForbidden<T>(
+  call: Promise<{ data?: T; error?: unknown; response: Response }>,
+): Promise<T | null> {
+  const result = await call;
+  if (result.response.status === 403) return null;
+  return read(Promise.resolve(result));
+}
