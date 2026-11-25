@@ -2,11 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { LicenseRenewalForm, nextDay, renewalAvailability } from "@/components/licenses/license-renewal-form";
 import { LicenseSuspensionForm } from "@/components/licenses/license-suspension-form";
 import { PageHeader, PageSkeleton } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { changeLicenseSuspensionAction } from "@/lib/actions/licenses";
+import { changeLicenseSuspensionAction, renewLicenseAction } from "@/lib/actions/licenses";
 import { api, read } from "@/lib/api/server";
 import { getCurrentUser } from "@/lib/dal";
 import { getDictionary } from "@/lib/i18n/server";
@@ -73,6 +74,32 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
       "Reactivate this license period?",
     ),
     pending: t.common.pending,
+  };
+
+  const renewalLabels = (previousEndsOn: string) => ({
+    submit: label("Renouveler", "Renew"),
+    endsOn: label("Nouvelle fin (exclusive)", "New end (exclusive)"),
+    endsOnHint: label(
+      `La nouvelle période commence le ${previousEndsOn} ; fin au plus tôt le ${nextDay(previousEndsOn)}.`,
+      `The new period starts on ${previousEndsOn}; earliest end ${nextDay(previousEndsOn)}.`,
+    ),
+    kind: label("Type", "Kind"),
+    kinds: { paid: label("Payante", "Paid"), trial: label("Essai", "Trial") },
+    reason: suspensionLabels.reason,
+    reasonHint: suspensionLabels.reasonHint,
+    confirm: label(
+      "Créer cette nouvelle période ? Aucun paiement n’est enregistré et la période actuelle reste inchangée.",
+      "Create this new period? No payment is recorded and the current period is unchanged.",
+    ),
+    pending: t.common.pending,
+  });
+  const renewalNotes = {
+    suspended: label("Réactiver la période avant de la renouveler.", "Reactivate the period before renewing it."),
+    expired: label(
+      "Période expirée : pas de renouvellement rétroactif, une nouvelle attribution est nécessaire.",
+      "Expired period: no backdated renewal, a new assignment is required.",
+    ),
+    renewed: label("Déjà renouvelée.", "Already renewed."),
   };
 
   const filteredLicenses = status
@@ -216,6 +243,20 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
                         labels={suspensionLabels}
                         fieldId={license.id}
                       />
+                      {(() => {
+                        const availability = renewalAvailability(license, licenses, today);
+                        return availability === "available" ? (
+                          <LicenseRenewalForm
+                            key={`renouvellement-${license.id}`}
+                            action={renewLicenseAction.bind(null, selected.id, license.id)}
+                            previousEndsOn={license.ends_on}
+                            labels={renewalLabels(license.ends_on)}
+                            fieldId={license.id}
+                          />
+                        ) : (
+                          <p className="text-muted-foreground text-xs">{renewalNotes[availability]}</p>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
                 ))}

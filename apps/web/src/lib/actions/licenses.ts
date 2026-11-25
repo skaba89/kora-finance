@@ -35,3 +35,28 @@ export async function changeLicenseSuspensionAction(
   const t = await actionDictionary();
   return { status: "success", message: t.common.saved };
 }
+
+/**
+ * Ajoute une période adjacente à `licenseId`. Le début n'est pas transmis :
+ * l'API le fixe à la fin de la période précédente et refuse chevauchement (409),
+ * période suspendue, fin non postérieure ou rétroactivité (422).
+ */
+export async function renewLicenseAction(
+  clientId: string,
+  licenseId: string,
+  _: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const kind = field(formData, "kind") === "trial" ? "trial" : "paid";
+  const { response, error } = await (await api()).POST(
+    "/api/v1/platform/module-clients/{client_id}/licenses/{license_id}/renewals",
+    {
+      params: { path: { client_id: clientId, license_id: licenseId } },
+      body: { ends_on: field(formData, "ends_on"), kind, reason: field(formData, "reason") },
+    },
+  );
+  if (!response.ok) return failure(error);
+  refresh();
+  const t = await actionDictionary();
+  return { status: "success", message: t.common.saved };
+}
