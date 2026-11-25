@@ -4924,6 +4924,14 @@
         "title": "LetteringOut",
         "type": "object"
       },
+      "LicenseKind": {
+        "enum": [
+          "trial",
+          "paid"
+        ],
+        "title": "LicenseKind",
+        "type": "string"
+      },
       "LicensePeriodOut": {
         "properties": {
           "ends_on": {
@@ -4973,6 +4981,63 @@
           "status"
         ],
         "title": "LicensePeriodOut",
+        "type": "object"
+      },
+      "LicenseRenewalIn": {
+        "additionalProperties": false,
+        "properties": {
+          "ends_on": {
+            "description": "Fin exclusive (AAAA-MM-JJ)",
+            "format": "date",
+            "title": "Ends On",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LicenseKind"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ends_on",
+          "kind",
+          "reason"
+        ],
+        "title": "LicenseRenewalIn",
+        "type": "object"
+      },
+      "LicenseRenewalOut": {
+        "properties": {
+          "ends_on": {
+            "format": "date",
+            "title": "Ends On",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LicenseKind"
+          },
+          "starts_on": {
+            "format": "date",
+            "title": "Starts On",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "starts_on",
+          "ends_on",
+          "kind"
+        ],
+        "title": "LicenseRenewalOut",
         "type": "object"
       },
       "LicenseSuspensionIn": {
@@ -26919,6 +26984,115 @@
           }
         ],
         "summary": "Platform Client Licenses",
+        "tags": [
+          "modules"
+        ]
+      }
+    },
+    "/api/v1/platform/module-clients/{client_id}/licenses/{license_id}/renewals": {
+      "post": {
+        "description": "Ajoute une période adjacente ; l'ancienne reste inchangée.\n\n422 : période suspendue, fin non postérieure ou début dans le passé.\n409 : chevauchement (dont double envoi). Aucun paiement ni droit comptable.",
+        "operationId": "platform_license_renewal_api_v1_platform_module_clients__client_id__licenses__license_id__renewals_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "license_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "License Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LicenseRenewalIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LicenseRenewalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Platform License Renewal",
         "tags": [
           "modules"
         ]

@@ -4,18 +4,21 @@ import uuid
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Query
-from pydantic import BaseModel, Field, StrictBool, StrictInt, StringConstraints
+from fastapi import APIRouter, Query, status
+from pydantic import BaseModel, BeforeValidator, Field, StrictBool, StrictInt, StringConstraints
 
 from kora.api.v1.common import TENANT_ERRORS, WRITE_ERRORS, Limit, Offset, RequestBody
 from kora.auth.deps import CurrentUser, DbSession
+from kora.models.licenses import CommercialLicensePeriod
 from kora.tenancy.deps import CompanyRead
 from kora.tenancy.license_query import list_license_periods
+from kora.tenancy.license_renewal_assignment import renew_license
 from kora.tenancy.license_suspension import (
     REASON_MAX_LENGTH,
     REASON_MIN_LENGTH,
     change_license_suspension,
 )
+from kora.tenancy.licenses import LicenseKind
 from kora.tenancy.module_admin import ModuleClientPage, bind_module_client, list_module_clients
 from kora.tenancy.module_config import (
     ModuleConfiguration,
@@ -32,15 +35,43 @@ class ModuleOverrideIn(RequestBody):
     expected_revision: Annotated[StrictInt, Field(ge=0, le=2147483646)]
 
 
+# Motif d'intervention commerciale : mêmes bornes que le service.
+Reason = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True, min_length=REASON_MIN_LENGTH, max_length=REASON_MAX_LENGTH
+    ),
+]
+
+
 class LicenseSuspensionIn(RequestBody):
     suspended: StrictBool
     expected_suspended: StrictBool
-    reason: Annotated[
-        str,
-        StringConstraints(
-            strip_whitespace=True, min_length=REASON_MIN_LENGTH, max_length=REASON_MAX_LENGTH
-        ),
+    reason: Reason
+
+
+def _iso_date_only(value: object) -> object:
+    """Refuse les horodatages numériques que le mode souple convertirait en date."""
+    if not isinstance(value, str | date):
+        raise ValueError("Date civile AAAA-MM-JJ attendue.")
+    return value
+
+
+class LicenseRenewalIn(RequestBody):
+    ends_on: Annotated[
+        date,
+        BeforeValidator(_iso_date_only),
+        Field(description="Fin exclusive (AAAA-MM-JJ)"),
     ]
+    kind: LicenseKind
+    reason: Reason
+
+
+class LicenseRenewalOut(BaseModel):
+    id: uuid.UUID
+    starts_on: date
+    ends_on: date
+    kind: LicenseKind
 
 
 class LicenseSuspensionOut(BaseModel):
@@ -105,6 +136,40 @@ def platform_license_suspension(
     )
     db.commit()
     return LicenseSuspensionOut(id=license_id, suspended=body.suspended, changed=changed)
+
+
+@router.post(
+    "/platform/module-clients/{client_id}/licenses/{license_id}/renewals",
+    responses=WRITE_ERRORS,
+    status_code=status.HTTP_201_CREATED,
+)
+def platform_license_renewal(
+    client_id: uuid.UUID,
+    license_id: uuid.UUID,
+    body: LicenseRenewalIn,
+    user: CurrentUser,
+    db: DbSession,
+) -> LicenseRenewalOut:
+    """Ajoute une période adjacente ; l'ancienne reste inchangée.
+
+    422 : période suspendue, fin non postérieure ou début dans le passé.
+    409 : chevauchement (dont double envoi). Aucun paiement ni droit comptable.
+    """
+    new_id = renew_license(
+        db,
+        actor_id=user.id,
+        company_id=client_id,
+        previous_id=license_id,
+        ends_on=body.ends_on,
+        kind=body.kind,
+        reason=body.reason,
+    )
+    period = db.get_one(CommercialLicensePeriod, new_id)
+    result = LicenseRenewalOut(
+        id=new_id, starts_on=period.starts_on, ends_on=period.ends_on, kind=LicenseKind(period.kind)
+    )
+    db.commit()
+    return result
 
 
 @router.get("/platform/module-clients", responses=TENANT_ERRORS)

@@ -2678,6 +2678,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/module-clients/{client_id}/licenses/{license_id}/renewals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Platform License Renewal
+         * @description Ajoute une période adjacente ; l'ancienne reste inchangée.
+         *
+         *     422 : période suspendue, fin non postérieure ou début dans le passé.
+         *     409 : chevauchement (dont double envoi). Aucun paiement ni droit comptable.
+         */
+        post: operations["platform_license_renewal_api_v1_platform_module_clients__client_id__licenses__license_id__renewals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/module-clients/{client_id}/licenses/{license_id}/suspension": {
         parameters: {
             query?: never;
@@ -4777,6 +4800,11 @@ export interface components {
              */
             id: string;
         };
+        /**
+         * LicenseKind
+         * @enum {string}
+         */
+        LicenseKind: "trial" | "paid";
         /** LicensePeriodOut */
         LicensePeriodOut: {
             /**
@@ -4804,6 +4832,37 @@ export interface components {
             status: string;
             /** Suspended */
             suspended: boolean;
+        };
+        /** LicenseRenewalIn */
+        LicenseRenewalIn: {
+            /**
+             * Ends On
+             * Format: date
+             * @description Fin exclusive (AAAA-MM-JJ)
+             */
+            ends_on: string;
+            kind: components["schemas"]["LicenseKind"];
+            /** Reason */
+            reason: string;
+        };
+        /** LicenseRenewalOut */
+        LicenseRenewalOut: {
+            /**
+             * Ends On
+             * Format: date
+             */
+            ends_on: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["LicenseKind"];
+            /**
+             * Starts On
+             * Format: date
+             */
+            starts_on: string;
         };
         /** LicenseSuspensionIn */
         LicenseSuspensionIn: {
@@ -17537,6 +17596,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_license_renewal_api_v1_platform_module_clients__client_id__licenses__license_id__renewals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+                license_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LicenseRenewalIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LicenseRenewalOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

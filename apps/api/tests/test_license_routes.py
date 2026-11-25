@@ -85,6 +85,11 @@ def test_aucune_mutation_http_licence_exposee_sans_revue_securite() -> None:
             "/platform/module-clients/{client_id}/licenses/{license_id}/suspension",
             frozenset({"PUT"}),
         ),
+        # M6c9 : renouvellement, après les mêmes preuves RBAC/IDOR.
+        (
+            "/platform/module-clients/{client_id}/licenses/{license_id}/renewals",
+            frozenset({"POST"}),
+        ),
     }
 
 
@@ -96,7 +101,14 @@ def test_mutations_http_licences_non_exposees(client: TestClient, method: str) -
     assert response.status_code == 405
 
 
-def _seed_license(owner_engine: Engine, company_id: uuid.UUID) -> uuid.UUID:
+def _seed_license(
+    owner_engine: Engine,
+    company_id: uuid.UUID,
+    *,
+    starts_on: date = date(2027, 1, 1),
+    ends_on: date = date(2028, 1, 1),
+    suspended: bool = False,
+) -> uuid.UUID:
     identifier = uuid.uuid4()
     code = f"test-{uuid.uuid4().hex}"
     with Session(owner_engine) as owner:
@@ -110,8 +122,9 @@ def _seed_license(owner_engine: Engine, company_id: uuid.UUID) -> uuid.UUID:
                 offer_code=code,
                 offer_version=1,
                 kind="paid",
-                starts_on=date(2027, 1, 1),
-                ends_on=date(2028, 1, 1),
+                starts_on=starts_on,
+                ends_on=ends_on,
+                suspended=suspended,
             )
         )
         owner.commit()
@@ -222,3 +235,134 @@ def test_suspension_http_transitions_conflit_et_audit(
         date(2028, 1, 1),
         "paid",
     )
+
+
+# Dates lointaines : le refus du rétroactif compare à la vraie date du jour.
+FAR_START, FAR_END = date(2040, 1, 1), date(2041, 1, 1)
+
+
+def _periods(owner_engine: Engine, company_id: uuid.UUID) -> list[tuple[date, date, str]]:
+    with Session(owner_engine) as owner:
+        bind_tenant(owner, company_id)
+        rows = owner.scalars(
+            select(CommercialLicensePeriod)
+            .where(CommercialLicensePeriod.tenant_id == company_id)
+            .order_by(CommercialLicensePeriod.starts_on)
+        ).all()
+        return [(row.starts_on, row.ends_on, row.kind) for row in rows]
+
+
+def test_renouvellement_http_refus_rbac_idor_et_validation(
+    client: TestClient,
+    db: Session,
+    owner_engine: Engine,
+    make_company: Callable[..., CompanyFixture],
+    make_user: Callable[..., UserFixture],
+) -> None:
+    company, other = make_company(), make_company()
+    license_id = _seed_license(owner_engine, company.id, starts_on=FAR_START, ends_on=FAR_END)
+    other_license = _seed_license(owner_engine, other.id, starts_on=FAR_START, ends_on=FAR_END)
+    admin, revoked = make_user(), make_user()
+    db.get_one(User, admin.id).is_platform_admin = True
+    db.get_one(User, revoked.id).is_platform_admin = True
+    db.commit()
+    admin_headers, revoked_headers = admin.headers(client), revoked.headers(client)
+    db.get_one(User, revoked.id).is_platform_admin = False
+    db.commit()
+
+    def url(client_id: uuid.UUID, lic: uuid.UUID) -> str:
+        return f"/api/v1/platform/module-clients/{client_id}/licenses/{lic}/renewals"
+
+    body = {"ends_on": "2042-01-01", "kind": "paid", "reason": "Renouvellement annuel"}
+    target = url(company.id, license_id)
+    assert client.post(target, json=body).status_code == 401
+    assert client.post(target, headers=company.headers, json=body).status_code == 403
+    assert client.post(target, headers=other.headers, json=body).status_code == 403
+    assert client.post(target, headers=revoked_headers, json=body).status_code == 403
+    for client_id, lic in (
+        (company.id, other_license),
+        (other.id, license_id),
+        (uuid.uuid4(), license_id),
+        (company.id, uuid.uuid4()),
+    ):
+        response = client.post(url(client_id, lic), headers=admin_headers, json=body)
+        assert response.status_code == 404, (client_id, lic)
+    for invalid in (
+        {**body, "ends_on": 2272147200},
+        {**body, "ends_on": "2029-02-30"},
+        {**body, "kind": "free"},
+        {key: value for key, value in body.items() if key != "reason"},
+        {**body, "reason": " "},
+        {**body, "paid": True},
+        {**body, "starts_on": "2041-01-01"},
+    ):
+        assert client.post(target, headers=admin_headers, json=invalid).status_code == 422, invalid
+    # Fin antérieure ou égale à la fin précédente : règle métier, sans écriture.
+    early = {**body, "ends_on": "2041-01-01"}
+    assert client.post(target, headers=admin_headers, json=early).status_code == 422
+    assert len(_periods(owner_engine, company.id)) == 1
+    assert len(_periods(owner_engine, other.id)) == 1
+
+
+def test_renouvellement_http_creation_conflit_suspension_et_retroactivite(
+    client: TestClient,
+    db: Session,
+    owner_engine: Engine,
+    make_company: Callable[..., CompanyFixture],
+    make_user: Callable[..., UserFixture],
+) -> None:
+    company = make_company()
+    license_id = _seed_license(owner_engine, company.id, starts_on=FAR_START, ends_on=FAR_END)
+    admin = make_user()
+    db.get_one(User, admin.id).is_platform_admin = True
+    db.commit()
+    headers = admin.headers(client)
+    target = f"/api/v1/platform/module-clients/{company.id}/licenses/{license_id}/renewals"
+    body = {"ends_on": "2042-01-01", "kind": "paid", "reason": "Renouvellement annuel"}
+
+    response = client.post(target, headers=headers, json=body)
+    assert response.status_code == 201, response.text
+    created = response.json()
+    assert created["starts_on"] == "2041-01-01"
+    assert created["ends_on"] == "2042-01-01"
+    assert created["kind"] == "paid"
+    # Double envoi : la contrainte anti-chevauchement refuse, sans seconde période.
+    assert client.post(target, headers=headers, json=body).status_code == 409
+    assert _periods(owner_engine, company.id) == [
+        (date(2040, 1, 1), date(2041, 1, 1), "paid"),
+        (date(2041, 1, 1), date(2042, 1, 1), "paid"),
+    ]
+    bind_tenant(db, company.id)
+    event = db.scalar(
+        select(AuditEvent).where(
+            AuditEvent.action == "commercial.license_renewed",
+            AuditEvent.entity_id == created["id"],
+        )
+    )
+    assert event is not None
+    assert event.actor_user_id == admin.id
+    assert event.payload["previous_license_id"] == str(license_id)
+    assert event.payload["reason"] == "Renouvellement annuel"
+    assert verify_chain(db).ok
+    db.rollback()
+
+    # Période suspendue : décision explicite exigée (réactivation d'abord).
+    suspended = _seed_license(
+        owner_engine,
+        company.id,
+        starts_on=date(2050, 1, 1),
+        ends_on=date(2051, 1, 1),
+        suspended=True,
+    )
+    suspended_url = f"/api/v1/platform/module-clients/{company.id}/licenses/{suspended}/renewals"
+    response = client.post(suspended_url, headers=headers, json={**body, "ends_on": "2052-01-01"})
+    assert response.status_code == 422
+    # Période expirée : pas de renouvellement rétroactif (décision du 2026-11-24).
+    expired = _seed_license(
+        owner_engine, company.id, starts_on=date(2020, 1, 1), ends_on=date(2021, 1, 1)
+    )
+    expired_url = f"/api/v1/platform/module-clients/{company.id}/licenses/{expired}/renewals"
+    response = client.post(expired_url, headers=headers, json={**body, "ends_on": "2022-01-01"})
+    assert response.status_code == 422
+    assert "rétroactif" in response.json()["detail"]
+    assert len(_periods(owner_engine, company.id)) == 4
