@@ -2571,3 +2571,25 @@ plateforme en base LOCALE ; script non versionné `apps/web/recette-locale/`).
   sur les trois pages avec exigence, accès aux dossiers intact.
 
 Le prochain déploiement doit inclure #204, #207 et #208.
+
+## Audit de suivi du 2026-11-27 (référence `71b2952`)
+
+Prolongement de `AUDIT_SUIVI_20261109.md` : vérification des lots #195→#210,
+cartographie de complétude par domaine, environnements, backlog dédoublonné
+P0–P3 et tableau de pilotage (`AUDIT_SUIVI_20261127.md`).
+
+- Vérifié dans le code : #202 (2FA admin exigible), #204 (requêtes lentes +
+  pool), #207 (page licences + garde-fou client-boundary), #208 (passthrough
+  compose + contrôle CI), #210 (preview embed, production inchangée). CI 9/9
+  verte sur PR #210, couverture ≥ 90 % (#201).
+- Constats principaux : PROD en retard sur main (#204/#207/#208 non déployés,
+  action opérateur) ; aucun E2E Playwright licences admin (seuls modules) ;
+  pipeline d'import arrêté après le précontrôle (prévisualisation,
+  confirmation, brouillons transactionnels, annulation, inter-entreprises à
+  construire) ; espace cabinet sans frontend ; facturation bloquée sur
+  validation métier (tarifs, entité facturante, PSP).
+- Pile de recette locale sans Docker rétablie après incident de bac à sable
+  (venv corrompu, répertoires runtime PG manquants) ; version générique et
+  paramétrable ajoutée au dépôt (`scripts/recette-sans-docker/`, PR séparée).
+- Limites assumées : aucun accès VPS/REC, score de maturité = 78/100 justifié
+  dans l'audit.
