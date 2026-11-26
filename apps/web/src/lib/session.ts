@@ -18,7 +18,7 @@ export const REFRESH_MAX_AGE_SECONDS = 30 * 24 * 3600;
 export type CookieOptions = {
   httpOnly: boolean;
   secure: boolean;
-  sameSite: "lax" | "strict";
+  sameSite: "lax" | "strict" | "none";
   path: string;
   maxAge: number;
 };
@@ -29,7 +29,17 @@ export function secureCookies(): boolean {
 }
 
 export function cookieOptions(maxAge: number): CookieOptions {
-  return { httpOnly: true, secure: secureCookies(), sameSite: "lax", path: "/", maxAge };
+  // KORA_PREVIEW_EMBED=1 : preview bac à sable uniquement (iframe de l'aperçu du
+  // chat). En contexte tiers, le navigateur n'envoie que des cookies
+  // `SameSite=None; Secure` — en production, le comportement reste `Lax`.
+  const embed = process.env.KORA_PREVIEW_EMBED === "1";
+  return {
+    httpOnly: true,
+    secure: secureCookies() || embed,
+    sameSite: embed ? "none" : "lax",
+    path: "/",
+    maxAge,
+  };
 }
 
 /** Lit l'expiration (`exp`) d'un JWT sans vérifier sa signature : l'API, elle, vérifie. */
