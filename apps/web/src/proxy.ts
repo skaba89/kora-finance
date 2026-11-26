@@ -44,6 +44,10 @@ function matches(pathname: string, prefixes: string[]) {
  */
 function contentSecurityPolicy(): string {
   const isDev = process.env.NODE_ENV === "development";
+  // KORA_PREVIEW_EMBED=1 : preview bac à sable uniquement (iframe de l'aperçu du
+  // chat sur *.space-z.ai autorisée via `frame-ancestors *`). Ne jamais activer
+  // en production, le comportement par défaut reste `frame-ancestors 'none'`.
+  const previewEmbed = process.env.KORA_PREVIEW_EMBED === "1";
   const https = (process.env.KORA_PUBLIC_URL ?? "").startsWith("https://");
   return [
     "default-src 'self'",
@@ -57,7 +61,7 @@ function contentSecurityPolicy(): string {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'none'",
+    previewEmbed ? "frame-ancestors *" : "frame-ancestors 'none'",
     ...(https ? ["upgrade-insecure-requests"] : []),
   ].join("; ");
 }

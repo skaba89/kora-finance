@@ -21,6 +21,10 @@ const nextConfig: NextConfig = {
     serverActions: {
       // Pièces justificatives (10 Mo au plus côté API) envoyées par Server Action.
       bodySizeLimit: "11mb",
+      // Preview bac à sable uniquement : la passerelle de la plateforme
+      // réécrit `x-forwarded-host` ; autoriser les origines du chat
+      // (ne jamais reproduire en production).
+      allowedOrigins: ["*.space-z.ai", "preview-chat-6ba03784-73a3-4747-a1a6-4c134eb9d19e.space-z.ai"],
     },
   },
   cacheComponents: true,
