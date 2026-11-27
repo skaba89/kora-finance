@@ -25,9 +25,9 @@ const SLOTS = 4;
 const SUSPENSION_409 = "État de licence modifié ; actualisez avant de réessayer.";
 const RENEWAL_409 = "Une période commerciale chevauche déjà ces dates.";
 
-test.beforeEach(async (_fixtures, testInfo) => {
+test.beforeEach(() => {
   test.skip(
-    testInfo.project.name !== "chromium",
+    test.info().project.name !== "chromium",
     "Console d'administration plateforme : recette ordinateur uniquement.",
   );
 });
