@@ -8,7 +8,7 @@ from fastapi import APIRouter, Query, Request
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
-from kora.accounting.import_service import precheck_staged_import
+from kora.accounting.import_service import precheck_and_persist, read_precheck_report
 from kora.accounting.import_storage import stage_import
 from kora.accounting.import_validation import ImportReport
 from kora.api.v1.common import Money
@@ -55,6 +55,22 @@ class ImportReportOut(BaseModel):
                 for issue in report.issues[:MAX_REPORT_ISSUES]
             ],
         )
+
+
+class ImportPrecheckPage(BaseModel):
+    """Rapport persisté : synthèse complète et page d'anomalies relue depuis la base."""
+
+    precheck_at: datetime
+    rows: int
+    entries: int
+    debit: Money
+    credit: Money
+    valid: bool
+    issue_count: int
+    stored_issues: int
+    offset: int
+    has_more: bool
+    issues: list[ImportIssueOut]
 
 
 async def _read_body(request: Request) -> bytes:
@@ -109,4 +125,32 @@ async def upload_accounting_import(
 
 @router.post("/{batch_id}/precheck", responses=_ERRORS)
 def precheck_accounting_import(tenant: EntriesWrite, batch_id: uuid.UUID) -> ImportReportOut:
-    return ImportReportOut.of(precheck_staged_import(tenant.user, tenant.company_id, batch_id))
+    """Précontrôle le fichier déposé et conserve le rapport jusqu'à l'expiration."""
+    return ImportReportOut.of(precheck_and_persist(tenant.user, tenant.company_id, batch_id))
+
+
+@router.get("/{batch_id}/precheck", responses=_ERRORS)
+def read_accounting_import_precheck(
+    tenant: EntriesWrite,
+    batch_id: uuid.UUID,
+    limit: Annotated[int, Query(ge=1, le=MAX_REPORT_ISSUES)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> ImportPrecheckPage:
+    """Relit le rapport conservé, anomalies par pages ordonnées (aucun rechargement)."""
+    report = read_precheck_report(
+        tenant.user, tenant.company_id, batch_id, limit=limit, offset=offset
+    )
+    next_offset = offset + len(report.issues)
+    return ImportPrecheckPage(
+        precheck_at=report.precheck_at,
+        rows=report.rows,
+        entries=report.entries,
+        debit=report.debit,
+        credit=report.credit,
+        valid=report.valid,
+        issue_count=report.issue_count,
+        stored_issues=report.stored_issues,
+        offset=offset,
+        has_more=next_offset < report.stored_issues,
+        issues=[ImportIssueOut(row=issue.row, code=issue.code) for issue in report.issues],
+    )

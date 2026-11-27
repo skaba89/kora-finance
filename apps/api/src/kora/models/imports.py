@@ -4,6 +4,8 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -36,6 +38,16 @@ class ImportBatch(Base):
     wrapped_key: Mapped[bytes] = mapped_column(LargeBinary)
     created_at: Mapped[datetime] = created_at_column()
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # Rapport de précontrôle persisté : NULL tant qu'aucun précontrôle n'a tourné.
+    # `stored_issues` borne la volumétrie ; le total réel reste dans `issue_count`.
+    precheck_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    precheck_rows: Mapped[int | None] = mapped_column(BigInteger)
+    precheck_entries: Mapped[int | None] = mapped_column(BigInteger)
+    precheck_debit: Mapped[int | None] = mapped_column(BigInteger)
+    precheck_credit: Mapped[int | None] = mapped_column(BigInteger)
+    precheck_valid: Mapped[bool | None] = mapped_column(Boolean)
+    precheck_issue_count: Mapped[int | None] = mapped_column(Integer)
+    precheck_stored_issues: Mapped[int | None] = mapped_column(Integer)
 
     __table_args__ = (
         UniqueConstraint("tenant_id", "id"),
@@ -59,5 +71,40 @@ class ImportBatch(Base):
             name="storage_key_valid",
         ),
         CheckConstraint("octet_length(wrapped_key) > 0", name="wrapped_key_present"),
+        CheckConstraint(
+            "(precheck_at IS NULL AND precheck_rows IS NULL AND precheck_entries IS NULL "
+            "AND precheck_debit IS NULL AND precheck_credit IS NULL AND precheck_valid IS NULL "
+            "AND precheck_issue_count IS NULL AND precheck_stored_issues IS NULL) "
+            "OR (precheck_at IS NOT NULL AND precheck_rows IS NOT NULL "
+            "AND precheck_entries IS NOT NULL AND precheck_debit IS NOT NULL "
+            "AND precheck_credit IS NOT NULL AND precheck_valid IS NOT NULL "
+            "AND precheck_issue_count IS NOT NULL AND precheck_stored_issues IS NOT NULL)",
+            name="precheck_coherent",
+        ),
+        CheckConstraint(
+            "precheck_issue_count >= 0 AND precheck_stored_issues >= 0 "
+            "AND precheck_stored_issues <= precheck_issue_count",
+            name="precheck_counts_valid",
+        ),
         Index("ix_accounting_import_batches_tenant_expiry", "tenant_id", "expires_at"),
+    )
+
+
+class ImportBatchIssue(Base):
+    """Anomalie persistée d'un rapport de précontrôle, bornée et ordonnée."""
+
+    __tablename__ = "accounting_import_issues"
+
+    batch_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("accounting_import_batches.id", ondelete="CASCADE"), primary_key=True
+    )
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"))
+    seq: Mapped[int] = mapped_column(Integer, primary_key=True)
+    row_number: Mapped[int] = mapped_column(Integer)
+    code: Mapped[str] = mapped_column(String(64))
+
+    __table_args__ = (
+        CheckConstraint("seq >= 0", name="seq_valid"),
+        CheckConstraint("row_number >= 1", name="row_number_valid"),
+        CheckConstraint("octet_length(code) > 0", name="code_present"),
     )

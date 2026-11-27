@@ -347,9 +347,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Read Accounting Import Precheck
+         * @description Relit le rapport conservé, anomalies par pages ordonnées (aucun rechargement).
+         */
+        get: operations["read_accounting_import_precheck_api_v1_companies__company_id__accounting_imports__batch_id__precheck_get"];
         put?: never;
-        /** Precheck Accounting Import */
+        /**
+         * Precheck Accounting Import
+         * @description Précontrôle le fichier déposé et conserve le rapport jusqu'à l'expiration.
+         */
         post: operations["precheck_accounting_import_api_v1_companies__company_id__accounting_imports__batch_id__precheck_post"];
         delete?: never;
         options?: never;
@@ -4442,6 +4449,43 @@ export interface components {
             /** Row */
             row: number;
         };
+        /**
+         * ImportPrecheckPage
+         * @description Rapport persisté : synthèse complète et page d'anomalies relue depuis la base.
+         */
+        ImportPrecheckPage: {
+            /**
+             * Credit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            credit: string;
+            /**
+             * Debit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            debit: string;
+            /** Entries */
+            entries: number;
+            /** Has More */
+            has_more: boolean;
+            /** Issue Count */
+            issue_count: number;
+            /** Issues */
+            issues: components["schemas"]["ImportIssueOut"][];
+            /** Offset */
+            offset: number;
+            /**
+             * Precheck At
+             * Format: date-time
+             */
+            precheck_at: string;
+            /** Rows */
+            rows: number;
+            /** Stored Issues */
+            stored_issues: number;
+            /** Valid */
+            valid: boolean;
+        };
         /** ImportReportOut */
         ImportReportOut: {
             /**
@@ -8017,6 +8061,96 @@ export interface operations {
             };
             /** @description Content Too Large */
             413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_accounting_import_precheck_api_v1_companies__company_id__accounting_imports__batch_id__precheck_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                batch_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPrecheckPage"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
