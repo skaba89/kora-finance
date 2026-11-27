@@ -29,9 +29,16 @@ KORA_EMAIL_FROM="Kora Finance <no-reply@kora.local>"
 KORA_PUBLIC_URL=${KORA_PUBLIC_URL:-http://localhost:3000}
 KORA_S3_ENDPOINT_URL=http://127.0.0.1:9000
 KORA_S3_REGION=garage
-KORA_S3_BUCKET=kora
+# Pièces justificatives : bucket kora-test ; les sauvegardes vivent ailleurs
+# (test_backup.py force KORA_BACKUP_S3_BUCKET=kora et exige la distinction).
+KORA_S3_BUCKET=kora-test
 KORA_S3_ACCESS_KEY_ID=kora-local
 KORA_S3_SECRET_ACCESS_KEY=kora-local-secret
+# Sauvegardes : bucket distinct des pièces (exigé par test_backup.py), même S3 local.
+KORA_BACKUP_S3_ENDPOINT_URL=http://127.0.0.1:9000
+KORA_BACKUP_S3_BUCKET=kora-backups
+KORA_BACKUP_S3_ACCESS_KEY_ID=kora-local
+KORA_BACKUP_S3_SECRET_ACCESS_KEY=kora-local-secret
 EOF
   chmod 600 "$ENVFILE"
   echo "   $ENVFILE écrit (secrets générés)"

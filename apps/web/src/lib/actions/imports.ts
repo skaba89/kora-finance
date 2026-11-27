@@ -7,7 +7,20 @@ import { actionDictionary, field } from "./support";
 export type ImportState =
   | { status: "idle" }
   | { status: "error"; message: string }
-  | { status: "success"; report: components["schemas"]["ImportReportOut"]; expiresAt: string };
+  | {
+      status: "success";
+      report: components["schemas"]["ImportReportOut"];
+      expiresAt: string;
+      batchId: string;
+    };
+
+export type ImportIssuesPage =
+  | { status: "error"; message: string }
+  | {
+      status: "success";
+      issues: components["schemas"]["ImportIssueOut"][];
+      hasMore: boolean;
+    };
 
 export async function precheckImportAction(
   companyId: string,
@@ -35,5 +48,24 @@ export async function precheckImportAction(
     params: { path: { company_id: companyId, batch_id: upload.data.id } },
   });
   if (!check.response.ok || !check.data) return fail(toApiError(check.error, t.common.unexpectedError).detail);
-  return { status: "success", report: check.data, expiresAt: upload.data.expires_at };
+  return { status: "success", report: check.data, expiresAt: upload.data.expires_at, batchId: upload.data.id };
+}
+
+export async function loadMoreIssuesAction(
+  companyId: string,
+  batchId: string,
+  offset: number,
+): Promise<ImportIssuesPage> {
+  const t = await actionDictionary();
+  const client = await api();
+  // Le rapport persisté est relu par pages : le fichier source n'est jamais
+  // rechargé ni redéchiffré pour consulter des anomalies déjà contrôlées.
+  const page = await client.GET(
+    "/api/v1/companies/{company_id}/accounting-imports/{batch_id}/precheck",
+    { params: { path: { company_id: companyId, batch_id: batchId }, query: { limit: 200, offset } } },
+  );
+  if (!page.response.ok || !page.data) {
+    return { status: "error", message: toApiError(page.error, t.common.unexpectedError).detail };
+  }
+  return { status: "success", issues: page.data.issues, hasMore: page.data.has_more };
 }

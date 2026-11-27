@@ -1,20 +1,51 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { ImportState } from "@/lib/actions/imports";
+import { ImportIssuesView } from "@/components/ledger/import-issues-view";
+import type { ImportIssuesPage, ImportState } from "@/lib/actions/imports";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import type { Locale } from "@/lib/i18n/config";
 import type { fr } from "@/lib/i18n/fr";
+import type { components } from "@/lib/api/schema";
 
-export function ImportPrecheck({ action, labels: t, locale }: {
+type IssueOut = components["schemas"]["ImportIssueOut"];
+type ReportOut = components["schemas"]["ImportReportOut"];
+
+export function ImportPrecheck({ action, loadMore, labels: t, locale }: {
   action: (state: ImportState, data: FormData) => Promise<ImportState>;
+  loadMore: (batchId: string, offset: number) => Promise<ImportIssuesPage>;
   labels: typeof fr.imports;
   locale: Locale;
 }) {
   const [state, submit, pending] = useActionState(action, { status: "idle" });
   const report = !pending && state.status === "success" ? state.report : null;
+  const batchId = !pending && state.status === "success" ? state.batchId : null;
+  const [extra, setExtra] = useState<IssueOut[]>([]);
+  const [loadingMore, startLoading] = useTransition();
+
+  // Ajustement de state pendant le rendu (pattern React) : un nouveau rapport
+  // de précontrôle repart d'une page vierge, sans effet ni rendu supplémentaire.
+  const [previousReport, setPreviousReport] = useState<ReportOut | null>(null);
+  if (report !== previousReport) {
+    setPreviousReport(report);
+    setExtra([]);
+  }
+
+  const shown = report ? [...report.issues, ...extra] : [];
+  const remaining = report ? report.issue_count - shown.length : 0;
+
+  const loadNextPage = () => {
+    if (!report || !batchId) return;
+    startLoading(async () => {
+      const page = await loadMore(batchId, shown.length);
+      if (page.status === "error") return;
+      setExtra(previous => [...previous, ...page.issues]);
+    });
+  };
+
   return <div className="space-y-4">
     <form action={submit} className="space-y-4 rounded-xl border bg-card p-4 sm:p-6">
       <p className="text-sm text-muted-foreground">{t.instructions}</p>
@@ -39,8 +70,14 @@ export function ImportPrecheck({ action, labels: t, locale }: {
       <dl className="grid gap-3 sm:grid-cols-2">
         {[[t.rows, report.rows], [t.entries, report.entries], [t.debit, formatMoney(BigInt(report.debit), "GNF", locale)], [t.credit, formatMoney(BigInt(report.credit), "GNF", locale)], [t.issues, report.issue_count]].map(([label, value]) => <div key={label} className="min-w-0 rounded-lg border p-3"><dt className="text-sm text-muted-foreground">{label}</dt><dd className="font-semibold tabular-nums wrap-break-word">{value}</dd></div>)}
       </dl>
-      {report.issue_count > report.issues.length && <p className="text-sm">{t.truncated}</p>}
-      {report.issues.length > 0 && <table className="w-full text-left text-sm"><thead><tr><th className="p-2">{t.row}</th><th className="p-2">{t.code}</th></tr></thead><tbody>{report.issues.map((issue, index) => <tr key={`${issue.row}-${index}`} className="border-t"><td className="p-2 tabular-nums">{issue.row}</td><td className="p-2 wrap-anywhere">{issue.code}</td></tr>)}</tbody></table>}
+      <ImportIssuesView
+        issues={shown}
+        remaining={remaining}
+        truncated={report.issue_count > report.issues.length}
+        loadingMore={loadingMore}
+        onLoadMore={loadNextPage}
+        labels={t}
+      />
     </section>}
   </div>;
 }

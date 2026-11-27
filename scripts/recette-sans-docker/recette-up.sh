@@ -18,12 +18,12 @@ if ! (echo > /dev/tcp/127.0.0.1/8100) >/dev/null 2>&1; then
     --host 127.0.0.1 --port 8100 --no-proxy-headers > $LOGS/kora-api.log 2>&1 < /dev/null &"
   for i in $(seq 1 30); do (echo > /dev/tcp/127.0.0.1/8100) >/dev/null 2>&1 && break; sleep 1; done
 fi
-curl -sf http://127.0.0.1:8100/health >/dev/null && echo "API OK (8100)" || {
+curl -sf http://127.0.0.1:8100/health/live >/dev/null && echo "API OK (8100)" || {
   echo "ERREUR API"; tail -20 "$LOGS/kora-api.log"; exit 1; }
 
 # 2) Web (Next.js dev)
 if ! (echo > /dev/tcp/127.0.0.1/3000) >/dev/null 2>&1; then
-  setsid sh -c "cd $REPO/apps/web && nohup npm run dev -p 3000 > $LOGS/kora-web.log 2>&1 < /dev/null &"
+  setsid sh -c "cd $REPO/apps/web && nohup npm run dev > $LOGS/kora-web.log 2>&1 < /dev/null &"
   for i in $(seq 1 45); do (echo > /dev/tcp/127.0.0.1/3000) >/dev/null 2>&1 && break; sleep 1; done
 fi
 (echo > /dev/tcp/127.0.0.1/3000) >/dev/null 2>&1 && echo "WEB OK (3000)" || {
