@@ -95,13 +95,23 @@ $PSQL "SELECT 1 FROM pg_database WHERE datname='kora_test'" | grep -q 1 || \
 # Droits du rôle runtime (équivalent init-roles.sh : l'app ne doit jamais être
 # propriétaire des tables, cf. test_db_roles.py).
 PGOWN="$PGHOME/bin/psql -h 127.0.0.1 -p 54330 -U kora_admin -d kora_test -tAc"
-if ! $PGOWN "SELECT count(*) FROM pg_extension WHERE extname='btree_gist'" | grep -q 1; then
-  $PGOWN "CREATE EXTENSION IF NOT EXISTS btree_gist"
+# btree_gist doit appartenir à kora_owner : alembic (et les resets de tests)
+# le suppriment et le recréent. Une extension créée par un autre rôle bloque
+# « must be owner of extension » et ALTER EXTENSION n'a pas de OWNER TO :
+# on crée l'extension sous kora_owner, sinon on répare le propriétaire direct
+# dans le catalogue (réservé au superuser initial de la pile locale).
+PGEXT="$PGHOME/bin/psql -h 127.0.0.1 -p 54330 -U kora_owner -d kora_test -tAc"
+if [ "$($PGOWN "SELECT count(*) FROM pg_extension WHERE extname='btree_gist'")" = "0" ]; then
+  $PGEXT "CREATE EXTENSION IF NOT EXISTS btree_gist"
+elif [ "$($PGOWN "SELECT count(*) FROM pg_extension e JOIN pg_roles r ON r.oid = e.extowner \
+WHERE e.extname='btree_gist' AND r.rolname='kora_owner'")" = "0" ]; then
+  $PGOWN "UPDATE pg_extension SET extowner = (SELECT oid FROM pg_roles \
+WHERE rolname='kora_owner') WHERE extname='btree_gist'"
 fi
 $PGOWN "ALTER SCHEMA public OWNER TO kora_owner; REVOKE ALL ON SCHEMA public FROM PUBLIC; GRANT USAGE ON SCHEMA public TO kora_app;"
 $PGOWN "GRANT CONNECT, TEMPORARY ON DATABASE kora_test TO kora_app;"
 $PGOWN "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO kora_app; GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO kora_app; GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO kora_app;"
-$PGOWN "ALTER DEFAULT PRIVILEGES FOR ROLE kora_owner IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO kora_app; ALTER DEFAULT PRIVILEGES FOR ROLE kora_owner IN SCHEMA public GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO kora_app; ALTER DEFAULT PRIVILEGES FOR ROLE kora_owner IN SCHEMA public GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO kora_app;"
+$PGOWN "ALTER DEFAULT PRIVILEGES FOR ROLE kora_owner IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO kora_app; ALTER DEFAULT PRIVILEGES FOR ROLE kora_owner IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO kora_app; ALTER DEFAULT PRIVILEGES FOR ROLE kora_owner IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO kora_app;"
 echo "   postgres OK (54330) + rôles + droits"
 
 # 4) Redis (fakeredis)
