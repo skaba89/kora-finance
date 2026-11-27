@@ -2593,3 +2593,28 @@ P0–P3 et tableau de pilotage (`AUDIT_SUIVI_20261127.md`).
   paramétrable ajoutée au dépôt (`scripts/recette-sans-docker/`, PR séparée).
 - Limites assumées : aucun accès VPS/REC, score de maturité = 78/100 justifié
   dans l'audit.
+
+## IMP-1 du 2026-11-27 (référence `9907466`)
+
+Rapport de précontrôle persisté et relu par pages (#214, branch
+`feature/import-precheck-report`). Le rapport ne se perd plus en quittant
+l'écran de dépôt et la revue dépasse les 200 premières anomalies.
+
+- API : synthèse sur le batch (`precheck_*`, CHECK tout-rien), anomalies
+  bornées à 1 000 dans `accounting_import_issues` (RLS tenant), migration
+  0033 ; `precheck_and_persist` sérialise les précontrôles concurrents sur le
+  verrou de ligne (idempotent) ; `GET .../precheck` relit par pages
+  (autorisation + RLS à chaque lecture, batch expiré = 404).
+- Web : `ImportIssuesView` + `loadMoreIssuesAction` — « Afficher plus
+  d'anomalies » relit le rapport conservé ; le fichier source n'est jamais
+  rechargé ni redéchiffré. i18n fr/en.
+- Tests : 7 API (`test_import_report.py` : persistance, pagination,
+  remplacement, plafond, isolation 404/403, expiration, bornes 422), 4 vitest,
+  1 E2E paginé > 200 anomalies. CI 9/9 verte avant fusion.
+- Recette sans Docker consolidée : `btree_gist` sous `kora_owner` (alembic le
+  recrée), buckets S3 séparés pièces/sauvegardes, `/health/live`, lancement
+  web sans `-p` (même PR, commit séparé).
+- Aucune écriture créée : le pipeline s'arrête toujours avant la comptabilisation
+  (IMP-2 reste le prochain lot).
+
+Suivi : `AUDIT_SUIVI_20261127B.md` (maturité 82/100).
