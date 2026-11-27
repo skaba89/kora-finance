@@ -251,10 +251,17 @@ def _apply(session: Session, actor: Actor, entry: JournalEntry, data: EntryData)
 
 
 def create_draft(
-    session: Session, actor: Actor, data: EntryData, *, entry_id: uuid.UUID | None = None
+    session: Session,
+    actor: Actor,
+    data: EntryData,
+    *,
+    entry_id: uuid.UUID | None = None,
+    commit: bool = True,
 ) -> tuple[JournalEntry, bool]:
     """Crée un brouillon. `entry_id` fourni par le client rend la création idempotente
-    (renvoi d'un brouillon saisi hors connexion) : renvoie (écriture, créée ?)."""
+    (renvoi d'un brouillon saisi hors connexion) : renvoie (écriture, créée ?).
+    `commit=False` : l'appelant (confirmation d'un import) écrit ses propres lignes
+    de traçabilité et sa trace d'audit dans la même transaction, avant un commit unique."""
     if entry_id is not None:
         existing = session.execute(
             select(JournalEntry).where(
@@ -277,7 +284,8 @@ def create_draft(
     except IntegrityError as exc:
         raise ConflictError("Cet identifiant d'écriture est déjà utilisé.") from exc
     _write_lines(session, actor, entry, data.lines)
-    session.commit()
+    if commit:
+        session.commit()
     return entry, True
 
 

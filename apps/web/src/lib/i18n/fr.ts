@@ -340,6 +340,13 @@ export const fr = {
     loadingMore: "Chargement…",
     expires: "Dépôt temporaire valable jusqu’au",
     instructions: "CSV séparé par des points-virgules ou XLSX : colonnes journal, ecriture, date, compte, libelle, debit, credit. FEC : format standard. Devise GNF uniquement.",
+    confirm: "Comptabiliser en brouillons",
+    confirmPending: "Confirmation en cours…",
+    confirmHint: "Aucune écriture n’est validée automatiquement : la confirmation crée des brouillons dans une seule transaction, que vous validez ensuite depuis le journal.",
+    confirmedTitle: "Import comptabilisé en brouillons",
+    confirmedHint: "Confirmé le",
+    lines: "Lignes comptables",
+    seeEntries: "Voir les écritures",
   },
   entries: {
     title: "Écritures",
