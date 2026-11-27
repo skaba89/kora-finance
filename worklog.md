@@ -2618,3 +2618,35 @@ l'écran de dépôt et la revue dépasse les 200 premières anomalies.
   (IMP-2 reste le prochain lot).
 
 Suivi : `AUDIT_SUIVI_20261127B.md` (maturité 82/100).
+
+## IMP-2 du 2026-11-27 (branche `feature/import-confirm-drafts`)
+
+Confirmation humaine d'un import → génération transactionnelle de brouillons.
+Le pipeline d'import va désormais jusqu'au journal, sans jamais valider ni
+numéroter automatiquement.
+
+- API : `POST .../accounting-imports/{batch_id}/confirm` (`ENTRIES_WRITE`) ;
+  service `confirm_staged_import` — redéchiffrement et empreinte avant
+  transaction, parsing hors connexion, puis **une seule** transaction :
+  brouillons (`create_draft`, `commit=False` nouveau paramètre, défaut
+  inchangé), liens de traçabilité, marqueurs du batch, trace d'audit.
+  Référentiel relu sous le verrou (`_catalog` + `ImportCatalog.check`) :
+  journal désactivé ou période verrouillée depuis le dépôt → 422 sans écriture.
+  Idempotence : verrou de ligne + `confirmed_at/confirmed_by_user_id/
+  confirmed_entries` (CHECK tout-rien) ; second appel → 409.
+- Modèle : `confirmed_*` sur `accounting_import_batches` ; table
+  `accounting_import_entries` (migration 0034, RLS FORCE, clé composite vers
+  `journal_entries`, CASCADE, une écriture n'appartient qu'à un batch).
+  Aucune modification du modèle comptable existant.
+- Web : `ImportConfirmSection` (bouton uniquement après précontrôle vert,
+  état d'attente, panneau de confirmation avec comptes et lien vers les
+  écritures), `confirmImportAction`, i18n fr/en.
+- Tests : 8 API (`test_import_confirm.py`), 4 vitest, 1 E2E (brouillons
+  visibles, `statut=POSTED` vide) ; suite API complète locale sans échec
+  (3 segments), vitest 113/113, eslint, typecheck, build, contrat
+  openapi↔schema.ts régénéré déterministe.
+- Recette : pile rétablie après recyclage du bac à sable ; Mailpit autonome
+  (`scripts` hors dépôt) pour `test_email_smtp.py` ; pytest exige
+  `KORA_EMAIL_BACKEND=memory` (le `.env` de recette reste `disabled`).
+
+Suivi : `AUDIT_SUIVI_20261127C.md` (maturité 85/100 ; IMP-3 déverrouillé).
