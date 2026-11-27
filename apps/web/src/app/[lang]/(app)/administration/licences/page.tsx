@@ -32,6 +32,9 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
 
   const en = locale === "en";
   const label = (fr: string, english: string) => en ? english : fr;
+  // Liens internes préfixés par la langue : sans préfixe, le proxy réécrirait
+  // avec le cookie de langue et la navigation perdrait la langue affichée.
+  const licencesBase = `/${locale}/administration/licences`;
   const offset = typeof query.offset === "string" && /^\d{1,8}$/.test(query.offset)
     ? Number(query.offset) : 0;
   const client = await api();
@@ -133,7 +136,7 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
           "License periods with audited suspension, without effect on payments or accounting rights.",
         )}
       />
-      <Link href="/administration" className="text-primary mb-4 inline-block text-sm font-medium underline underline-offset-4">
+      <Link href={`/${locale}/administration`} className="text-primary mb-4 inline-block text-sm font-medium underline underline-offset-4">
         {label("Retour à l’administration", "Back to administration")}
       </Link>
       <div className="grid gap-4 lg:grid-cols-[minmax(220px,1fr)_minmax(0,3fr)]">
@@ -148,7 +151,7 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
             {companies.items.map((item) => (
               <Link
                 key={item.id}
-                href={`/administration/licences?offset=${offset}&client=${item.id}&as_of=${asOf}${statusSuffix}`}
+                href={`${licencesBase}?offset=${offset}&client=${item.id}&as_of=${asOf}${statusSuffix}`}
                 aria-current={selected?.id === item.id ? "page" : undefined}
                 className={`block break-words rounded-lg border px-3 py-2 text-sm hover:bg-accent ${selected?.id === item.id ? "border-primary font-semibold" : ""}`}
               >
@@ -157,10 +160,10 @@ async function LicenseList({ searchParams }: { searchParams: Query }) {
             ))}
             <nav aria-label={label("Pagination des dossiers", "Company pagination")} className="flex flex-wrap gap-3 text-sm">
               {offset > 0
-                ? <Link href={`/administration/licences?offset=${Math.max(0, offset - 50)}&as_of=${asOf}${statusSuffix}`}>{label("Précédent", "Previous")}</Link>
+                ? <Link href={`${licencesBase}?offset=${Math.max(0, offset - 50)}&as_of=${asOf}${statusSuffix}`}>{label("Précédent", "Previous")}</Link>
                 : null}
               {offset + 50 < companies.total
-                ? <Link href={`/administration/licences?offset=${offset + 50}&as_of=${asOf}${statusSuffix}`}>{label("Suivant", "Next")}</Link>
+                ? <Link href={`${licencesBase}?offset=${offset + 50}&as_of=${asOf}${statusSuffix}`}>{label("Suivant", "Next")}</Link>
                 : null}
             </nav>
           </CardContent>

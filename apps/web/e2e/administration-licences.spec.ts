@@ -113,7 +113,7 @@ test("l'administrateur plateforme consulte les licences et filtre par état", as
   await expect(page.getByRole("heading", { level: 2, name: CONSULTATION })).toBeVisible();
   await expect(page.getByText("Périodes affichées : 3 / 3")).toBeVisible();
 
-  await page.getByLabel("État").selectOption({ label: "Active" });
+  await page.getByRole("combobox", { name: "État" }).selectOption({ label: "Active" });
   await page.getByRole("button", { name: "Consulter" }).click();
   await expect(page.getByText("Périodes affichées : 1 / 3")).toBeVisible();
   await expect(page.getByText("Aucune période pour cet état.")).toHaveCount(0);
@@ -178,7 +178,8 @@ test("suspension concurrente : l'onglet obsolète reçoit un 409 explicite", asy
 
   await stale.getByLabel("Motif de l’intervention").fill("Tentative depuis un onglet devenu obsolète.");
   await stale.getByRole("button", { name: "Suspendre", exact: true }).click();
-  await expect(stale.getByRole("alert")).toContainText(SUSPENSION_409);
+  // L'annonceur de routes Next.js a aussi le rôle alert : on vise l'alerte applicative.
+  await expect(stale.locator('[data-slot="alert"]')).toContainText(SUSPENSION_409);
   await stale.close();
 });
 
@@ -201,7 +202,8 @@ test("renouvellement concurrent : le second onglet reçoit un 409 de chevaucheme
   await stale.getByLabel("Nouvelle fin (exclusive)").fill(isoDayOffset(180));
   await stale.getByLabel("Motif du renouvellement").fill("Soumission depuis un onglet devenu obsolète.");
   await stale.getByRole("button", { name: "Renouveler", exact: true }).click();
-  await expect(stale.getByRole("alert")).toContainText(RENEWAL_409);
+  // L'annonceur de routes Next.js a aussi le rôle alert : on vise l'alerte applicative.
+  await expect(stale.locator('[data-slot="alert"]')).toContainText(RENEWAL_409);
   await stale.close();
 });
 
@@ -215,7 +217,8 @@ test("la console des licences est consultable en anglais", async ({ page }) => {
   await page.goto("/en/administration/licences");
   await expect(page.getByRole("heading", { name: "Commercial licenses" })).toBeVisible();
   await page.getByRole("link", { name: CONSULTATION }).click();
+  await expect(page.getByRole("heading", { level: 2, name: CONSULTATION })).toBeVisible();
   await expect(page.getByText("Displayed periods : 3 / 3")).toBeVisible();
-  await expect(page.getByText("Type : Paid")).toHaveCount(2);
-  await expect(page.getByText("Type : Trial")).toHaveCount(1);
+  await expect(page.getByText("Kind : Paid")).toHaveCount(2);
+  await expect(page.getByText("Kind : Trial")).toHaveCount(1);
 });
