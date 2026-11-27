@@ -340,6 +340,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/companies/{company_id}/accounting-imports/{batch_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Accounting Import
+         * @description Confirme l'import à la demande explicite de l'utilisateur : les écritures sont
+         *     créées en brouillons dans une transaction unique, jamais validées ni numérotées
+         *     automatiquement. Un second appel est refusé (aucune duplication).
+         */
+        post: operations["confirm_accounting_import_api_v1_companies__company_id__accounting_imports__batch_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/companies/{company_id}/accounting-imports/{batch_id}/precheck": {
         parameters: {
             query?: never;
@@ -4442,6 +4464,31 @@ export interface components {
              */
             id: string;
         };
+        /**
+         * ImportConfirmationOut
+         * @description Résultat d'une confirmation : des comptes, jamais le contenu du fichier.
+         */
+        ImportConfirmationOut: {
+            /**
+             * Confirmed At
+             * Format: date-time
+             */
+            confirmed_at: string;
+            /**
+             * Credit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            credit: string;
+            /**
+             * Debit
+             * @description Montant entier en unités mineures, sous forme de chaîne
+             */
+            debit: string;
+            /** Entries */
+            entries: number;
+            /** Lines */
+            lines: number;
+        };
         /** ImportIssueOut */
         ImportIssueOut: {
             /** Code */
@@ -8061,6 +8108,93 @@ export interface operations {
             };
             /** @description Content Too Large */
             413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    confirm_accounting_import_api_v1_companies__company_id__accounting_imports__batch_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+                /** @description Identifiant du dossier d'entreprise */
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportConfirmationOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -341,6 +341,13 @@ export const en: typeof fr = {
     loadingMore: "Loading…",
     expires: "Temporary upload available until",
     instructions: "Semicolon-separated CSV or XLSX: columns journal, ecriture, date, compte, libelle, debit, credit. FEC: standard format. GNF only.",
+    confirm: "Book as drafts",
+    confirmPending: "Confirming…",
+    confirmHint: "No entry is validated automatically: confirming creates drafts in a single transaction, which you then validate from the journal.",
+    confirmedTitle: "Import booked as drafts",
+    confirmedHint: "Confirmed on",
+    lines: "Accounting lines",
+    seeEntries: "View entries",
   },
   entries: {
     title: "Entries",

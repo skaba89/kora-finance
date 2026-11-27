@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useActionState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ImportConfirmSection } from "@/components/ledger/import-confirm-section";
 import { ImportIssuesView } from "@/components/ledger/import-issues-view";
-import type { ImportIssuesPage, ImportState } from "@/lib/actions/imports";
+import type { ImportConfirmState, ImportIssuesPage, ImportState } from "@/lib/actions/imports";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import type { Locale } from "@/lib/i18n/config";
 import type { fr } from "@/lib/i18n/fr";
@@ -13,10 +14,13 @@ import type { components } from "@/lib/api/schema";
 
 type IssueOut = components["schemas"]["ImportIssueOut"];
 type ReportOut = components["schemas"]["ImportReportOut"];
+type ConfirmationOut = components["schemas"]["ImportConfirmationOut"];
 
-export function ImportPrecheck({ action, loadMore, labels: t, locale }: {
+export function ImportPrecheck({ action, loadMore, confirm, companyId, labels: t, locale }: {
   action: (state: ImportState, data: FormData) => Promise<ImportState>;
   loadMore: (batchId: string, offset: number) => Promise<ImportIssuesPage>;
+  confirm: (batchId: string) => Promise<ImportConfirmState>;
+  companyId: string;
   labels: typeof fr.imports;
   locale: Locale;
 }) {
@@ -25,6 +29,9 @@ export function ImportPrecheck({ action, loadMore, labels: t, locale }: {
   const batchId = !pending && state.status === "success" ? state.batchId : null;
   const [extra, setExtra] = useState<IssueOut[]>([]);
   const [loadingMore, startLoading] = useTransition();
+  const [confirmation, setConfirmation] = useState<ConfirmationOut | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [confirming, startConfirm] = useTransition();
 
   // Ajustement de state pendant le rendu (pattern React) : un nouveau rapport
   // de précontrôle repart d'une page vierge, sans effet ni rendu supplémentaire.
@@ -32,6 +39,8 @@ export function ImportPrecheck({ action, loadMore, labels: t, locale }: {
   if (report !== previousReport) {
     setPreviousReport(report);
     setExtra([]);
+    setConfirmation(null);
+    setConfirmError(null);
   }
 
   const shown = report ? [...report.issues, ...extra] : [];
@@ -43,6 +52,18 @@ export function ImportPrecheck({ action, loadMore, labels: t, locale }: {
       const page = await loadMore(batchId, shown.length);
       if (page.status === "error") return;
       setExtra(previous => [...previous, ...page.issues]);
+    });
+  };
+
+  const confirmNow = () => {
+    if (!batchId) return;
+    startConfirm(async () => {
+      const result = await confirm(batchId);
+      if (result.status === "error") {
+        setConfirmError(result.message);
+        return;
+      }
+      if (result.status === "success") setConfirmation(result.confirmation);
     });
   };
 
@@ -78,6 +99,15 @@ export function ImportPrecheck({ action, loadMore, labels: t, locale }: {
         onLoadMore={loadNextPage}
         labels={t}
       />
+      {report.valid && <ImportConfirmSection
+        confirmation={confirmation}
+        error={confirmError}
+        confirming={confirming}
+        onConfirm={confirmNow}
+        companyId={companyId}
+        labels={t}
+        locale={locale}
+      />}
     </section>}
   </div>;
 }

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { ImportPrecheck } from "@/components/ledger/import-precheck";
-import { loadMoreIssuesAction, precheckImportAction } from "@/lib/actions/imports";
+import { confirmImportAction, loadMoreIssuesAction, precheckImportAction } from "@/lib/actions/imports";
 import { can, getCompany } from "@/lib/dal";
 import { getDictionary } from "@/lib/i18n/server";
 
@@ -13,6 +13,13 @@ export default async function ImportPage({ params }: { params: Promise<{ company
   if (!can(company, "entries:write") || company.company.currency !== "GNF") notFound();
   return <>
     <PageHeader title={t.imports.title} subtitle={t.imports.subtitle} actions={<Button asChild variant="outline"><Link href={`/dossiers/${companyId}/ecritures`}>{t.entries.title}</Link></Button>} />
-    <ImportPrecheck action={precheckImportAction.bind(null, companyId)} loadMore={loadMoreIssuesAction.bind(null, companyId)} labels={t.imports} locale={locale} />
+    <ImportPrecheck
+      action={precheckImportAction.bind(null, companyId)}
+      loadMore={loadMoreIssuesAction.bind(null, companyId)}
+      confirm={confirmImportAction.bind(null, companyId)}
+      companyId={companyId}
+      labels={t.imports}
+      locale={locale}
+    />
   </>;
 }

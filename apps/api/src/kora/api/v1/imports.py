@@ -8,10 +8,13 @@ from fastapi import APIRouter, Query, Request
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
+from kora.accounting.entries import Actor
+from kora.accounting.import_confirm import confirm_staged_import
 from kora.accounting.import_service import precheck_and_persist, read_precheck_report
 from kora.accounting.import_storage import stage_import
 from kora.accounting.import_validation import ImportReport
 from kora.api.v1.common import Money
+from kora.auth.deps import Ctx
 from kora.core.errors import ErrorResponse, PayloadTooLargeError
 from kora.tenancy.deps import EntriesWrite
 
@@ -71,6 +74,16 @@ class ImportPrecheckPage(BaseModel):
     offset: int
     has_more: bool
     issues: list[ImportIssueOut]
+
+
+class ImportConfirmationOut(BaseModel):
+    """Résultat d'une confirmation : des comptes, jamais le contenu du fichier."""
+
+    confirmed_at: datetime
+    entries: int
+    lines: int
+    debit: Money
+    credit: Money
 
 
 async def _read_body(request: Request) -> bytes:
@@ -153,4 +166,26 @@ def read_accounting_import_precheck(
         offset=offset,
         has_more=next_offset < report.stored_issues,
         issues=[ImportIssueOut(row=issue.row, code=issue.code) for issue in report.issues],
+    )
+
+
+@router.post("/{batch_id}/confirm", responses=_ERRORS)
+def confirm_accounting_import(
+    tenant: EntriesWrite, batch_id: uuid.UUID, ctx: Ctx
+) -> ImportConfirmationOut:
+    """Confirme l'import à la demande explicite de l'utilisateur : les écritures sont
+    créées en brouillons dans une transaction unique, jamais validées ni numérotées
+    automatiquement. Un second appel est refusé (aucune duplication)."""
+    confirmation = confirm_staged_import(
+        tenant.user,
+        tenant.company_id,
+        batch_id,
+        actor=Actor(tenant.company_id, tenant.user.id, ctx),
+    )
+    return ImportConfirmationOut(
+        confirmed_at=confirmation.confirmed_at,
+        entries=confirmation.entries,
+        lines=confirmation.lines,
+        debit=confirmation.debit,
+        credit=confirmation.credit,
     )

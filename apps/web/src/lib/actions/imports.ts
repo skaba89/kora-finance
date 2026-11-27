@@ -22,6 +22,32 @@ export type ImportIssuesPage =
       hasMore: boolean;
     };
 
+export type ImportConfirmState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | {
+      status: "success";
+      confirmation: components["schemas"]["ImportConfirmationOut"];
+    };
+
+export async function confirmImportAction(
+  companyId: string,
+  batchId: string,
+): Promise<ImportConfirmState> {
+  const t = await actionDictionary();
+  const client = await api();
+  // Une seule confirmation possible côté API : un double appel est refusé
+  // (409) et aucun brouillon ne peut être dupliqué.
+  const confirmed = await client.POST(
+    "/api/v1/companies/{company_id}/accounting-imports/{batch_id}/confirm",
+    { params: { path: { company_id: companyId, batch_id: batchId } } },
+  );
+  if (!confirmed.response.ok || !confirmed.data) {
+    return { status: "error", message: toApiError(confirmed.error, t.common.unexpectedError).detail };
+  }
+  return { status: "success", confirmation: confirmed.data };
+}
+
 export async function precheckImportAction(
   companyId: string,
   _: ImportState,

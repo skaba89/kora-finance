@@ -9,6 +9,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     LargeBinary,
@@ -48,6 +49,11 @@ class ImportBatch(Base):
     precheck_valid: Mapped[bool | None] = mapped_column(Boolean)
     precheck_issue_count: Mapped[int | None] = mapped_column(Integer)
     precheck_stored_issues: Mapped[int | None] = mapped_column(Integer)
+    # Confirmation humaine : une seule, sous verrou de ligne. Les brouillons générés
+    # sont référencés dans `accounting_import_entries` (traçabilité et annulation).
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    confirmed_entries: Mapped[int | None] = mapped_column(BigInteger)
 
     __table_args__ = (
         UniqueConstraint("tenant_id", "id"),
@@ -86,6 +92,16 @@ class ImportBatch(Base):
             "AND precheck_stored_issues <= precheck_issue_count",
             name="precheck_counts_valid",
         ),
+        CheckConstraint(
+            "(confirmed_at IS NULL AND confirmed_by_user_id IS NULL AND confirmed_entries IS NULL) "
+            "OR (confirmed_at IS NOT NULL AND confirmed_by_user_id IS NOT NULL "
+            "AND confirmed_entries IS NOT NULL)",
+            name="confirmation_coherent",
+        ),
+        CheckConstraint(
+            "confirmed_entries IS NULL OR confirmed_entries >= 1",
+            name="confirmed_entries_valid",
+        ),
         Index("ix_accounting_import_batches_tenant_expiry", "tenant_id", "expires_at"),
     )
 
@@ -107,4 +123,31 @@ class ImportBatchIssue(Base):
         CheckConstraint("seq >= 0", name="seq_valid"),
         CheckConstraint("row_number >= 1", name="row_number_valid"),
         CheckConstraint("octet_length(code) > 0", name="code_present"),
+    )
+
+
+class ImportBatchEntry(Base):
+    """Traçabilité d'un batch confirmé : une ligne par brouillon généré.
+
+    Lien purement additif : aucune colonne ni contrainte ajoutée aux écritures.
+    La suppression d'un brouillon par son auteur emporte la ligne (CASCADE) —
+    l'annulation d'un batch ne visera que les brouillons encore présents. Un
+    brouillon ne peut appartenir qu'à un seul batch (unicité dossier + écriture).
+    """
+
+    __tablename__ = "accounting_import_entries"
+
+    batch_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("accounting_import_batches.id", ondelete="CASCADE"), primary_key=True
+    )
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"))
+    entry_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "entry_id"],
+            ["journal_entries.tenant_id", "journal_entries.id"],
+            ondelete="CASCADE",
+        ),
+        UniqueConstraint("tenant_id", "entry_id"),
     )
