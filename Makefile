@@ -122,6 +122,8 @@ contract: ## Vérifie que openapi.json et les types TS du frontend sont à jour
 e2e: export KORA_AUTH_RATE_LIMIT_PER_MINUTE = 1000
 e2e: env ## Tests de bout en bout Playwright contre la pile démarrée
 	$(COMPOSE) up -d --build --wait
+	# SEC-1 : administrateur plateforme et dossiers clients dédiés à la recette licences.
+	$(COMPOSE) run --rm api python -m kora.scripts.seed_platform_recette
 	$(COMPOSE) --profile e2e run --rm e2e
 
 secrets-scan: ## Recherche de secrets dans le dépôt (gitleaks)
