@@ -3531,6 +3531,55 @@
         "title": "FirmOut",
         "type": "object"
       },
+      "FirmPortfolioCompany": {
+        "description": "Fiche synthétique d'un dossier client, sans donnée financière.",
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "legal_name": {
+            "title": "Legal Name",
+            "type": "string"
+          },
+          "trade_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Name"
+          }
+        },
+        "required": [
+          "id",
+          "legal_name",
+          "trade_name",
+          "city",
+          "currency"
+        ],
+        "title": "FirmPortfolioCompany",
+        "type": "object"
+      },
       "FiscalYearIn": {
         "additionalProperties": false,
         "properties": {
@@ -27231,6 +27280,98 @@
           }
         ],
         "summary": "Add Firm Member",
+        "tags": [
+          "cabinets"
+        ]
+      }
+    },
+    "/api/v1/firms/{firm_id}/portfolio": {
+      "get": {
+        "operationId": "list_firm_portfolio_api_v1_firms__firm_id__portfolio_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "firm_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Firm Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FirmPortfolioCompany"
+                  },
+                  "title": "Response List Firm Portfolio Api V1 Firms  Firm Id  Portfolio Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Firm Portfolio",
         "tags": [
           "cabinets"
         ]
