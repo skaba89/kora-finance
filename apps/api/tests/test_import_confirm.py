@@ -328,3 +328,61 @@ def test_confirm_concurrents_se_serialisent_sur_le_verrou(
     # Une confirmation HTTP de plus : déjà confirmé, rien ne bouge.
     assert _confirm(client, company, batch_id).status_code == 409
     assert db.scalar(select(func.count()).select_from(JournalEntry)) == 2
+
+
+
+def test_meme_fichier_deux_dossiers_isole_tous_les_parcours(
+    db: Session, client: TestClient, make_company: MakeCompany, storage: dict[str, bytes]
+) -> None:
+    """IMP-4 : même SHA source, mais dépôts, rapports et confirmations isolés.
+
+    Un dossier ne peut ni relire ni précontrôler ni confirmer le batch d'un
+    autre ; les refus n'empêchent pas le propriétaire de terminer son import.
+    """
+    mine, other = make_company(), make_company()
+    content = _csv_deux_ecritures()
+    mine_batch = _upload(client, mine, content)
+    other_batch = _upload(client, other, content)
+    assert mine_batch != other_batch
+    assert len(storage) == 2
+
+    mine_url = URL.format(company_id=mine.id)
+    other_url = URL.format(company_id=other.id)
+    for foreign_url, foreign_headers, batch_id in (
+        (other_url, other.headers, mine_batch),
+        (mine_url, mine.headers, other_batch),
+    ):
+        assert (
+            client.post(f"{foreign_url}/{batch_id}/precheck", headers=foreign_headers).status_code
+            == 404
+        )
+        assert (
+            client.get(f"{foreign_url}/{batch_id}/precheck", headers=foreign_headers).status_code
+            == 404
+        )
+        assert (
+            client.post(f"{foreign_url}/{batch_id}/confirm", headers=foreign_headers).status_code
+            == 404
+        )
+
+    for company, batch_id in ((mine, mine_batch), (other, other_batch)):
+        own_url = URL.format(company_id=company.id)
+        precheck = client.post(f"{own_url}/{batch_id}/precheck", headers=company.headers)
+        assert precheck.status_code == 200, precheck.text
+        assert precheck.json()["valid"] is True
+        report = client.get(f"{own_url}/{batch_id}/precheck", headers=company.headers)
+        assert report.status_code == 200, report.text
+        assert report.json()["entries"] == 2
+        confirmed = _confirm(client, company, batch_id)
+        assert confirmed.status_code == 200, confirmed.text
+        assert confirmed.json()["entries"] == 2
+        assert _confirm(client, company, batch_id).status_code == 409
+
+    for company in (mine, other):
+        bind_tenant(db, company.id)
+        entries = db.execute(select(JournalEntry)).scalars().all()
+        links = db.execute(select(ImportBatchEntry)).scalars().all()
+        assert len(entries) == len(links) == 2
+        assert all(e.tenant_id == company.id and e.status == EntryStatus.DRAFT for e in entries)
+        assert all(link.tenant_id == company.id for link in links)
+        db.rollback()
