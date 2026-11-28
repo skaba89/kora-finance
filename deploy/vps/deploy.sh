@@ -23,7 +23,8 @@ fi
 # Pour une installation neuve, laisser l'administrateur créer son compte et
 # enrôler son TOTP avant la release suivante (voir docs/DEPLOIEMENT.md §6 bis).
 # Ne pas sourcer .env : il contient des secrets et des caractères spéciaux.
-if [[ -s .release ]]; then
+if [[ -s .release ]] || [[ -s releases.log ]] \
+  || docker volume inspect kora_postgres_data >/dev/null 2>&1; then
   mfa=$(grep -E '^KORA_PLATFORM_ADMIN_REQUIRE_MFA=' .env | tail -1 | cut -d= -f2- || true)
   if [[ "${mfa}" != "true" ]]; then
     echo "BLOCAGE : MFA des administrateurs plateforme non exigé pour une mise à jour." >&2
