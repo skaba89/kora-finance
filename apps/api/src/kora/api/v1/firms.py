@@ -47,6 +47,16 @@ class FirmMemberDetail(BaseModel):
     full_name: str
 
 
+class FirmPortfolioCompany(BaseModel):
+    """Fiche synthétique d'un dossier client, sans donnée financière."""
+
+    id: uuid.UUID
+    legal_name: str
+    trade_name: str | None
+    city: str | None
+    currency: str
+
+
 class AssignmentCreate(RequestBody):
     firm_membership_id: uuid.UUID
     company_id: uuid.UUID
@@ -85,6 +95,22 @@ def list_firm_members(
             full_name=r.user.full_name,
         )
         for r in firms.list_firm_members(db, user, firm_id)
+    ]
+
+
+@router.get("/{firm_id}/portfolio", responses=WRITE_ERRORS)
+def list_firm_portfolio(
+    firm_id: uuid.UUID, user: CurrentUser, db: DbSession
+) -> list[FirmPortfolioCompany]:
+    return [
+        FirmPortfolioCompany(
+            id=company.id,
+            legal_name=company.legal_name,
+            trade_name=company.trade_name,
+            city=company.city,
+            currency=company.currency,
+        )
+        for company in firms.list_firm_portfolio(db, user, firm_id)
     ]
 
 
