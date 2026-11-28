@@ -19,6 +19,20 @@ if [[ ! -f .env ]] || grep -qE '=__A_REMPLIR__$' .env; then
   exit 1
 fi
 
+# MFA obligatoire avant toute MISE À JOUR d'une installation déjà démarrée.
+# Pour une installation neuve, laisser l'administrateur créer son compte et
+# enrôler son TOTP avant la release suivante (voir docs/DEPLOIEMENT.md §6 bis).
+# Ne pas sourcer .env : il contient des secrets et des caractères spéciaux.
+if [[ -s .release ]]; then
+  mfa=$(grep -E '^KORA_PLATFORM_ADMIN_REQUIRE_MFA=' .env | tail -1 | cut -d= -f2- || true)
+  if [[ "${mfa}" != "true" ]]; then
+    echo "BLOCAGE : MFA des administrateurs plateforme non exigé pour une mise à jour." >&2
+    echo "Vérifier l'enrôlement TOTP des administrateurs, puis activer" >&2
+    echo "KORA_PLATFORM_ADMIN_REQUIRE_MFA=true dans deploy/vps/.env." >&2
+    exit 1
+  fi
+fi
+
 repo=../..
 branch=$(git -C "${repo}" rev-parse --abbrev-ref HEAD)
 if [[ "${branch}" != "main" ]]; then
