@@ -74,6 +74,10 @@ def main() -> int:
             "KORA_IMAGE_TAG=\"${previous}\" docker compose up -d --wait --remove-orphans || true",  # rollback auto
             "releases.log",                       # consignation des releases
             ".previous-release",                  # cible du rollback connue
+            "KORA_ALLOW_INITIAL_INSTALL",          # opt-in explicite première installation
+            "docker volume inspect kora_postgres_data",  # détecte les données persistées
+            "docker compose ps -aq postgres",       # refuse un conteneur arrêté
+            "PostgreSQL indisponible ou déjà initialisé",  # erreur fermée
         ],
     )
 
