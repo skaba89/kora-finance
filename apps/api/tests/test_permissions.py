@@ -330,3 +330,82 @@ def test_collaborateur_non_affecte_n_a_pas_acces(
 def test_documentation_des_permissions_a_jour() -> None:
     documented = (REPO_ROOT / "docs" / "PERMISSIONS.md").read_text(encoding="utf-8")
     assert documented == render_markdown(), "Lancer `make permissions-doc` et committer."
+
+
+def test_affectation_refuse_membre_et_dossier_d_un_autre_cabinet(
+    client: TestClient, make_user: MakeUser, make_company: MakeCompany
+) -> None:
+    """CAB-2 : une affectation ne peut traverser aucune frontière de cabinet."""
+    admin_a, admin_b = make_user(), make_user()
+    headers_a, headers_b = admin_a.headers(client), admin_b.headers(client)
+    firm_a_response = client.post(
+        "/api/v1/firms", headers=headers_a, json={"name": "Cabinet Alpha"}
+    )
+    firm_b_response = client.post("/api/v1/firms", headers=headers_b, json={"name": "Cabinet Bêta"})
+    assert firm_a_response.status_code == firm_b_response.status_code == 201
+    firm_a, firm_b = firm_a_response.json(), firm_b_response.json()
+    company_a = make_company(owner=admin_a, firm_id=firm_a["id"])
+    company_b = make_company(owner=admin_b, firm_id=firm_b["id"])
+
+    member_a, member_b = make_user(), make_user()
+    joined_a = client.post(
+        f"/api/v1/firms/{firm_a['id']}/members",
+        headers=headers_a,
+        json={"email": member_a.email, "role": "CABINET_COLLABORATEUR"},
+    )
+    joined_b = client.post(
+        f"/api/v1/firms/{firm_b['id']}/members",
+        headers=headers_b,
+        json={"email": member_b.email, "role": "CABINET_COLLABORATEUR"},
+    )
+    assert joined_a.status_code == joined_b.status_code == 201
+
+    target = f"/api/v1/firms/{firm_a['id']}/assignments"
+    # Le collaborateur appartient à un autre cabinet, même si le dossier est local.
+    foreign_member = client.post(
+        target,
+        headers=headers_a,
+        json={
+            "firm_membership_id": joined_b.json()["id"],
+            "company_id": str(company_a.id),
+        },
+    )
+    assert foreign_member.status_code == 404
+    # Le collaborateur est local, mais le dossier appartient à l'autre cabinet.
+    foreign_company = client.post(
+        target,
+        headers=headers_a,
+        json={
+            "firm_membership_id": joined_a.json()["id"],
+            "company_id": str(company_b.id),
+        },
+    )
+    assert foreign_company.status_code == 404
+    # Un administrateur étranger ne peut pas affecter dans ce cabinet.
+    foreign_admin = client.post(
+        target,
+        headers=headers_b,
+        json={
+            "firm_membership_id": joined_a.json()["id"],
+            "company_id": str(company_a.id),
+        },
+    )
+    assert foreign_admin.status_code == 404
+
+    # Les refus ne modifient pas le droit du collaborateur local.
+    denied = client.get(f"/api/v1/companies/{company_a.id}", headers=member_a.headers(client))
+    assert denied.status_code == 404
+    approved = client.post(
+        target,
+        headers=headers_a,
+        json={
+            "firm_membership_id": joined_a.json()["id"],
+            "company_id": str(company_a.id),
+        },
+    )
+    assert approved.status_code == 201, approved.text
+    accessible = client.get(f"/api/v1/companies/{company_a.id}", headers=member_a.headers(client))
+    assert accessible.status_code == 200
+    # Une affectation correcte ne donne jamais accès au dossier de B.
+    cross_tenant = client.get(f"/api/v1/companies/{company_b.id}", headers=member_a.headers(client))
+    assert cross_tenant.status_code == 404
