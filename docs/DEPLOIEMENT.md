@@ -193,6 +193,13 @@ commerciales. Pour leur imposer la double authentification (2FA) :
    doit ne renvoyer aucune ligne.
 2. Ajouter `KORA_PLATFORM_ADMIN_REQUIRE_MFA=true` dans `deploy/vps/.env`, puis redéployer.
 
+**Garde P0 :** pour toute mise à jour d'une installation possédant déjà
+`deploy/vps/.release`, `deploy.sh` bloque si cette variable n'est pas
+explicitement égale à `true`. Pour la première installation uniquement,
+l'administrateur peut créer son compte et enrôler le TOTP avant la première mise
+à jour. Ne jamais supprimer `.release` pour contourner le contrôle : consulter
+les logs de déploiement et vérifier les comptes administrateurs en base.
+
 Le droit est relu en base à chaque requête : la désactivation de la 2FA retire
 aussitôt l'accès plateforme. Les droits dans les dossiers ne sont pas concernés.
 
