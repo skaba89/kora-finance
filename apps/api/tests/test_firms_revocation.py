@@ -41,9 +41,9 @@ def test_revocation_retirer_tous_les_acces_et_preserver_l_audit(
 
     worker_headers = worker.headers(client)
     for company in (company_a, company_b):
-        assert client.get(
-            f"/api/v1/companies/{company.id}", headers=worker_headers
-        ).status_code == 200
+        assert (
+            client.get(f"/api/v1/companies/{company.id}", headers=worker_headers).status_code == 200
+        )
 
     url = f"/api/v1/firms/{firm['id']}/members/{member_id}"
     revoked = client.delete(url, headers=headers)
@@ -51,38 +51,37 @@ def test_revocation_retirer_tous_les_acces_et_preserver_l_audit(
     assert revoked.content == b""
     assert client.delete(url, headers=headers).status_code == 404
     for company in (company_a, company_b):
-        assert client.get(
-            f"/api/v1/companies/{company.id}", headers=worker_headers
-        ).status_code == 404
-    assert client.get(
-        f"/api/v1/firms/{firm['id']}/portfolio", headers=worker_headers
-    ).status_code == 404
+        assert (
+            client.get(f"/api/v1/companies/{company.id}", headers=worker_headers).status_code == 404
+        )
+    assert (
+        client.get(f"/api/v1/firms/{firm['id']}/portfolio", headers=worker_headers).status_code
+        == 404
+    )
 
     bind_tenant(db, None)
-    assert db.scalar(
-        select(FirmMembership.id).where(FirmMembership.id == uuid.UUID(member_id))
-    ) is None
-    assert db.scalars(
-        select(FirmAssignment).where(FirmAssignment.firm_membership_id == uuid.UUID(member_id))
-    ).all() == []
-    audit = db.scalar(
-        select(AuditEvent).where(AuditEvent.action == "firm.collaborator_revoked")
+    assert (
+        db.scalar(select(FirmMembership.id).where(FirmMembership.id == uuid.UUID(member_id)))
+        is None
     )
+    assert (
+        db.scalars(
+            select(FirmAssignment).where(FirmAssignment.firm_membership_id == uuid.UUID(member_id))
+        ).all()
+        == []
+    )
+    audit = db.scalar(select(AuditEvent).where(AuditEvent.action == "firm.collaborator_revoked"))
     assert audit is not None
     assert audit.payload["user_id"] == str(worker.id)
     assert audit.payload["membership_id"] == member_id
 
 
-def test_revocation_refuse_admin_et_exterieurs(
-    client: TestClient, make_user: MakeUser
-) -> None:
+def test_revocation_refuse_admin_et_exterieurs(client: TestClient, make_user: MakeUser) -> None:
     admin, other_admin, worker = make_user(), make_user(), make_user()
     headers = admin.headers(client)
     firm = client.post("/api/v1/firms", headers=headers, json={"name": "Alpha"}).json()
     other_headers = other_admin.headers(client)
-    other_firm = client.post(
-        "/api/v1/firms", headers=other_headers, json={"name": "Beta"}
-    ).json()
+    other_firm = client.post("/api/v1/firms", headers=other_headers, json={"name": "Beta"}).json()
     member = client.post(
         f"/api/v1/firms/{firm['id']}/members",
         headers=headers,
@@ -93,18 +92,25 @@ def test_revocation_refuse_admin_et_exterieurs(
     url = f"/api/v1/firms/{firm['id']}/members/{member_id}"
     assert client.delete(url, headers=other_headers).status_code == 404
     assert client.delete(url, headers=worker.headers(client)).status_code == 403
-    assert client.delete(
-        f"/api/v1/firms/{other_firm['id']}/members/{member_id}",
-        headers=other_headers,
-    ).status_code == 404
-    assert client.delete(
-        f"/api/v1/firms/{firm['id']}/members/{uuid.uuid4()}", headers=headers
-    ).status_code == 404
+    assert (
+        client.delete(
+            f"/api/v1/firms/{other_firm['id']}/members/{member_id}",
+            headers=other_headers,
+        ).status_code
+        == 404
+    )
+    assert (
+        client.delete(
+            f"/api/v1/firms/{firm['id']}/members/{uuid.uuid4()}", headers=headers
+        ).status_code
+        == 404
+    )
 
     members = client.get(f"/api/v1/firms/{firm['id']}/members", headers=headers).json()
     admin_id = next(row["id"] for row in members if row["role"] == "CABINET_ADMIN")
-    assert client.delete(
-        f"/api/v1/firms/{firm['id']}/members/{admin_id}", headers=headers
-    ).status_code == 422
+    assert (
+        client.delete(f"/api/v1/firms/{firm['id']}/members/{admin_id}", headers=headers).status_code
+        == 422
+    )
     # Aucun des refus précédents ne supprime le collaborateur.
     assert client.delete(url, headers=headers).status_code == 204
