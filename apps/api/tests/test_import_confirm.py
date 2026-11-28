@@ -330,7 +330,6 @@ def test_confirm_concurrents_se_serialisent_sur_le_verrou(
     assert db.scalar(select(func.count()).select_from(JournalEntry)) == 2
 
 
-
 def test_meme_fichier_deux_dossiers_isole_tous_les_parcours(
     db: Session, client: TestClient, make_company: MakeCompany, storage: dict[str, bytes]
 ) -> None:
