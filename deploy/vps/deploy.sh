@@ -69,7 +69,21 @@ if [[ -n "$(docker compose ps -q postgres 2>/dev/null)" ]] \
   echo "Sauvegarde pré-migration (vérifiée)…"
   KORA_IMAGE_TAG="${previous:-prod}" ./backup.sh
 else
-  echo "Première installation : postgres ne tourne pas, sauvegarde pré-migration passée (aucune donnée existante)." >&2
+  # Échec fermé : une panne PostgreSQL n'est JAMAIS la preuve d'une base vide.
+  # La première installation exige un opt-in explicite ET aucune trace d'installation.
+  # Ne pas utiliser --sans-git pour contourner ce contrôle.
+  if [[ "${KORA_ALLOW_INITIAL_INSTALL:-0}" == "1" ]] \
+    && [[ ! -s .release ]] \
+    && [[ ! -s releases.log ]] \
+    && [[ -z "$(docker compose ps -aq postgres 2>/dev/null)" ]] \
+    && ! docker volume inspect kora_postgres_data >/dev/null 2>&1; then
+    echo "Première installation explicitement autorisée : aucune base ni volume existant."
+  else
+    echo "BLOCAGE : PostgreSQL indisponible ou déjà initialisé ; sauvegarde obligatoire." >&2
+    echo "Vérifier la base et restaurer son fonctionnement avant de déployer." >&2
+    echo "Première installation neuve uniquement : KORA_ALLOW_INITIAL_INSTALL=1 ./deploy.sh" >&2
+    exit 1
+  fi
 fi
 
 # 3. Bascule : migrations puis attente des healthchecks. En cas d'échec (migration
