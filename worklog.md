@@ -2650,3 +2650,29 @@ numéroter automatiquement.
   `KORA_EMAIL_BACKEND=memory` (le `.env` de recette reste `disabled`).
 
 Suivi : `AUDIT_SUIVI_20261127C.md` (maturité 85/100 ; IMP-3 déverrouillé).
+
+## IMP-4 du 2026-11-28 (référence `6642a26`)
+
+Isolation inter-entreprises du pipeline d'import prouvée de bout en bout
+(#217, branche `test/imp4-import-cross-tenant-end-to-end`). Le même fichier
+(SHA identique) déposé dans deux dossiers ne traverse jamais la frontière :
+dépôt, précontrôle POST/GET et confirmation renvoient 404 au voisin, sans
+jamais entraver le parcours du propriétaire (200 puis 409 au second appel).
+
+- Test unique volontairement complet dans `test_import_confirm.py`
+  (+58 lignes, aucun code produit modifié) : ids de batches et objets de
+  stockage distincts malgré le SHA identique ; refus 404 croisés des trois
+  routes (`precheck` POST/GET, `confirm`) dans les deux sens ; parcours
+  complet de chaque dossier (précontrôle 200 `valid:true`, rapport 200
+  `entries=2`, confirmation 200 `entries=2`, idempotence 409) ; sous RLS de
+  chaque tenant, exactement 2 écritures `DRAFT` + 2 liens de traçabilité au
+  bon `tenant_id`.
+- Premier tour de CI 8/9 : échec `ruff format --check` (trois lignes vides
+  avant le test), corrigé par `89f85e0` (une ligne supprimée) vérifié en
+  local avec les outils du dépôt (ruff 301 fichiers, mypy 266). Second tour
+  **9/9 vert** (run `46119608278`), fusion ensuite.
+- Recette sans Docker : après recyclage du bac à sable, `pgdata` réanimé en
+  recréant les répertoires runtime — dont `pg_logical/snapshots` et
+  `pg_logical/mappings`, nouveaux pièges du copier-coller de `pgdata`.
+
+Suivi : `AUDIT_SUIVI_20261128.md` (maturité 86/100 ; reste IMP-3 puis CAB-1).
