@@ -2629,7 +2629,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List Firm Members */
+        get: operations["list_firm_members_api_v1_firms__firm_id__members_get"];
         put?: never;
         /** Add Firm Member */
         post: operations["add_firm_member_api_v1_firms__firm_id__members_post"];
@@ -4221,6 +4222,27 @@ export interface components {
             /** Email */
             email: string;
             role: components["schemas"]["Role"];
+        };
+        /**
+         * FirmMemberDetail
+         * @description Membre de cabinet avec les coordonnées utiles à l'écran d'affectation.
+         */
+        FirmMemberDetail: {
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            role: components["schemas"]["Role"];
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
         };
         /** FirmMemberOut */
         FirmMemberOut: {
@@ -17580,6 +17602,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssignmentOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_firm_members_api_v1_firms__firm_id__members_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                firm_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FirmMemberDetail"][];
                 };
             };
             /** @description Unauthorized */
