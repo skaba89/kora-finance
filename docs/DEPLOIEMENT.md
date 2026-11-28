@@ -95,8 +95,12 @@ Chaque déploiement est une **release identifiée** (KF-11) :
 
 1. **Pré-vols** — `.env` complet, branche `main`, **copie git propre** (aucune
    modification suivie non commitée), avance `--ff-only` sur `origin/main`. La
-   protection de branche n'accepte qu'une PR verte : le commit déployé est exactement
-   un commit validé par la CI.
+   vérification du SHA local contre le SHA distant réel de `origin/main`,
+   également avec `--sans-git`. Une divergence ou l'impossibilité de joindre
+   GitHub bloque la publication. **Attention :** cette égalité de SHA ne prouve
+   pas à elle seule la réussite de la CI. La protection de `main` par une règle
+   GitHub imposant le statut `CI / Résultat` et la revue des PR est indispensable,
+   et doit être configurée par un administrateur du dépôt.
 2. **Release** — les images sont construites et étiquetées par le SHA court du commit
    (`kora-api:<sha>`, `kora-web:<sha>`, variable `KORA_IMAGE_TAG`) : l'alias `:prod`
    n'est plus écrasé avant la bascule, la pile en place continue de tourner sur ses

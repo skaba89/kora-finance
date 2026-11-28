@@ -67,6 +67,9 @@ def main() -> int:
         [
             "rev-parse --short=12 HEAD",          # release identifiée par SHA
             "--ff-only",                          # avance depuis origin/main (CI verte)
+            "ls-remote --exit-code origin refs/heads/main",  # SHA distant frais
+            'if [[ "${local_head}" != "${remote_head}" ]]; then',  # aucun commit local
+            "impossible de vérifier origin/main",  # échec fermé si hors réseau
             "status --porcelain --untracked-files=no",  # copie git propre
             "./backup.sh",                        # sauvegarde pré-migration imposée
             "KORA_IMAGE_TAG=\"${previous:-prod}\" ./backup.sh",  # backup sur l'image en cours
