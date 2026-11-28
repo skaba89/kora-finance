@@ -9,6 +9,7 @@ from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
 from kora.accounting.entries import Actor
+from kora.accounting.import_cancel import cancel_staged_import
 from kora.accounting.import_confirm import confirm_staged_import
 from kora.accounting.import_service import precheck_and_persist, read_precheck_report
 from kora.accounting.import_storage import stage_import
@@ -84,6 +85,14 @@ class ImportConfirmationOut(BaseModel):
     lines: int
     debit: Money
     credit: Money
+
+
+class ImportCancellationOut(BaseModel):
+    """Résultat d'une annulation : des comptes, jamais le contenu du fichier."""
+
+    cancelled_at: datetime
+    entries_removed: int
+    lines_removed: int
 
 
 async def _read_body(request: Request) -> bytes:
@@ -188,4 +197,25 @@ def confirm_accounting_import(
         lines=confirmation.lines,
         debit=confirmation.debit,
         credit=confirmation.credit,
+    )
+
+
+@router.post("/{batch_id}/cancel", responses=_ERRORS)
+def cancel_accounting_import(
+    tenant: EntriesWrite, batch_id: uuid.UUID, ctx: Ctx
+) -> ImportCancellationOut:
+    """Annule définitivement un batch non validé : un dépôt simple disparaît, un
+    batch confirmé voit ses brouillons encore présents supprimés. Toute écriture
+    déjà validée interdit l'annulation (409) : corrigez-la par contre-passation.
+    Le même fichier peut ensuite être redéposé sur un batch neuf."""
+    cancellation = cancel_staged_import(
+        tenant.user,
+        tenant.company_id,
+        batch_id,
+        actor=Actor(tenant.company_id, tenant.user.id, ctx),
+    )
+    return ImportCancellationOut(
+        cancelled_at=cancellation.cancelled_at,
+        entries_removed=cancellation.entries_removed,
+        lines_removed=cancellation.lines_removed,
     )
