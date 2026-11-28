@@ -348,6 +348,12 @@ export const en: typeof fr = {
     confirmedHint: "Confirmed on",
     lines: "Accounting lines",
     seeEntries: "View entries",
+    cancel: "Cancel this upload",
+    cancelPending: "Cancelling…",
+    cancelHint: "Permanently deletes the upload and the drafts still present. A validated entry prevents cancellation: correct it by reversal instead.",
+    cancelledTitle: "Upload cancelled",
+    cancelledHint: "The uploaded file and any drafts have been deleted. The corrected file can be uploaded again.",
+    cancelledDrafts: "Drafts deleted",
   },
   entries: {
     title: "Entries",

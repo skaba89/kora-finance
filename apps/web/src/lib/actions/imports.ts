@@ -30,6 +30,32 @@ export type ImportConfirmState =
       confirmation: components["schemas"]["ImportConfirmationOut"];
     };
 
+export type ImportCancelState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | {
+      status: "success";
+      cancellation: components["schemas"]["ImportCancellationOut"];
+    };
+
+export async function cancelImportAction(
+  companyId: string,
+  batchId: string,
+): Promise<ImportCancelState> {
+  const t = await actionDictionary();
+  const client = await api();
+  // Annulation definitive : le depot disparait, les brouillons encore presents
+  // sont supprimes ; une ecriture deja validee est refusee (409).
+  const cancelled = await client.POST(
+    "/api/v1/companies/{company_id}/accounting-imports/{batch_id}/cancel",
+    { params: { path: { company_id: companyId, batch_id: batchId } } },
+  );
+  if (!cancelled.response.ok || !cancelled.data) {
+    return { status: "error", message: toApiError(cancelled.error, t.common.unexpectedError).detail };
+  }
+  return { status: "success", cancellation: cancelled.data };
+}
+
 export async function confirmImportAction(
   companyId: string,
   batchId: string,

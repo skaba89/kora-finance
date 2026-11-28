@@ -4,9 +4,10 @@ import { useState, useTransition } from "react";
 import { useActionState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ImportCancelSection } from "@/components/ledger/import-cancel-section";
 import { ImportConfirmSection } from "@/components/ledger/import-confirm-section";
 import { ImportIssuesView } from "@/components/ledger/import-issues-view";
-import type { ImportConfirmState, ImportIssuesPage, ImportState } from "@/lib/actions/imports";
+import type { ImportCancelState, ImportConfirmState, ImportIssuesPage, ImportState } from "@/lib/actions/imports";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import type { Locale } from "@/lib/i18n/config";
 import type { fr } from "@/lib/i18n/fr";
@@ -15,11 +16,13 @@ import type { components } from "@/lib/api/schema";
 type IssueOut = components["schemas"]["ImportIssueOut"];
 type ReportOut = components["schemas"]["ImportReportOut"];
 type ConfirmationOut = components["schemas"]["ImportConfirmationOut"];
+type CancellationOut = components["schemas"]["ImportCancellationOut"];
 
-export function ImportPrecheck({ action, loadMore, confirm, companyId, labels: t, locale }: {
+export function ImportPrecheck({ action, loadMore, confirm, cancel, companyId, labels: t, locale }: {
   action: (state: ImportState, data: FormData) => Promise<ImportState>;
   loadMore: (batchId: string, offset: number) => Promise<ImportIssuesPage>;
   confirm: (batchId: string) => Promise<ImportConfirmState>;
+  cancel: (batchId: string) => Promise<ImportCancelState>;
   companyId: string;
   labels: typeof fr.imports;
   locale: Locale;
@@ -32,6 +35,9 @@ export function ImportPrecheck({ action, loadMore, confirm, companyId, labels: t
   const [confirmation, setConfirmation] = useState<ConfirmationOut | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [confirming, startConfirm] = useTransition();
+  const [cancellation, setCancellation] = useState<CancellationOut | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelling, startCancel] = useTransition();
 
   // Ajustement de state pendant le rendu (pattern React) : un nouveau rapport
   // de précontrôle repart d'une page vierge, sans effet ni rendu supplémentaire.
@@ -41,6 +47,8 @@ export function ImportPrecheck({ action, loadMore, confirm, companyId, labels: t
     setExtra([]);
     setConfirmation(null);
     setConfirmError(null);
+    setCancellation(null);
+    setCancelError(null);
   }
 
   const shown = report ? [...report.issues, ...extra] : [];
@@ -64,6 +72,18 @@ export function ImportPrecheck({ action, loadMore, confirm, companyId, labels: t
         return;
       }
       if (result.status === "success") setConfirmation(result.confirmation);
+    });
+  };
+
+  const cancelNow = () => {
+    if (!batchId) return;
+    startCancel(async () => {
+      const result = await cancel(batchId);
+      if (result.status === "error") {
+        setCancelError(result.message);
+        return;
+      }
+      if (result.status === "success") setCancellation(result.cancellation);
     });
   };
 
@@ -99,7 +119,7 @@ export function ImportPrecheck({ action, loadMore, confirm, companyId, labels: t
         onLoadMore={loadNextPage}
         labels={t}
       />
-      {report.valid && <ImportConfirmSection
+      {report.valid && cancellation === null && <ImportConfirmSection
         confirmation={confirmation}
         error={confirmError}
         confirming={confirming}
@@ -108,6 +128,13 @@ export function ImportPrecheck({ action, loadMore, confirm, companyId, labels: t
         labels={t}
         locale={locale}
       />}
+      <ImportCancelSection
+        cancellation={cancellation}
+        error={cancelError}
+        cancelling={cancelling}
+        onCancel={cancelNow}
+        labels={t}
+      />
     </section>}
   </div>;
 }
