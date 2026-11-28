@@ -4106,6 +4106,31 @@
         "title": "ImportBatchOut",
         "type": "object"
       },
+      "ImportCancellationOut": {
+        "description": "Résultat d'une annulation : des comptes, jamais le contenu du fichier.",
+        "properties": {
+          "cancelled_at": {
+            "format": "date-time",
+            "title": "Cancelled At",
+            "type": "string"
+          },
+          "entries_removed": {
+            "title": "Entries Removed",
+            "type": "integer"
+          },
+          "lines_removed": {
+            "title": "Lines Removed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cancelled_at",
+          "entries_removed",
+          "lines_removed"
+        ],
+        "title": "ImportCancellationOut",
+        "type": "object"
+      },
       "ImportConfirmationOut": {
         "description": "Résultat d'une confirmation : des comptes, jamais le contenu du fichier.",
         "properties": {
@@ -11768,6 +11793,127 @@
           }
         ],
         "summary": "Upload Accounting Import",
+        "tags": [
+          "imports"
+        ]
+      }
+    },
+    "/api/v1/companies/{company_id}/accounting-imports/{batch_id}/cancel": {
+      "post": {
+        "description": "Annule définitivement un batch non validé : un dépôt simple disparaît, un\nbatch confirmé voit ses brouillons encore présents supprimés. Toute écriture\ndéjà validée interdit l'annulation (409) : corrigez-la par contre-passation.\nLe même fichier peut ensuite être redéposé sur un batch neuf.",
+        "operationId": "cancel_accounting_import_api_v1_companies__company_id__accounting_imports__batch_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batch_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Batch Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Identifiant du dossier d'entreprise",
+            "in": "path",
+            "name": "company_id",
+            "required": true,
+            "schema": {
+              "description": "Identifiant du dossier d'entreprise",
+              "format": "uuid",
+              "title": "Company Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportCancellationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Accounting Import",
         "tags": [
           "imports"
         ]
