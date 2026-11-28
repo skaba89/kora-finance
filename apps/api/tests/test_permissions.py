@@ -341,9 +341,7 @@ def test_affectation_refuse_membre_et_dossier_d_un_autre_cabinet(
     firm_a_response = client.post(
         "/api/v1/firms", headers=headers_a, json={"name": "Cabinet Alpha"}
     )
-    firm_b_response = client.post(
-        "/api/v1/firms", headers=headers_b, json={"name": "Cabinet Bêta"}
-    )
+    firm_b_response = client.post("/api/v1/firms", headers=headers_b, json={"name": "Cabinet Bêta"})
     assert firm_a_response.status_code == firm_b_response.status_code == 201
     firm_a, firm_b = firm_a_response.json(), firm_b_response.json()
     company_a = make_company(owner=admin_a, firm_id=firm_a["id"])
@@ -395,9 +393,7 @@ def test_affectation_refuse_membre_et_dossier_d_un_autre_cabinet(
     assert foreign_admin.status_code == 404
 
     # Les refus ne modifient pas le droit du collaborateur local.
-    denied = client.get(
-        f"/api/v1/companies/{company_a.id}", headers=member_a.headers(client)
-    )
+    denied = client.get(f"/api/v1/companies/{company_a.id}", headers=member_a.headers(client))
     assert denied.status_code == 404
     approved = client.post(
         target,
@@ -408,12 +404,8 @@ def test_affectation_refuse_membre_et_dossier_d_un_autre_cabinet(
         },
     )
     assert approved.status_code == 201, approved.text
-    accessible = client.get(
-        f"/api/v1/companies/{company_a.id}", headers=member_a.headers(client)
-    )
+    accessible = client.get(f"/api/v1/companies/{company_a.id}", headers=member_a.headers(client))
     assert accessible.status_code == 200
     # Une affectation correcte ne donne jamais accès au dossier de B.
-    cross_tenant = client.get(
-        f"/api/v1/companies/{company_b.id}", headers=member_a.headers(client)
-    )
+    cross_tenant = client.get(f"/api/v1/companies/{company_b.id}", headers=member_a.headers(client))
     assert cross_tenant.status_code == 404
