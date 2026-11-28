@@ -56,5 +56,7 @@ def test_portefeuille_admin_et_collaborateur_sont_isoles(
     # Les dossiers des autres cabinets ne sont jamais retournés.
     assert str(outsider.id) not in {row["id"] for row in portfolio.json()}
     assert client.get(url, headers=headers_b).status_code == 404
-    assert client.get(f"/api/v1/firms/{firm_b['id']}/portfolio", headers=headers_worker).status_code == 404
-    assert client.get(f"/api/v1/firms/{uuid.uuid4()}/portfolio", headers=headers_a).status_code == 404
+    other_url = f"/api/v1/firms/{firm_b['id']}/portfolio"
+    missing_url = f"/api/v1/firms/{uuid.uuid4()}/portfolio"
+    assert client.get(other_url, headers=headers_worker).status_code == 404
+    assert client.get(missing_url, headers=headers_a).status_code == 404
