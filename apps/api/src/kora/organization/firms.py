@@ -91,6 +91,33 @@ def list_firm_members(session: Session, user: User, firm_id: uuid.UUID) -> list[
     return [FirmMemberRow(membership, member) for membership, member in rows]
 
 
+def list_firm_portfolio(session: Session, user: User, firm_id: uuid.UUID) -> list[Company]:
+    """Dossiers du cabinet visibles selon le rôle, sans détail comptable.
+
+    Administrateur : tous les dossiers du cabinet. Collaborateur : seulement
+    ceux dont l'affectation est active. Non-membre : 404, sans divulgation.
+    """
+    membership = session.execute(
+        select(FirmMembership).where(
+            FirmMembership.firm_id == firm_id, FirmMembership.user_id == user.id
+        )
+    ).scalar_one_or_none()
+    if membership is None:
+        raise NotFoundError("Cabinet introuvable.")
+    if membership.role == Role.CABINET_ADMIN:
+        query = select(Company).where(Company.firm_id == firm_id)
+    else:
+        query = (
+            select(Company)
+            .join(FirmAssignment, FirmAssignment.company_id == Company.id)
+            .where(
+                Company.firm_id == firm_id,
+                FirmAssignment.firm_membership_id == membership.id,
+            )
+        )
+    return list(session.scalars(query.order_by(Company.legal_name, Company.id)).all())
+
+
 def _require_firm_admin(session: Session, user: User, firm_id: uuid.UUID) -> Firm:
     role = session.execute(
         select(FirmMembership.role).where(
