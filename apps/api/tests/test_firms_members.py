@@ -65,9 +65,8 @@ def test_collaborateur_ne_peut_pas_lister_les_membres(
     )
     assert added.status_code == 201, added.text
 
-    res = client.get(
-        f"/api/v1/firms/{firm['id']}/members", headers=collaborateur.headers(client)
-    )
+    collaborator_headers = collaborateur.headers(client)
+    res = client.get(f"/api/v1/firms/{firm['id']}/members", headers=collaborator_headers)
     assert res.status_code == 403
     assert res.json()["detail"] == "Action réservée aux administrateurs du cabinet."
 
