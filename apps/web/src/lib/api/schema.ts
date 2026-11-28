@@ -2640,6 +2640,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/firms/{firm_id}/portfolio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Firm Portfolio */
+        get: operations["list_firm_portfolio_api_v1_firms__firm_id__portfolio_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invitations/accept": {
         parameters: {
             query?: never;
@@ -4273,6 +4290,25 @@ export interface components {
             /** Name */
             name: string;
             role: components["schemas"]["Role"];
+        };
+        /**
+         * FirmPortfolioCompany
+         * @description Fiche synthétique d'un dossier client, sans donnée financière.
+         */
+        FirmPortfolioCompany: {
+            /** City */
+            city: string | null;
+            /** Currency */
+            currency: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Legal Name */
+            legal_name: string;
+            /** Trade Name */
+            trade_name: string | null;
         };
         /** FiscalYearIn */
         FiscalYearIn: {
@@ -17740,6 +17776,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FirmMemberOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_firm_portfolio_api_v1_firms__firm_id__portfolio_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                firm_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FirmPortfolioCompany"][];
                 };
             };
             /** @description Unauthorized */
