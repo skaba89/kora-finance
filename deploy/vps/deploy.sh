@@ -52,6 +52,22 @@ if [[ "${1:-}" != "--sans-git" ]]; then
   git -C "${repo}" fetch --quiet origin main
   git -C "${repo}" merge --ff-only --quiet origin/main
 fi
+# Ne jamais publier un commit local différent de la branche distante main.
+# Cette vérification s'applique aussi à --sans-git : ce mode saute la fusion,
+# mais n'autorise ni commit local non publié ni branche distante non vérifiable.
+# La protection GitHub (PR + CI requises) reste une condition externe impérative.
+local_head=$(git -C "${repo}" rev-parse HEAD)
+if ! remote_head=$(git -C "${repo}" ls-remote --exit-code origin refs/heads/main); then
+  echo "BLOCAGE : impossible de vérifier origin/main auprès du serveur Git." >&2
+  exit 1
+fi
+remote_head=${remote_head%%[[:space:]]*}
+if [[ "${local_head}" != "${remote_head}" ]]; then
+  echo "BLOCAGE : le commit local ne correspond pas à origin/main." >&2
+  echo "Synchroniser proprement main et vérifier la CI avant tout déploiement." >&2
+  exit 1
+fi
+
 release=$(git -C "${repo}" rev-parse --short=12 HEAD)
 echo "Version : $(git -C "${repo}" log -1 --format='%h %s')"
 echo "Release : ${release}"
