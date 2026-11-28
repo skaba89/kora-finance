@@ -37,6 +37,16 @@ class FirmMemberOut(BaseModel):
     role: Role
 
 
+class FirmMemberDetail(BaseModel):
+    """Membre de cabinet avec les coordonnées utiles à l'écran d'affectation."""
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    role: Role
+    email: str
+    full_name: str
+
+
 class AssignmentCreate(RequestBody):
     firm_membership_id: uuid.UUID
     company_id: uuid.UUID
@@ -59,6 +69,22 @@ def list_firms(user: CurrentUser, db: DbSession) -> list[FirmOut]:
     return [
         FirmOut(id=r.firm.id, name=r.firm.name, role=r.role, created_at=r.firm.created_at)
         for r in firms.list_firms(db, user)
+    ]
+
+
+@router.get("/{firm_id}/members", responses=WRITE_ERRORS)
+def list_firm_members(
+    firm_id: uuid.UUID, user: CurrentUser, db: DbSession
+) -> list[FirmMemberDetail]:
+    return [
+        FirmMemberDetail(
+            id=r.membership.id,
+            user_id=r.membership.user_id,
+            role=Role(r.membership.role),
+            email=r.user.email,
+            full_name=r.user.full_name,
+        )
+        for r in firms.list_firm_members(db, user, firm_id)
     ]
 
 

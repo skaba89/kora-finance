@@ -25,6 +25,12 @@ class FirmRow:
     role: Role
 
 
+@dataclass(frozen=True)
+class FirmMemberRow:
+    membership: FirmMembership
+    user: User
+
+
 def _platform_audit(
     session: Session,
     user: User,
@@ -66,6 +72,23 @@ def list_firms(session: Session, user: User) -> list[FirmRow]:
         .order_by(Firm.name)
     ).all()
     return [FirmRow(firm, Role(role)) for firm, role in rows]
+
+
+def list_firm_members(session: Session, user: User, firm_id: uuid.UUID) -> list[FirmMemberRow]:
+    """Liste les membres d'un cabinet, lecture réservée aux administrateurs.
+
+    L'écran d'affectation a besoin du courriel et du nom complet pour proposer
+    les collaborateurs ; l'ajout et l'affectation restent les seules écritures.
+    """
+    firm = _require_firm_admin(session, user, firm_id)
+    rows = session.execute(
+        select(FirmMembership, User)
+        .join(User, User.id == FirmMembership.user_id)
+        .where(FirmMembership.firm_id == firm.id)
+        # Administrateurs d'abord, puis collaborateurs par nom : ordre stable.
+        .order_by(FirmMembership.role, User.full_name, User.email)
+    ).all()
+    return [FirmMemberRow(membership, member) for membership, member in rows]
 
 
 def _require_firm_admin(session: Session, user: User, firm_id: uuid.UUID) -> Firm:
