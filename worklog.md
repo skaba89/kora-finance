@@ -2676,3 +2676,39 @@ jamais entraver le parcours du propriétaire (200 puis 409 au second appel).
   `pg_logical/mappings`, nouveaux pièges du copier-coller de `pgdata`.
 
 Suivi : `AUDIT_SUIVI_20261128.md` (maturité 86/100 ; reste IMP-3 puis CAB-1).
+
+## 2026-11-28 — IMP-3 : annulation d'un batch d'import non validé (#219 + #220)
+
+Ref `5fad681` (main après fusion de #220 ; #219 fusionnée en `a944b29`,
+base `f5df450`). Branche `feature/import-batch-cancel` puis
+`feature/import-cancel-ui`.
+
+- **Backend (#219)** : route `POST .../accounting-imports/{batch_id}/cancel`
+  et service `import_cancel` — dépôt simple effacé (référence + objet
+  chiffré, capacité libérée) ; batch confirmé : seuls les brouillons encore
+  présents et encore `DRAFT` partent, lignes en CASCADE, pièces jointes
+  détachées puis purgées après commit ; écriture validée → 409 intégral
+  (contre-passation obligatoire) ; verrou de ligne du batch (sérialisation
+  avec la confirmation, prouvée via `pg_locks`) ; reprise immédiate du même
+  SHA sur un batch neuf ; audit `import.cancelled` (brouillons, lignes,
+  confirmés) ; idempotence par disparition (404 ensuite). Aucune migration.
+- **Contrat** : premier tour CI 8/9 — « Contrat d'API à jour » rouge comme
+  attendu (nouvelle route) ; `openapi.json` + `schema.ts` régénérés
+  (`f71087f`), second tour **9/9 vert**.
+- **UI/E2E (#220)** : action serveur `cancelImportAction`, composant
+  `ImportCancelSection` (avertissement définitif, bandeau compteur après
+  annulation, 409 en alerte réessayable), libellés FR/EN, 5 tests vitest,
+  parcours E2E complet (confirmer → annuler → journal vide → redéposer le
+  même fichier → reconfirmer). Premier tour **9/9 vert**, fusion.
+- **Tests backend** : 7 nouveaux (`test_import_cancel.py`) — dépôt libéré,
+  brouillons supprimés (2 écritures / 4 lignes), refus après validation
+  (rien d'entamé), reprise, isolation dossiers/lecteur, inconnu/expiré 404,
+  sérialisation verrou. Local : ruff 303, mypy 268, pytest ciblé 58 verts
+  (imports) + 88 verts (voisinage partagé) ; suite intégrale hors fenêtre
+  du bac à sable, portée par le job API de la CI (couverture ≥ 90 %).
+- Recette : `moto_server` lent à se lier (attente robuste ajoutée au
+  script) ; cache d'identité SQLAlchemy dans un test (statut modifié hors
+  session → `expire_all()` avant relecture).
+
+Suivi : `AUDIT_SUIVI_20261128B.md` (maturité 87/100 ; reste CAB-1 puis
+CAB-2 ; PROD-1 attend l'autorisation opérateur).
