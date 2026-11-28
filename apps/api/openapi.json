@@ -27285,6 +27285,30 @@
         ]
       }
     },
+    "/api/v1/firms/{firm_id}/members/{membership_id}": {
+      "delete": {
+        "operationId": "revoke_firm_collaborator_api_v1_firms__firm_id__members__membership_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "firm_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Firm Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Membership Id",
+              "type": "string"
+            }
+          }
     "/api/v1/firms/{firm_id}/portfolio": {
       "get": {
         "operationId": "list_firm_portfolio_api_v1_firms__firm_id__portfolio_get",
