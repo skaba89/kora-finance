@@ -211,3 +211,40 @@ def assign_collaborator(
     )
     session.commit()
     return assignment
+
+
+def revoke_firm_collaborator(
+    session: Session,
+    user: User,
+    firm_id: uuid.UUID,
+    membership_id: uuid.UUID,
+    ctx: RequestContext,
+) -> None:
+    """Retire un collaborateur et ses affectations, de manière atomique.
+
+    La contrainte FK CASCADE supprime les affectations à tous les dossiers.
+    Un administrateur ne peut pas être supprimé via cette route, afin de ne
+    jamais laisser un cabinet sans administrateur par accident.
+    """
+    firm = _require_firm_admin(session, user, firm_id)
+    membership = session.scalar(
+        select(FirmMembership)
+        .where(FirmMembership.firm_id == firm.id, FirmMembership.id == membership_id)
+        .with_for_update()
+    )
+    if membership is None:
+        raise NotFoundError("Collaborateur introuvable dans ce cabinet.")
+    if membership.role != Role.CABINET_COLLABORATEUR:
+        raise BusinessRuleError("Seuls les collaborateurs peuvent être retirés.")
+    removed_user_id = membership.user_id
+    session.delete(membership)
+    session.flush()
+    _platform_audit(
+        session,
+        user,
+        action="firm.collaborator_revoked",
+        entity_id=firm.id,
+        payload={"user_id": str(removed_user_id), "membership_id": str(membership_id)},
+        ctx=ctx,
+    )
+    session.commit()

@@ -27285,6 +27285,97 @@
         ]
       }
     },
+    "/api/v1/firms/{firm_id}/members/{membership_id}": {
+      "delete": {
+        "operationId": "revoke_firm_collaborator_api_v1_firms__firm_id__members__membership_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "firm_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Firm Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Membership Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Firm Collaborator",
+        "tags": [
+          "cabinets"
+        ]
+      }
+    },
     "/api/v1/firms/{firm_id}/portfolio": {
       "get": {
         "operationId": "list_firm_portfolio_api_v1_firms__firm_id__portfolio_get",
