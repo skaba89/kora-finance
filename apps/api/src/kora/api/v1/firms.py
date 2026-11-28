@@ -139,3 +139,18 @@ def assign_collaborator(
         firm_membership_id=assignment.firm_membership_id,
         company_id=assignment.company_id,
     )
+
+
+@router.delete(
+    "/{firm_id}/members/{membership_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=WRITE_ERRORS,
+)
+def revoke_firm_collaborator(
+    firm_id: uuid.UUID,
+    membership_id: uuid.UUID,
+    user: CurrentUser,
+    db: DbSession,
+    ctx: Ctx,
+) -> None:
+    firms.revoke_firm_collaborator(db, user, firm_id, membership_id, ctx)
