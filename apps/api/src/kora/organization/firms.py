@@ -91,9 +91,7 @@ def list_firm_members(session: Session, user: User, firm_id: uuid.UUID) -> list[
     return [FirmMemberRow(membership, member) for membership, member in rows]
 
 
-def list_firm_portfolio(
-    session: Session, user: User, firm_id: uuid.UUID
-) -> list[Company]:
+def list_firm_portfolio(session: Session, user: User, firm_id: uuid.UUID) -> list[Company]:
     """Dossiers du cabinet visibles selon le rôle, sans détail comptable.
 
     Administrateur : tous les dossiers du cabinet. Collaborateur : seulement
