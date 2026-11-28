@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { ImportPrecheck } from "@/components/ledger/import-precheck";
-import { confirmImportAction, loadMoreIssuesAction, precheckImportAction } from "@/lib/actions/imports";
+import { cancelImportAction, confirmImportAction, loadMoreIssuesAction, precheckImportAction } from "@/lib/actions/imports";
 import { can, getCompany } from "@/lib/dal";
 import { getDictionary } from "@/lib/i18n/server";
 
@@ -17,6 +17,7 @@ export default async function ImportPage({ params }: { params: Promise<{ company
       action={precheckImportAction.bind(null, companyId)}
       loadMore={loadMoreIssuesAction.bind(null, companyId)}
       confirm={confirmImportAction.bind(null, companyId)}
+      cancel={cancelImportAction.bind(null, companyId)}
       companyId={companyId}
       labels={t.imports}
       locale={locale}

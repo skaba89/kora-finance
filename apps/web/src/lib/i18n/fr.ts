@@ -347,6 +347,12 @@ export const fr = {
     confirmedHint: "Confirmé le",
     lines: "Lignes comptables",
     seeEntries: "Voir les écritures",
+    cancel: "Annuler ce dépôt",
+    cancelPending: "Annulation en cours…",
+    cancelHint: "Supprime définitivement le dépôt et les brouillons encore présents. Une écriture déjà validée interdit l’annulation : corrigez-la par contre-passation.",
+    cancelledTitle: "Dépôt annulé",
+    cancelledHint: "Le fichier déposé et les brouillons éventuels ont été supprimés. Le même fichier corrigé peut être redéposé.",
+    cancelledDrafts: "Brouillons supprimés",
   },
   entries: {
     title: "Écritures",

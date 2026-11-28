@@ -80,3 +80,36 @@ test("confirmation d'un import : brouillons créés dans le journal, jamais vali
   await page.goto(`/dossiers/${companyId}/ecritures?statut=POSTED`);
   await expect(page.getByText("Aucune écriture pour ces critères.")).toBeVisible();
 });
+
+test("annulation d'un batch confirmé : brouillons supprimés puis reprise du même fichier", async ({ page }) => {
+  test.setTimeout(120_000);
+  await registerAndLogin(page);
+  const companyId = await createCompany(page, "Import annulé Guinée");
+  await page.goto(`/dossiers/${companyId}/ecritures/importer`);
+  const header = "journal;ecriture;date;compte;libelle;debit;credit\n";
+  const lignes =
+    "VT;AN-2026-201;2026-03-15;571;Vente comptant;1500000;0\n" +
+    "VT;AN-2026-201;2026-03-15;701;Vente comptant;0;1500000\n";
+  const contenu = Buffer.from(header + lignes);
+  const file = page.getByLabel("Fichier comptable (10 Mio maximum)");
+  const submit = page.getByRole("button", { name: "Déposer et précontrôler" });
+  await file.setInputFiles({ name: "ventes.csv", mimeType: "text/csv", buffer: contenu });
+  await submit.click();
+  await expect(page.getByRole("heading", { name: "Précontrôle réussi — aucune écriture créée" })).toBeVisible();
+  await page.getByRole("button", { name: "Comptabiliser en brouillons" }).click();
+  await expect(page.getByRole("heading", { name: "Import comptabilisé en brouillons" })).toBeVisible();
+  // Annulation définitive du batch confirmé : les brouillons sont supprimés.
+  await page.getByRole("button", { name: "Annuler ce dépôt" }).click();
+  await expect(page.getByRole("heading", { name: "Dépôt annulé" })).toBeVisible();
+  await expect(page.getByText(/Le même fichier corrigé peut être redéposé/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Annuler ce dépôt" })).toHaveCount(0);
+  await page.goto(`/dossiers/${companyId}/ecritures`);
+  await expect(page.getByText("Aucune écriture pour ces critères.")).toBeVisible();
+  // Reprise immédiate : le même fichier repart sur un batch neuf, confirmable.
+  await page.goto(`/dossiers/${companyId}/ecritures/importer`);
+  await file.setInputFiles({ name: "ventes.csv", mimeType: "text/csv", buffer: contenu });
+  await submit.click();
+  await expect(page.getByRole("heading", { name: "Précontrôle réussi — aucune écriture créée" })).toBeVisible();
+  await page.getByRole("button", { name: "Comptabiliser en brouillons" }).click();
+  await expect(page.getByRole("heading", { name: "Import comptabilisé en brouillons" })).toBeVisible();
+});
