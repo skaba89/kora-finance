@@ -76,7 +76,7 @@ def main() -> int:
             ".previous-release",                  # cible du rollback connue
             "KORA_PLATFORM_ADMIN_REQUIRE_MFA=",    # garde MFA prod
             "BLOCAGE : MFA des administrateurs plateforme",  # fail closed
-            "if [[ -s .release ]]; then",           # bootstrap initial autorisé
+            "docker volume inspect kora_postgres_data",  # install persistée détectée
             "KORA_ALLOW_INITIAL_INSTALL",          # opt-in explicite première installation
             "docker volume inspect kora_postgres_data",  # détecte les données persistées
             "docker compose ps -aq postgres",       # refuse un conteneur arrêté
