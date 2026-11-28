@@ -55,7 +55,9 @@ def test_collaborateur_ne_peut_pas_lister_les_membres(
     admin = make_user()
     collaborateur = make_user()
     admin_headers = admin.headers(client)
-    firm = client.post("/api/v1/firms", headers=admin_headers, json={"name": "Cabinet Fouta"}).json()
+    firm = client.post(
+        "/api/v1/firms", headers=admin_headers, json={"name": "Cabinet Fouta"}
+    ).json()
     added = client.post(
         f"/api/v1/firms/{firm['id']}/members",
         headers=admin_headers,
